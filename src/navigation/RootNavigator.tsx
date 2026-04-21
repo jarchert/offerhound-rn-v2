@@ -44,6 +44,7 @@ import CoachRosterScreen from '@/screens/coach/CoachRosterScreen';
 // Influencer screens
 import InfluencerBoardScreen from '@/screens/influencer/InfluencerBoardScreen';
 import PodcastScreen from '@/screens/influencer/PodcastScreen';
+import SmokeTestScreen from '@/screens/dev/SmokeTestScreen';
 
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -69,6 +70,7 @@ export type RootStackParamList = {
   CoachRoster: undefined;
   InfluencerBoard: undefined;
   Podcast: undefined;
+  SmokeTest: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -153,6 +155,7 @@ export default function RootNavigator() {
             <Stack.Screen name="NILAdvisor" component={NILAdvisorScreen} />
             <Stack.Screen name="InfluencerBoard" component={InfluencerBoardScreen} />
             <Stack.Screen name="Podcast" component={PodcastScreen} />
+            <Stack.Screen name="SmokeTest" component={SmokeTestScreen} />
           </>
         )}
       </Stack.Navigator>

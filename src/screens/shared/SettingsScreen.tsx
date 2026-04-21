@@ -44,6 +44,10 @@ export default function SettingsScreen() {
           <SettingsRow icon={LogOut} label="Sign out" onPress={signOut} destructive />
         </SettingsGroup>
 
+        <Pressable style={s.smokeTest} onPress={() => nav.navigate('SmokeTest')}>
+          <Text style={s.smokeTestText}>Run Smoke Test →</Text>
+        </Pressable>
+
         <Text style={s.version}>OfferHound v1.0.0 (Build 1)</Text>
       </ScrollView>
     </SafeAreaView>
@@ -81,4 +85,6 @@ const s = StyleSheet.create({
   rowLabel: { flex: 1, fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.base, color: colors.foreground },
   rowDestructive: { color: colors.destructive },
   version: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.xs, color: colors.mutedForeground, textAlign: 'center', marginTop: spacing.md },
+  smokeTest: { alignItems: 'center', padding: spacing.sm, marginTop: spacing.sm },
+  smokeTestText: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.xs, color: colors.mutedForeground },
 });
