@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { toast } from "react-native-toast-message";
+import Toast from "react-native-toast-message";
+const toast = (opts: any) => Toast.show(opts);
 
 // Generic unified letter history that piggy-backs on coach_letter_history
 // for any sender role. Stored entries use coach_user_id as the sender ID
@@ -42,9 +43,9 @@ export function useUnifiedLetterHistory(senderRole: string) {
 
   const deleteFromHistory = async (id: string) => {
      const { error } = await supabase.from("coach_letter_history" as any).delete().eq("id", id);
-     if (error) { toast.error("Failed to delete"); return; }
+     if (error) { Toast.show({ type: "error", text1: "Failed to delete" }); return; }
      queryClient.invalidateQueries({ queryKey });
-     toast.success("Letter deleted");
+     Toast.show({ type: "success", text1: "Letter deleted" });
   };
 
   return { history, isLoading, addToHistory, deleteFromHistory };

@@ -20,6 +20,9 @@
         "NSCameraUsageDescription": "OfferHound needs camera access to upload profile photos and highlight videos.",
         "NSPhotoLibraryUsageDescription": "OfferHound needs photo library access to upload profile photos and highlight videos.",
         "NSMicrophoneUsageDescription": "OfferHound needs microphone access for video recording.",
+        "NSCalendarsUsageDescription": "OfferHound adds upcoming college camps and recruiting events to your calendar.",
+        "NSCalendarsFullAccessUsageDescription": "OfferHound adds upcoming college camps and recruiting events to your calendar.",
+        "NSUserTrackingUsageDescription": "OfferHound never tracks you across other apps. This permission is unused.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "entitlements": {
@@ -48,8 +51,8 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router",
       "expo-font",
+      "expo-apple-authentication",
       [
         "expo-notifications",
         {
@@ -62,6 +65,12 @@
         {
           "photosPermission": "OfferHound accesses your photos to let you upload profile and highlight media.",
           "cameraPermission": "OfferHound uses your camera to capture profile photos and videos."
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "OfferHound adds upcoming camps to your calendar."
         }
       ],
       "expo-secure-store"

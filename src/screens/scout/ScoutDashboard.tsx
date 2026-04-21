@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, SafeAreaView, RefreshControl } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Users, Trophy, FileText } from 'lucide-react-native';
-import { useScoutPipeline } from '@/hooks/useScoutPipeline';
+import { useScoutPipelineAthletes } from '@/hooks/useScoutPipeline';
 import { useScoutActivity } from '@/hooks/useScoutActivity';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navbar } from '@/components/Navbar';
@@ -14,7 +14,7 @@ import type { RootStackParamList } from '@/navigation/RootNavigator';
 export default function ScoutDashboard() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
   const { user } = useAuth();
-  const { data: pipeline = [], isLoading, refetch } = useScoutPipeline();
+  const { data: pipeline = [], isLoading, refetch } = useScoutPipelineAthletes();
   const { data: activity } = useScoutActivity();
 
   return (

@@ -234,7 +234,7 @@ export const SPORT_METRICS: Record<string, SportMetric[]> = {
    ],
    wrestling: [
       { key: "career_record", label: "Career Record (W-L)", placeholder: "85-12", hint: "Wins-Losses", radarAxis: "Win Rate" },
-      { key: "season_record", label: "Season Record", placeholder: "32-3", hint: "Wins-Losses", radarAxis: "WinRate" },
+      { key: "season_record", label: "Season Record", placeholder: "32-3", hint: "Wins-Losses", radarAxis: "Win Rate" },
       { key: "pins", label: "Pins", placeholder: "25", hint: "Season total", benchmark: 30, radarAxis: "Pinning"},
       { key: "tech_falls", label: "Tech Falls", placeholder: "8", hint: "Season total", benchmark: 12, radarAxis: "Technique" },
       { key: "major_decisions", label: "Major Decisions", placeholder: "10", hint: "Season total", benchmark: 15, radarAxis: "Technique" },
@@ -395,8 +395,8 @@ export const SPORT_EVENT_CATALOG: Record<string, SportEventCategory[]> = {
       {
          key: "relays", label: "Relays",
          events: [
-            { key: "200_free_relay", label: "200 Free Relay", format: "time", benchmark: 86.0, radarAxis: "SprintSpeed", hasSplits: true },
-            { key: "400_free_relay", label: "400 Free Relay", format: "time", benchmark: 190.0, radarAxis: "SprintSpeed", hasSplits: true },
+            { key: "200_free_relay", label: "200 Free Relay", format: "time", benchmark: 86.0, radarAxis: "Sprint Speed", hasSplits: true },
+            { key: "400_free_relay", label: "400 Free Relay", format: "time", benchmark: 190.0, radarAxis: "Sprint Speed", hasSplits: true },
             { key: "200_medley_relay", label: "200 Medley Relay", format: "time", benchmark: 95.0, radarAxis: "Stroke Versatility", hasSplits: true },
             { key: "400_medley_relay", label: "400 Medley Relay", format: "time", benchmark: 205.0, radarAxis: "Stroke Versatility", hasSplits: true },
          ],

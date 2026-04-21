@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/Badge';
 import { colors, typography, spacing } from '@/lib/theme';
 
 export default function LettersScreen() {
-  const { data: letters = [], isLoading, refetch } = useUnifiedLetterHistory();
+  const { history: letters = [], isLoading } = useUnifiedLetterHistory('athlete');
+  const refetch = () => {};
 
   return (
     <SafeAreaView style={s.container}>

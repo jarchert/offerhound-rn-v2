@@ -36,9 +36,9 @@ export default function ParentDashboard() {
               <View style={s.athleteRow}>
                 <Avatar source={a.profile_image_url ? { uri: a.profile_image_url } : null} fallback={a.full_name} size={56} />
                 <View style={s.athleteInfo}>
-                  <Text style={s.athleteName}>{a.full_name}</Text>
-                  {a.position && <Text style={s.athleteMeta}>{a.position}</Text>}
-                  {a.school && <Text style={s.athleteMeta}>{a.school}</Text>}
+                  <Text style={s.athleteName}>{String(a.full_name ?? '')}</Text>
+                  {a.position && <Text style={s.athleteMeta}>{String(a.position)}</Text>}
+                  {a.school && <Text style={s.athleteMeta}>{String(a.school)}</Text>}
                 </View>
               </View>
               <Button

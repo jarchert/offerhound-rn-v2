@@ -7,7 +7,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { supabase } from '@/integrations/supabase/client';
 
-export type ShareFormat = 'png' | 'jpeg';
+export type ShareFormat = 'png' | 'jpg';
 
 export interface CapturedCard {
   uri: string;
@@ -23,15 +23,15 @@ export async function captureCardImage(
 ): Promise<CapturedCard> {
   const uri = await captureRef(viewRef, {
     format,
-    quality: format === 'jpeg' ? 0.92 : 1,
+    quality: format === 'jpg' ? 0.92 : 1,
     result: 'tmpfile',
   });
   const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
   return {
     uri,
     base64,
-    mimeType: format === 'jpeg' ? 'image/jpeg' : 'image/png',
-    extension: format === 'jpeg' ? 'jpg' : 'png',
+    mimeType: format === 'jpg' ? 'image/jpeg' : 'image/png',
+    extension: format === 'jpg' ? 'jpg' : 'png',
   };
 }
 

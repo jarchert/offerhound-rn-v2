@@ -4,6 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import type { AppRole } from '@/integrations/supabase/types';
 import type { User, Session } from '@supabase/supabase-js';
 
+import { signInWithApple as nativeAppleSignIn, isAppleSignInAvailable } from '@/lib/appleSignIn';
+import { registerForPushNotifications } from '@/lib/push';
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -28,15 +31,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) fetchUserRole(session.user.id);
+      if (session?.user) {
+        fetchUserRole(session.user.id);
+        registerForPushNotifications(session.user.id).catch(e => console.warn('[push] register failed', e));
+      }
       setIsLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) fetchUserRole(session.user.id);
-      else setUserRole(null);
+      if (session?.user) {
+        fetchUserRole(session.user.id);
+        registerForPushNotifications(session.user.id).catch(e => console.warn('[push] register failed', e));
+      } else setUserRole(null);
     });
 
     return () => subscription.unsubscribe();
@@ -74,10 +82,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithApple = async () => {
-    // Uses @invertase/react-native-apple-authentication
-    // Full implementation requires native module — see screens/auth/AppleSignIn
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'apple' });
-    return { error: error as Error | null };
+    try {
+      if (await isAppleSignInAvailable()) {
+        await nativeAppleSignIn();
+        return { error: null };
+      }
+      const { error } = await supabase.auth.signInWithOAuth({ provider: 'apple' });
+      return { error: error as Error | null };
+    } catch (e) {
+      return { error: e as Error };
+    }
   };
 
   return (

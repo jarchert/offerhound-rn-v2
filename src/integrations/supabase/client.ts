@@ -1,7 +1,15 @@
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
-import type { Database } from './types';
+import type { Database as TypedDatabase } from './types';
+
+// Permissive overlay: keep typed enums + helpers but make all table queries loose,
+// since not every table has a generated row type yet.
+type Database = Omit<TypedDatabase, 'public'> & {
+  public: Omit<TypedDatabase['public'], 'Tables'> & {
+    Tables: Record<string, { Row: any; Insert: any; Update: any; Relationships: [] }>;
+  };
+};
 
 const SUPABASE_URL = 'https://abdzdcgsmdlnytkkhvtb.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiZHpkY2dzbWRsbnl0a2todnRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU4OTcyMTcsImV4cCI6MjA4MTQ3MzIxN30.2tvNgfIc0BD53GsAJk1oF88vK3lW1RVZSouMsOa4J3I';

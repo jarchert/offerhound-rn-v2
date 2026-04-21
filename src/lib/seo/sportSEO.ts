@@ -1,4 +1,5 @@
-import { SportType, getSportConfig, getSportPath } from "@/lib/data/sports";
+import { SportType, SPORTS_CONFIG, getSportPath } from "@/lib/data/sports";
+const getSportConfig = (s: SportType) => SPORTS_CONFIG[s] as any;
 
 export function getSportSEO(sport: SportType) {
   const config = getSportConfig(sport);

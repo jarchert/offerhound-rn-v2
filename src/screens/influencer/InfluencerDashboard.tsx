@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, SafeAreaView, Pressable, RefreshControl } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Mic, Users, Eye, Calendar } from 'lucide-react-native';
-import { useInfluencer } from '@/hooks/useInfluencer';
+import { useMyInfluencerProfile } from '@/hooks/useInfluencer';
 import { Navbar } from '@/components/Navbar';
 import { StatTile } from '@/components/StatTile';
 import { SectionHeader } from '@/components/SectionHeader';
@@ -11,7 +11,7 @@ import type { RootStackParamList } from '@/navigation/RootNavigator';
 
 export default function InfluencerDashboard() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
-  const { profile, isLoading, refetch } = useInfluencer() as any;
+  const { data: profile, isLoading, refetch } = useMyInfluencerProfile() as any;
 
   return (
     <SafeAreaView style={s.container}>

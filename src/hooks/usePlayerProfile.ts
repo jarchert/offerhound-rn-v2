@@ -101,6 +101,5 @@ export function usePlayerProfile() {
     return !data || data.length === 0;
   }, [user]);
 
-  return { profile, isLoading, isOfflineData, fetchProfile, createProfile, updateProfile, publishProfile, chec
-kUrlAvailability };
+  return { profile, isLoading, isOfflineData, fetchProfile, createProfile, updateProfile, publishProfile, checkUrlAvailability };
 }

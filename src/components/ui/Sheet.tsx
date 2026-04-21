@@ -36,7 +36,7 @@ export function SheetContent({ children, style }: { children: React.ReactNode; s
     return { transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [height * 0.6, 0] }) }] };
   })();
 
-  const align: ViewStyle = { right: { alignItems: 'flex-end' }, left: { alignItems: 'flex-start' }, top: { justifyContent: 'flex-start' }, bottom: { justifyContent: 'flex-end' } }[ctx.side];
+  const align: ViewStyle = ({ right: { alignItems: 'flex-end' }, left: { alignItems: 'flex-start' }, top: { justifyContent: 'flex-start' }, bottom: { justifyContent: 'flex-end' } } as Record<string, ViewStyle>)[ctx.side];
 
   return (
     <Modal visible={ctx.open} transparent animationType="fade" onRequestClose={() => ctx.onOpenChange(false)}>

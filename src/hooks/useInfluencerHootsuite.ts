@@ -343,7 +343,7 @@ export function useIsAthleteMinor(athleteProfileId?: string) {
     queryKey: ["is-athlete-minor", athleteProfileId],
     queryFn: async () => {
        if (!athleteProfileId) return false;
-       const { data } = await supabase.rpc("is_athlete_minor", { profile_id: athleteProfileId });
+       const { data } = await (supabase.rpc as any)("is_athlete_minor", { profile_id: athleteProfileId });
        return !!data;
     },
     enabled: !!athleteProfileId,

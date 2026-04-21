@@ -24,8 +24,7 @@ export function useScoutSaveAthlete() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   return useMutation({
-    mutationFn: async ({ athleteProfileId, notes, priority = "medium" }: { athleteProfileId: string; notes?: s
-tring; priority?: string }) => {
+    mutationFn: async ({ athleteProfileId, notes, priority = "medium" }: { athleteProfileId: string; notes?: string; priority?: string }) => {
        if (!user?.id) throw new Error("Not authenticated");
        const { data, error } = await supabase
          .from("saved_athletes")

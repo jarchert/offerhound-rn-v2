@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { toast } from "react-native-toast-message";
+import Toast from "react-native-toast-message";
+const toast = (opts: any) => Toast.show(opts);
 
 export interface ScoutSavedCoach {
   id: string;
@@ -46,8 +47,8 @@ export function useScoutSaveCoach() {
        if (error) { if (error.code === "23505") throw new Error("Coach already saved"); throw error; }
        return data;
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["scout-saved-coaches"] }); toast.success("Coach added to your network!"); },
-    onError: (error) => { toast.error(error instanceof Error ? error.message : "Failed to save coach"); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["scout-saved-coaches"] }); Toast.show({ type: "success", text1: "Coach added to your network!" }); },
+    onError: (error) => { Toast.show({ type: "error", text1: error instanceof Error ? error.message : "Failed to save coach" }); },
   });
 }
 
@@ -60,7 +61,7 @@ export function useScoutRemoveSavedCoach() {
        const { error } = await supabase.from("scout_saved_coaches").delete().eq("coach_id", coachId).eq("scout_user_id", user.id);
        if (error) throw error;
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["scout-saved-coaches"] }); toast.success("Coach removed from your network"); },
-    onError: () => { toast.error("Failed to remove coach"); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["scout-saved-coaches"] }); Toast.show({ type: "success", text1: "Coach removed from your network" }); },
+    onError: () => { Toast.show({ type: "error", text1: "Failed to remove coach" }); },
   });
 }

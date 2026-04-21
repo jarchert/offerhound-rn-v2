@@ -68,4 +68,6 @@ export const SPORTS_CONFIG: Record<string, { name: string; icon: string; positio
 
 export type SportType = keyof typeof SPORTS_CONFIG;
 export const DEFAULT_SPORT: SportType = 'football';
+export const getSportPath = (sport: string) => `/${sport.toLowerCase()}`;
 export const SPORT_LIST = Object.keys(SPORTS_CONFIG) as SportType[];
+
