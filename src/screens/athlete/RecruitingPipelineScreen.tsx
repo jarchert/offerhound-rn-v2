@@ -1,21 +1,28 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
+import { Navbar } from '@/components/Navbar';
+import { RecruitingPipeline } from '@/components/RecruitingPipeline';
 import { colors, typography, spacing } from '@/lib/theme';
 
 export default function RecruitingPipelineScreen() {
   return (
     <SafeAreaView style={s.container}>
-      <ScrollView contentContainerStyle={s.content}>
-        <Text style={s.title}>📊 RECRUITING PIPELINE</Text>
-        <Text style={s.subtitle}>Loading...</Text>
-      </ScrollView>
+      <Navbar />
+      <View style={s.header}>
+        <Text style={s.title}>Recruiting Pipeline</Text>
+        <Text style={s.subtitle}>Track coaches across recruiting stages</Text>
+      </View>
+      <View style={s.board}>
+        <RecruitingPipeline />
+      </View>
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.xl, gap: spacing.md, alignItems: 'center' },
+  header: { padding: spacing.md },
   title: { fontFamily: typography.fontFamily.heading, fontSize: typography.fontSize['2xl'], color: colors.foreground, letterSpacing: typography.letterSpacing.heading },
-  subtitle: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.base, color: colors.mutedForeground },
+  subtitle: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.sm, color: colors.mutedForeground, marginTop: 2 },
+  board: { flex: 1 },
 });

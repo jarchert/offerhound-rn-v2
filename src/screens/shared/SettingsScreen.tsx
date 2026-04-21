@@ -1,21 +1,84 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, SafeAreaView, Pressable, Switch, Linking } from 'react-native';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { Bell, Moon, Shield, FileText, Trash2, LogOut, ChevronRight } from 'lucide-react-native';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Navbar } from '@/components/Navbar';
 import { colors, typography, spacing } from '@/lib/theme';
+import type { RootStackParamList } from '@/navigation/RootNavigator';
 
 export default function SettingsScreen() {
+  const nav = useNavigation<NavigationProp<RootStackParamList>>();
+  const { signOut, user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+
   return (
     <SafeAreaView style={s.container}>
+      <Navbar />
       <ScrollView contentContainerStyle={s.content}>
-        <Text style={s.title}>⚙️ SETTINGS</Text>
-        <Text style={s.subtitle}>Loading...</Text>
+        <Text style={s.title}>Settings</Text>
+        <Text style={s.email}>{user?.email}</Text>
+
+        <SettingsGroup title="Preferences">
+          <SettingsRow
+            icon={Moon}
+            label="Dark mode"
+            right={<Switch value={theme === 'dark'} onValueChange={toggleTheme} />}
+          />
+          <SettingsRow
+            icon={Bell}
+            label="Notifications"
+            onPress={() => nav.navigate('Notifications')}
+          />
+        </SettingsGroup>
+
+        <SettingsGroup title="Legal">
+          <SettingsRow icon={Shield} label="Privacy Policy" onPress={() => Linking.openURL('https://offer-hound.com/privacy')} />
+          <SettingsRow icon={FileText} label="Terms of Service" onPress={() => Linking.openURL('https://offer-hound.com/terms')} />
+          <SettingsRow icon={FileText} label="Community Guidelines" onPress={() => Linking.openURL('https://offer-hound.com/community-guidelines')} />
+        </SettingsGroup>
+
+        <SettingsGroup title="Account">
+          <SettingsRow icon={Trash2} label="Delete account" onPress={() => nav.navigate('DeleteAccount')} destructive />
+          <SettingsRow icon={LogOut} label="Sign out" onPress={signOut} destructive />
+        </SettingsGroup>
+
+        <Text style={s.version}>OfferHound v1.0.0 (Build 1)</Text>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+function SettingsGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <View style={s.group}>
+      <Text style={s.groupTitle}>{title}</Text>
+      <View style={s.groupCard}>{children}</View>
+    </View>
+  );
+}
+
+function SettingsRow({ icon: Icon, label, onPress, right, destructive }: { icon: any; label: string; onPress?: () => void; right?: React.ReactNode; destructive?: boolean }) {
+  return (
+    <Pressable style={s.row} onPress={onPress} disabled={!onPress}>
+      <Icon size={18} color={destructive ? colors.destructive : colors.foreground} />
+      <Text style={[s.rowLabel, destructive && s.rowDestructive]}>{label}</Text>
+      {right ?? (onPress ? <ChevronRight size={16} color={colors.mutedForeground} /> : null)}
+    </Pressable>
+  );
+}
+
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.xl, gap: spacing.md, alignItems: 'center' },
+  content: { padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xxl },
   title: { fontFamily: typography.fontFamily.heading, fontSize: typography.fontSize['2xl'], color: colors.foreground, letterSpacing: typography.letterSpacing.heading },
-  subtitle: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.base, color: colors.mutedForeground },
+  email: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.sm, color: colors.mutedForeground },
+  group: { gap: spacing.xs },
+  groupTitle: { fontFamily: typography.fontFamily.bodyBold, fontSize: typography.fontSize.xs, color: colors.mutedForeground, textTransform: 'uppercase', letterSpacing: 0.8, paddingHorizontal: spacing.xs, marginTop: spacing.sm },
+  groupCard: { backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border, minHeight: 52 },
+  rowLabel: { flex: 1, fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.base, color: colors.foreground },
+  rowDestructive: { color: colors.destructive },
+  version: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.xs, color: colors.mutedForeground, textAlign: 'center', marginTop: spacing.md },
 });
