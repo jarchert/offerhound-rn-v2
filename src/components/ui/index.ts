@@ -1,0 +1,24 @@
+// Re-exports for convenience — matches shadcn's barrel pattern
+export { Button } from './Button';
+export type { ButtonVariant, ButtonSize } from './Button';
+export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './Card';
+export { Input } from './Input';
+export { Textarea } from './Textarea';
+export { Label } from './Label';
+export { Badge } from './Badge';
+export type { BadgeVariant } from './Badge';
+export { Avatar } from './Avatar';
+export { Separator } from './Separator';
+export { Skeleton } from './Skeleton';
+export { Progress } from './Progress';
+export { Switch } from './Switch';
+export { Checkbox } from './Checkbox';
+export { RadioGroup, RadioGroupItem } from './RadioGroup';
+export { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from './Dialog';
+export { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetFooter, SheetTitle, SheetDescription } from './Sheet';
+export { Tabs, TabsList, TabsTrigger, TabsContent } from './Tabs';
+export { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from './Select';
+export { ScrollArea } from './ScrollArea';
+export { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './Accordion';
+export { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent, LongPressTooltip } from './Tooltip';
+export { toast, Toaster } from './toast';
