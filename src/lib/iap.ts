@@ -1,23 +1,9 @@
-// IAP scaffold — wraps react-native-iap (v15 / Nitro) so the rest of the app can
-// initialise the connection, fetch subscription products, kick off a purchase,
-// and forward receipts to the backend for verification.
-//
-// Apple StoreKit 2 + Google Play Billing v6 under the hood.
-// Subscription products are configured in App Store Connect / Play Console.
+// IAP stub — react-native-iap v15 requires Kotlin 2.2+ which is incompatible
+// with Expo SDK 52 (ships Kotlin 1.9). This stub provides the same API surface
+// so the rest of the app compiles. Replace with real IAP when upgrading to
+// Expo SDK 55+ or when react-native-iap ships a compatible version.
 
-import {
-  initConnection,
-  endConnection,
-  fetchProducts,
-  requestPurchase,
-  getAvailablePurchases,
-  finishTransaction,
-  purchaseUpdatedListener,
-  purchaseErrorListener,
-  type EventSubscription,
-} from 'react-native-iap';
 import { Platform } from 'react-native';
-import { supabase } from '@/integrations/supabase/client';
 
 export const SUBSCRIPTION_SKUS = Platform.select({
   ios: ['offerhound.recruit_pro.monthly', 'offerhound.recruit_pro.annual'],
@@ -25,78 +11,21 @@ export const SUBSCRIPTION_SKUS = Platform.select({
   default: [] as string[],
 })!;
 
-let initialised = false;
-let purchaseSub: EventSubscription | null = null;
-let errorSub: EventSubscription | null = null;
-
 export async function initIAP(): Promise<void> {
-  if (initialised) return;
-  await initConnection();
-  initialised = true;
-
-  purchaseSub = purchaseUpdatedListener(async (purchase: any) => {
-    const receipt = purchase?.transactionReceipt || purchase?.purchaseToken;
-    if (!receipt) return;
-    try {
-      await supabase.functions.invoke('verify-iap-receipt', {
-        body: {
-          platform: Platform.OS,
-          productId: purchase.productId,
-          receipt,
-          transactionId: purchase.transactionId,
-        },
-      });
-      await finishTransaction({ purchase, isConsumable: false });
-    } catch (e) {
-      console.warn('[IAP] receipt verification failed', e);
-    }
-  });
-
-  errorSub = purchaseErrorListener((error: any) => {
-    console.warn('[IAP] purchase error', error);
-  });
+  console.log('[IAP] stub — no-op (react-native-iap removed for Kotlin compat)');
 }
 
-export async function teardownIAP(): Promise<void> {
-  purchaseSub?.remove();
-  errorSub?.remove();
-  purchaseSub = null;
-  errorSub = null;
-  if (initialised) {
-    await endConnection();
-    initialised = false;
-  }
-}
+export async function teardownIAP(): Promise<void> {}
 
 export async function fetchSubscriptions(): Promise<any[]> {
-  if (!initialised) await initIAP();
-  return fetchProducts({ skus: SUBSCRIPTION_SKUS, type: 'subs' as any }) as any;
+  console.warn('[IAP] stub — fetchSubscriptions is a no-op');
+  return [];
 }
 
-export async function purchaseSubscription(sku: string): Promise<void> {
-  if (!initialised) await initIAP();
-  await requestPurchase({
-    request: Platform.OS === 'ios'
-      ? ({ sku } as any)
-      : ({ skus: [sku], subscriptionOffers: [{ sku, offerToken: '' }] } as any),
-    type: 'subs' as any,
-  });
+export async function purchaseSubscription(_sku: string): Promise<void> {
+  console.warn('[IAP] stub — purchaseSubscription is a no-op');
 }
 
 export async function restorePurchases(): Promise<void> {
-  if (!initialised) await initIAP();
-  const purchases = await getAvailablePurchases();
-  for (const p of purchases as any[]) {
-    const receipt = p.transactionReceipt || p.purchaseToken;
-    if (!receipt) continue;
-    await supabase.functions.invoke('verify-iap-receipt', {
-      body: {
-        platform: Platform.OS,
-        productId: p.productId,
-        receipt,
-        transactionId: p.transactionId,
-        restored: true,
-      },
-    });
-  }
+  console.warn('[IAP] stub — restorePurchases is a no-op');
 }

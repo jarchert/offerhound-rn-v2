@@ -59,7 +59,6 @@
     "plugins": [
       "expo-font",
       "expo-apple-authentication",
-      "react-native-iap",
       [
         "expo-notifications",
         {
