@@ -2,6 +2,7 @@
   "expo": {
     "name": "OfferHound",
     "slug": "offerhound-v2",
+    "scheme": "offerhoundv2",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -31,8 +32,18 @@
         "com.apple.developer.applesignin": [
           "Default"
         ],
-        "aps-environment": "production"
+        "aps-environment": "production",
+        "com.apple.developer.associated-domains": [
+          "applinks:offerhound.app",
+          "applinks:www.offerhound.app",
+          "applinks:playbook-promoter.lovable.app"
+        ]
       },
+      "associatedDomains": [
+        "applinks:offerhound.app",
+        "applinks:www.offerhound.app",
+        "applinks:playbook-promoter.lovable.app"
+      ],
       "usesAppleSignIn": true
     },
     "android": {
@@ -42,6 +53,18 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#101318"
       },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            { "scheme": "https", "host": "offerhound.app" },
+            { "scheme": "https", "host": "www.offerhound.app" },
+            { "scheme": "https", "host": "playbook-promoter.lovable.app" }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.POST_NOTIFICATIONS",

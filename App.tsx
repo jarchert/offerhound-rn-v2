@@ -28,6 +28,7 @@ import { PodcastPlayerProvider } from '@/contexts/PodcastPlayerContext';
 import { CookiePreferencesProvider } from '@/contexts/CookiePreferencesContext';
 
 import RootNavigator from '@/navigation/RootNavigator';
+import { linking } from '@/navigation/linking';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import OfflineBanner from '@/components/OfflineBanner';
 import ImpersonationBanner from '@/components/ImpersonationBanner';
@@ -107,7 +108,7 @@ export default function App() {
                     <ImpersonationProvider>
                       <AthleteProfileProvider>
                         <PodcastPlayerProvider>
-                          <NavigationContainer>
+                          <NavigationContainer linking={linking}>
                             <ImpersonationBanner />
                             <OfflineBanner />
                             <RootNavigator />

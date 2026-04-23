@@ -14,6 +14,7 @@ export const USER_ROLES = {
   CLUB_COACH: 'club_coach',
   HIGH_SCHOOL_COACH: 'high_school_coach',
   MODERATOR: 'moderator',
+  AGENCY: 'agency',
 } as const;
 
 export type UserRole = typeof USER_ROLES[keyof typeof USER_ROLES];
