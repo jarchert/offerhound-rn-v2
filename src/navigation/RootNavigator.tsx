@@ -31,6 +31,7 @@ import ProfileScreen from '@/screens/shared/ProfileScreen';
 import MessagesScreen from '@/screens/shared/MessagesScreen';
 import NotificationsScreen from '@/screens/shared/NotificationsScreen';
 import LetterComposerScreen from '@/screens/shared/LetterComposerScreen';
+import AICoachScreen from '@/screens/shared/AICoachScreen';
 import SmokeTestScreen from '@/screens/dev/SmokeTestScreen';
 
 export type RootStackParamList = {
@@ -53,6 +54,7 @@ export type RootStackParamList = {
   Messages: undefined;
   Notifications: undefined;
   LetterComposer: { seed?: any } | undefined;
+  AICoach: undefined;
   SmokeTest: undefined;
 };
 
@@ -127,6 +129,11 @@ export default function RootNavigator() {
           <Stack.Screen
             name="LetterComposer"
             component={LetterComposerScreen}
+            options={{ presentation: 'modal' }}
+          />
+          <Stack.Screen
+            name="AICoach"
+            component={AICoachScreen}
             options={{ presentation: 'modal' }}
           />
           <Stack.Screen name="SmokeTest" component={SmokeTestScreen} />

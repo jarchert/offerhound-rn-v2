@@ -32,18 +32,8 @@
         "com.apple.developer.applesignin": [
           "Default"
         ],
-        "aps-environment": "production",
-        "com.apple.developer.associated-domains": [
-          "applinks:offerhound.app",
-          "applinks:www.offerhound.app",
-          "applinks:playbook-promoter.lovable.app"
-        ]
+        "aps-environment": "production"
       },
-      "associatedDomains": [
-        "applinks:offerhound.app",
-        "applinks:www.offerhound.app",
-        "applinks:playbook-promoter.lovable.app"
-      ],
       "usesAppleSignIn": true
     },
     "android": {
