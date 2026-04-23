@@ -16,6 +16,9 @@ const ROLES: { key: AppRole; label: string; emoji: string; desc: string }[] = [
   { key: 'scout', label: 'Scout', emoji: '🔍', desc: 'Evaluating and identifying talent' },
   { key: 'parent', label: 'Parent', emoji: '👨‍👩‍👧', desc: 'Supporting your athlete through recruiting' },
   { key: 'influencer', label: 'Influencer', emoji: '📢', desc: 'Creating content for the recruiting community' },
+  { key: 'high_school_coach', label: 'HS Coach', emoji: '🏫', desc: 'Endorsing and supporting your athletes' },
+  { key: 'club_coach', label: 'Club Coach', emoji: '⚽', desc: 'Managing club athletes and camps' },
+  { key: 'agency' as AppRole, label: 'Agency', emoji: '🏢', desc: 'Multi-recruiter scouting organization' },
 ];
 
 export default function OnboardingScreen() {
