@@ -8,7 +8,8 @@ module.exports = function (api) {
         alias: { '@': './src' },
         extensions: ['.ios.js', '.android.js', '.js', '.ts', '.tsx', '.json'],
       }],
-      'react-native-reanimated/plugin',
+      // Reanimated 4 uses react-native-worklets/plugin; keep reanimated plugin off.
+      'react-native-worklets/plugin',
     ],
   };
 };
