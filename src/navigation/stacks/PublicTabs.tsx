@@ -1,0 +1,40 @@
+// PublicTabs — unauthenticated browse per Part 2 §2.1
+// 4 tabs: Landing, Discover, Podcasts, Account
+import React from 'react';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { colors, typography } from '@/lib/theme';
+
+import LandingScreen from '@/screens/auth/LandingScreen';
+import SportPickerScreen from '@/screens/shared/SportPickerScreen';
+import PodcastScreen from '@/screens/influencer/PodcastScreen';
+import SignInScreen from '@/screens/auth/SignInScreen';
+import { makePlaceholder } from '@/navigation/PlaceholderScreen';
+
+const PublicDiscoverScreen = SportPickerScreen; // Session 2: sport picker acts as discover hub
+
+const Tab = createBottomTabNavigator();
+
+export default function PublicTabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: colors.background,
+          borderTopColor: colors.border,
+        },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.foregroundSubtle,
+        tabBarLabelStyle: {
+          fontFamily: typography.fontFamily.bodyMedium,
+          fontSize: 11,
+          letterSpacing: 0.5,
+        },
+      }}>
+      <Tab.Screen name="LandingTab" component={LandingScreen} options={{ title: 'Home' }} />
+      <Tab.Screen name="DiscoverTab" component={PublicDiscoverScreen} options={{ title: 'Discover' }} />
+      <Tab.Screen name="PodcastsTab" component={PodcastScreen} options={{ title: 'Podcasts' }} />
+      <Tab.Screen name="AccountTab" component={SignInScreen} options={{ title: 'Account' }} />
+    </Tab.Navigator>
+  );
+}

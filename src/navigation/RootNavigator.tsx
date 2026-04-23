@@ -1,160 +1,130 @@
+// RootNavigator — post-Session 2 rewrite per Part 2 §2.1
+// NO NavigationContainer here (App.tsx owns it). This is the root Stack that
+// branches on auth + role and exposes 9 role navigators + 7 shared stacks.
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors } from '@/lib/theme';
+import type { UserRole } from '@/lib/constants';
 
-// Auth screens
-import LandingScreen from '@/screens/auth/LandingScreen';
-import SignInScreen from '@/screens/auth/SignInScreen';
-import SignUpScreen from '@/screens/auth/SignUpScreen';
+// Role navigators
+import AthleteTabs from '@/navigation/role/AthleteTabs';
+import CoachTabs from '@/navigation/role/CoachTabs';
+import ScoutTabs from '@/navigation/role/ScoutTabs';
+import ParentTabs from '@/navigation/role/ParentTabs';
+import InfluencerTabs from '@/navigation/role/InfluencerTabs';
+import AdminTabs from '@/navigation/role/AdminTabs';
+import HSCoachTabs from '@/navigation/role/HSCoachTabs';
+import ClubCoachTabs from '@/navigation/role/ClubCoachTabs';
+import AgencyTabs from '@/navigation/role/AgencyTabs';
 
-// Onboarding screens
-import OnboardingScreen from '@/screens/onboarding/OnboardingScreen';
+// Shared stacks
+import AuthStack from '@/navigation/stacks/AuthStack';
+import OnboardingStack from '@/navigation/stacks/OnboardingStack';
+import CampStack from '@/navigation/stacks/CampStack';
+import SettingsStack from '@/navigation/stacks/SettingsStack';
+import PublicProfileStack from '@/navigation/stacks/PublicProfileStack';
+import PublicTabs from '@/navigation/stacks/PublicTabs';
 
-// Role-specific dashboards
-import AthleteDashboard from '@/screens/athlete/AthleteDashboard';
-import CoachDashboard from '@/screens/coach/CoachDashboard';
-import ScoutDashboard from '@/screens/scout/ScoutDashboard';
-import ParentDashboard from '@/screens/parent/ParentDashboard';
-import InfluencerDashboard from '@/screens/influencer/InfluencerDashboard';
-import AdminDashboard from '@/screens/admin/AdminDashboard';
-
-// Shared screens
+// Shared screens accessed from any role
 import ProfileScreen from '@/screens/shared/ProfileScreen';
 import MessagesScreen from '@/screens/shared/MessagesScreen';
 import NotificationsScreen from '@/screens/shared/NotificationsScreen';
-import SettingsScreen from '@/screens/shared/SettingsScreen';
-import CoachSearchScreen from '@/screens/shared/CoachSearchScreen';
-import CampsScreen from '@/screens/shared/CampsScreen';
-import NewsScreen from '@/screens/shared/NewsScreen';
-import DeleteAccountScreen from '@/screens/shared/DeleteAccountScreen';
-
-// Athlete-specific screens
-import AthleteMatchesScreen from '@/screens/athlete/AthleteMatchesScreen';
-import RecruitingPipelineScreen from '@/screens/athlete/RecruitingPipelineScreen';
-import LettersScreen from '@/screens/athlete/LettersScreen';
-import NILAdvisorScreen from '@/screens/athlete/NILAdvisorScreen';
-
-// Coach-specific screens
-import CoachSearchAthletesScreen from '@/screens/coach/CoachSearchAthletesScreen';
-import CoachRosterScreen from '@/screens/coach/CoachRosterScreen';
-
-// Influencer screens
-import InfluencerBoardScreen from '@/screens/influencer/InfluencerBoardScreen';
-import PodcastScreen from '@/screens/influencer/PodcastScreen';
 import SmokeTestScreen from '@/screens/dev/SmokeTestScreen';
 
-import { useTheme } from '@/contexts/ThemeContext';
-
 export type RootStackParamList = {
-  Landing: undefined;
-  SignIn: undefined;
-  SignUp: undefined;
-  Onboarding: undefined;
-  MainTabs: undefined;
+  PublicTabs: undefined;
+  AuthStack: undefined;
+  OnboardingStack: undefined;
+  AthleteTabs: undefined;
+  CoachTabs: undefined;
+  ScoutTabs: undefined;
+  ParentTabs: undefined;
+  InfluencerTabs: undefined;
+  AdminTabs: undefined;
+  HSCoachTabs: undefined;
+  ClubCoachTabs: undefined;
+  AgencyTabs: undefined;
+  CampStack: undefined;
+  SettingsStack: undefined;
+  PublicProfileStack: undefined;
   Profile: { userId?: string };
   Messages: undefined;
   Notifications: undefined;
-  Settings: undefined;
-  CoachSearch: undefined;
-  Camps: undefined;
-  News: undefined;
-  DeleteAccount: undefined;
-  AthleteMatches: undefined;
-  RecruitingPipeline: undefined;
-  Letters: undefined;
-  NILAdvisor: undefined;
-  CoachSearchAthletes: undefined;
-  CoachRoster: undefined;
-  InfluencerBoard: undefined;
-  Podcast: undefined;
   SmokeTest: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
-const Tab = createBottomTabNavigator();
 
-function AthleteTabs() {
-  return (
-    <Tab.Navigator screenOptions={{
-      headerShown: false,
-      tabBarStyle: { backgroundColor: colors.background, borderTopColor: colors.border },
-      tabBarActiveTintColor: colors.primary,
-      tabBarInactiveTintColor: colors.mutedForeground,
-    }}>
-      <Tab.Screen name="Home" component={AthleteDashboard} />
-      <Tab.Screen name="Matches" component={AthleteMatchesScreen} />
-      <Tab.Screen name="Pipeline" component={RecruitingPipelineScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
-    </Tab.Navigator>
-  );
-}
-
-function CoachTabs() {
-  return (
-    <Tab.Navigator screenOptions={{
-      headerShown: false,
-      tabBarStyle: { backgroundColor: colors.background, borderTopColor: colors.border },
-      tabBarActiveTintColor: colors.primary,
-      tabBarInactiveTintColor: colors.mutedForeground,
-    }}>
-      <Tab.Screen name="Home" component={CoachDashboard} />
-      <Tab.Screen name="Athletes" component={CoachSearchAthletesScreen} />
-      <Tab.Screen name="Roster" component={CoachRosterScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
-    </Tab.Navigator>
-  );
-}
-
-function MainTabs() {
-  const { userRole } = useAuth();
-  switch (userRole) {
-    case 'coach': return <CoachTabs />;
-    case 'scout': return <ScoutDashboard />;
-    case 'parent': return <ParentDashboard />;
-    case 'influencer': return <InfluencerDashboard />;
-    case 'admin': return <AdminDashboard />;
-    default: return <AthleteTabs />;
+/**
+ * Map the resolved user role to the initial role-specific tab navigator name.
+ * Default = athlete (the largest role). Unknown roles fall back to PublicTabs.
+ */
+function roleToInitialRoute(role: UserRole | null | undefined): keyof RootStackParamList {
+  switch (role) {
+    case 'athlete': return 'AthleteTabs';
+    case 'coach': return 'CoachTabs';
+    case 'scout': return 'ScoutTabs';
+    case 'parent': return 'ParentTabs';
+    case 'influencer': return 'InfluencerTabs';
+    case 'admin':
+    case 'moderator': return 'AdminTabs';
+    case 'high_school_coach': return 'HSCoachTabs';
+    case 'club_coach': return 'ClubCoachTabs';
+    case 'agency' as UserRole: return 'AgencyTabs';
+    default: return 'AthleteTabs';
   }
 }
 
 export default function RootNavigator() {
-  const { user, isLoading } = useAuth();
-  const { theme } = useTheme();
+  const { user, userRole, isLoading } = useAuth() as any;
 
   if (isLoading) return null;
 
+  const initialRouteName = user
+    ? roleToInitialRoute(userRole as UserRole | null | undefined)
+    : ('PublicTabs' as keyof RootStackParamList);
+
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!user ? (
-          <>
-            <Stack.Screen name="Landing" component={LandingScreen} />
-            <Stack.Screen name="SignIn" component={SignInScreen} />
-            <Stack.Screen name="SignUp" component={SignUpScreen} />
-          </>
-        ) : (
-          <>
-            <Stack.Screen name="MainTabs" component={MainTabs} />
-            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-            <Stack.Screen name="Profile" component={ProfileScreen} />
-            <Stack.Screen name="Messages" component={MessagesScreen} />
-            <Stack.Screen name="Notifications" component={NotificationsScreen} />
-            <Stack.Screen name="Settings" component={SettingsScreen} />
-            <Stack.Screen name="CoachSearch" component={CoachSearchScreen} />
-            <Stack.Screen name="Camps" component={CampsScreen} />
-            <Stack.Screen name="News" component={NewsScreen} />
-            <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
-            <Stack.Screen name="Letters" component={LettersScreen} />
-            <Stack.Screen name="NILAdvisor" component={NILAdvisorScreen} />
-            <Stack.Screen name="InfluencerBoard" component={InfluencerBoardScreen} />
-            <Stack.Screen name="Podcast" component={PodcastScreen} />
-            <Stack.Screen name="SmokeTest" component={SmokeTestScreen} />
-          </>
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <Stack.Navigator
+      initialRouteName={initialRouteName}
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}>
+      {!user ? (
+        <>
+          <Stack.Screen name="PublicTabs" component={PublicTabs} />
+          <Stack.Screen name="AuthStack" component={AuthStack} />
+          <Stack.Screen name="PublicProfileStack" component={PublicProfileStack} />
+          <Stack.Screen name="CampStack" component={CampStack} />
+        </>
+      ) : (
+        <>
+          {/* Role-specific navigators — the initialRouteName picks one */}
+          <Stack.Screen name="AthleteTabs" component={AthleteTabs} />
+          <Stack.Screen name="CoachTabs" component={CoachTabs} />
+          <Stack.Screen name="ScoutTabs" component={ScoutTabs} />
+          <Stack.Screen name="ParentTabs" component={ParentTabs} />
+          <Stack.Screen name="InfluencerTabs" component={InfluencerTabs} />
+          <Stack.Screen name="AdminTabs" component={AdminTabs} />
+          <Stack.Screen name="HSCoachTabs" component={HSCoachTabs} />
+          <Stack.Screen name="ClubCoachTabs" component={ClubCoachTabs} />
+          <Stack.Screen name="AgencyTabs" component={AgencyTabs} />
+
+          {/* Shared stacks accessible from any role */}
+          <Stack.Screen name="OnboardingStack" component={OnboardingStack} />
+          <Stack.Screen name="CampStack" component={CampStack} />
+          <Stack.Screen name="SettingsStack" component={SettingsStack} />
+          <Stack.Screen name="PublicProfileStack" component={PublicProfileStack} />
+
+          {/* Cross-cutting modals / shared screens */}
+          <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="Messages" component={MessagesScreen} />
+          <Stack.Screen name="Notifications" component={NotificationsScreen} />
+          <Stack.Screen name="SmokeTest" component={SmokeTestScreen} />
+        </>
+      )}
+    </Stack.Navigator>
   );
 }

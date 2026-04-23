@@ -15,7 +15,7 @@ export type Json =
 // ============================================================
 export type ActivityType = 'new_post' | 'live_session' | 'camp_clinic' | 'recruiting_qa' | 'video_drop' | 'giveaway_promo' | 'athlete_spotlight' | 'announcement'
 export type ActivityVisibility = 'public' | 'followers_only' | 'private'
-export type AppRole = 'admin' | 'moderator' | 'user' | 'beta_tester' | 'influencer' | 'high_school_coach' | 'athlete' | 'coach' | 'scout' | 'parent' | 'club_coach'
+export type AppRole = 'admin' | 'moderator' | 'user' | 'beta_tester' | 'influencer' | 'high_school_coach' | 'athlete' | 'coach' | 'scout' | 'parent' | 'club_coach' | 'agency'
 export type AthleteVisibility = 'private' | 'team_only' | 'coaches_only' | 'public'
 export type CampaignStatus = 'draft' | 'active' | 'paused' | 'completed'
 export type CampaignTimeline = 'immediate' | 'this_season' | 'next_season' | 'transfer_window'
