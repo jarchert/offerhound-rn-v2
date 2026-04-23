@@ -77,12 +77,10 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
 
 function AthleteTabs() {
-  const { theme } = useTheme();
-  const bg = theme === 'dark' ? colors.background : colors.backgroundLight;
   return (
     <Tab.Navigator screenOptions={{
       headerShown: false,
-      tabBarStyle: { backgroundColor: bg, borderTopColor: colors.border },
+      tabBarStyle: { backgroundColor: colors.background, borderTopColor: colors.border },
       tabBarActiveTintColor: colors.primary,
       tabBarInactiveTintColor: colors.mutedForeground,
     }}>
@@ -95,12 +93,10 @@ function AthleteTabs() {
 }
 
 function CoachTabs() {
-  const { theme } = useTheme();
-  const bg = theme === 'dark' ? colors.background : colors.backgroundLight;
   return (
     <Tab.Navigator screenOptions={{
       headerShown: false,
-      tabBarStyle: { backgroundColor: bg, borderTopColor: colors.border },
+      tabBarStyle: { backgroundColor: colors.background, borderTopColor: colors.border },
       tabBarActiveTintColor: colors.primary,
       tabBarInactiveTintColor: colors.mutedForeground,
     }}>
