@@ -5,9 +5,9 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
 
 import AdminDashboard from '@/screens/admin/AdminDashboard';
+import AdminUsersScreen from '@/screens/admin/AdminUsersScreen';
 import { makePlaceholder } from '@/navigation/PlaceholderScreen';
 
-const AdminUsersScreen = makePlaceholder('User Management', 'Arrives in Session 8', 'FlashList for 1000+ rows at 60fps.');
 const AdminModerationScreen = makePlaceholder('Moderation', 'Arrives in Session 8', 'Camp moderation + community guidelines.');
 const AdminContentScreen = makePlaceholder('Content', 'Arrives in Session 8', 'Media center + influencers + podcasts + letter analytics.');
 const AdminAuditScreen = makePlaceholder('Audit Log', 'Arrives in Session 8', 'Full audit trail viewer.');
