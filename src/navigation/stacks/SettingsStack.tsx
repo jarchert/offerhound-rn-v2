@@ -6,10 +6,10 @@ import { colors } from '@/lib/theme';
 import SettingsScreen from '@/screens/shared/SettingsScreen';
 import NotificationsScreen from '@/screens/shared/NotificationsScreen';
 import DeleteAccountScreen from '@/screens/shared/DeleteAccountScreen';
+import PrivacySettingsScreen from '@/screens/shared/PrivacySettingsScreen';
 import { makePlaceholder } from '@/navigation/PlaceholderScreen';
 
 const FollowingSettingsScreen = makePlaceholder('Following Settings', 'Arrives in Session 8', 'Manage followed athletes, coaches, and camps.');
-const CookieSettingsScreen = makePlaceholder('Privacy Settings', 'Arrives in Session 9', 'ATT + analytics opt-in preferences.');
 
 export type SettingsStackParamList = {
   Settings: undefined;
@@ -31,7 +31,7 @@ export default function SettingsStack() {
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="NotificationSettings" component={NotificationsScreen} />
       <Stack.Screen name="FollowingSettings" component={FollowingSettingsScreen} />
-      <Stack.Screen name="CookieSettings" component={CookieSettingsScreen} />
+      <Stack.Screen name="CookieSettings" component={PrivacySettingsScreen} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
     </Stack.Navigator>
   );
