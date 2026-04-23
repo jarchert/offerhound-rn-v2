@@ -17,10 +17,10 @@ export default function LandingScreen() {
         <Text style={s.tagline}>Find your path. Get recruited.</Text>
       </View>
       <View style={s.actions}>
-        <Pressable style={s.primaryBtn} onPress={() => nav.navigate('SignUp')}>
+        <Pressable style={s.primaryBtn} onPress={() => nav.navigate('SignUp' as any)}>
           <Text style={s.primaryBtnText}>Get Started</Text>
         </Pressable>
-        <Pressable style={s.secondaryBtn} onPress={() => nav.navigate('SignIn')}>
+        <Pressable style={s.secondaryBtn} onPress={() => nav.navigate('SignIn' as any)}>
           <Text style={s.secondaryBtnText}>Sign In</Text>
         </Pressable>
       </View>

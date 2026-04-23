@@ -16,7 +16,7 @@ export function Navbar() {
     <View>
       <ImpersonationBanner />
       <View style={s.bar}>
-        <Pressable onPress={() => nav.navigate('MainTabs')} style={s.brand} hitSlop={8}>
+        <Pressable onPress={() => nav.navigate('AthleteTabs' as any)} style={s.brand} hitSlop={8}>
           <Text style={s.brandText}>OFFERHOUND</Text>
         </Pressable>
         <View style={s.actions}>
@@ -28,12 +28,12 @@ export function Navbar() {
               <Pressable onPress={() => nav.navigate('Messages')} hitSlop={8} style={s.iconBtn}>
                 <MessageSquare size={20} color={colors.foreground} />
               </Pressable>
-              <Pressable onPress={() => nav.navigate('Settings')} hitSlop={8} style={s.iconBtn}>
+              <Pressable onPress={() => nav.navigate('SettingsStack' as any)} hitSlop={8} style={s.iconBtn}>
                 <Menu size={20} color={colors.foreground} />
               </Pressable>
             </>
           ) : (
-            <Pressable onPress={() => nav.navigate('SignIn')} style={s.signInBtn}>
+            <Pressable onPress={() => nav.navigate('AuthStack' as any)} style={s.signInBtn}>
               <Text style={s.signInText}>Sign In</Text>
             </Pressable>
           )}

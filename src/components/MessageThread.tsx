@@ -2,7 +2,7 @@
 // read-receipt updates. Session 3 upgrade of the FlatList-based implementation.
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, FlashListRef } from '@shopify/flash-list';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,7 +20,7 @@ interface Message {
 export function MessageThread({ conversationId }: { conversationId: string }) {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const listRef = useRef<FlashList<Message>>(null);
+  const listRef = useRef<FlashListRef<Message> | null>(null);
 
   const { data: messages = [] } = useQuery({
     queryKey: ['messages', conversationId],
@@ -84,10 +84,9 @@ export function MessageThread({ conversationId }: { conversationId: string }) {
       style={s.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <FlashList
-        ref={listRef}
+        ref={listRef as any}
         data={messages}
         keyExtractor={(m) => m.id}
-        estimatedItemSize={72}
         contentContainerStyle={s.list}
         renderItem={({ item }) => {
           const isMine = item.sender_id === user?.id;

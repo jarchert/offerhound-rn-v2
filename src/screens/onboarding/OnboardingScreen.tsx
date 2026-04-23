@@ -29,7 +29,7 @@ export default function OnboardingScreen() {
     setLoading(true);
     await supabase.from('user_roles').upsert({ user_id: user.id, role: selectedRole });
     setLoading(false);
-    nav.navigate('MainTabs');
+    nav.navigate('AthleteTabs' as any);
   };
 
   return (

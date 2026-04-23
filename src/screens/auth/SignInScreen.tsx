@@ -47,7 +47,7 @@ export default function SignInScreen() {
           <Text style={s.socialBtnText}>Continue with Google</Text>
         </Pressable>
 
-        <Pressable onPress={() => nav.navigate('SignUp')} style={s.linkRow}>
+        <Pressable onPress={() => nav.navigate('SignUp' as any)} style={s.linkRow}>
           <Text style={s.link}>Don't have an account? Sign Up</Text>
         </Pressable>
       </ScrollView>

@@ -23,7 +23,7 @@ export default function SignUpScreen() {
     const { error } = await signUpWithEmail(email, password);
     setLoading(false);
     if (error) Alert.alert('Sign Up Failed', error.message);
-    else { Alert.alert('Account Created', 'Please check your email to confirm your account.'); nav.navigate('SignIn'); }
+    else { Alert.alert('Account Created', 'Please check your email to confirm your account.'); nav.navigate('SignIn' as any); }
   };
 
   return (
@@ -37,7 +37,7 @@ export default function SignUpScreen() {
         <Pressable style={s.primaryBtn} onPress={handleSignUp} disabled={loading}>
           {loading ? <ActivityIndicator color={colors.primaryForeground} /> : <Text style={s.primaryBtnText}>Create Account</Text>}
         </Pressable>
-        <Pressable onPress={() => nav.navigate('SignIn')} style={s.linkRow}>
+        <Pressable onPress={() => nav.navigate('SignIn' as any)} style={s.linkRow}>
           <Text style={s.link}>Already have an account? Sign In</Text>
         </Pressable>
       </ScrollView>

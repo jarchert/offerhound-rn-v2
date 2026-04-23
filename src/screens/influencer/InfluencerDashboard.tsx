@@ -32,11 +32,11 @@ export default function InfluencerDashboard() {
 
         <SectionHeader title="Quick actions" />
         <View style={s.actions}>
-          <Pressable style={s.action} onPress={() => nav.navigate('InfluencerBoard')}>
+          <Pressable style={s.action} onPress={() => nav.navigate('InfluencerBoard' as any)}>
             <Calendar size={18} color={colors.primary} />
             <Text style={s.actionText}>Influencer Board</Text>
           </Pressable>
-          <Pressable style={s.action} onPress={() => nav.navigate('Podcast')}>
+          <Pressable style={s.action} onPress={() => nav.navigate('Podcast' as any)}>
             <Mic size={18} color={colors.primary} />
             <Text style={s.actionText}>Podcast Library</Text>
           </Pressable>
