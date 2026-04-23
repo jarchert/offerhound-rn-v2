@@ -5,9 +5,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { colors } from '@/lib/theme';
 
 import CampsScreen from '@/screens/shared/CampsScreen';
+import CampDiscoveryScreen from '@/screens/shared/CampDiscoveryScreen';
 import { makePlaceholder } from '@/navigation/PlaceholderScreen';
 
-const CampDiscovery = makePlaceholder('Camp Discovery', 'Arrives in Session 6', 'Browse and discover camps.');
+const CampDiscovery = CampDiscoveryScreen;
 const ClaimCampSpot = makePlaceholder('Claim Camp Spot', 'Arrives in Session 6', 'Register for a camp.');
 const CampDetail = makePlaceholder('Camp Detail', 'Arrives in Session 6', 'Camp details + enrollment.');
 const CampLeaderboard = makePlaceholder('Camp Leaderboard', 'Arrives in Session 6', 'Live leaderboard during camp.');
