@@ -81,7 +81,9 @@
       ],
       "expo-secure-store",
       "expo-tracking-transparency",
-      "expo-asset"
+      "expo-asset",
+      "expo-image",
+      "expo-sharing"
     ],
     "extra": {
       "eas": {

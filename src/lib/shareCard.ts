@@ -26,7 +26,7 @@ export async function captureCardImage(
     quality: format === 'jpg' ? 0.92 : 1,
     result: 'tmpfile',
   });
-  const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+  const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' as any });
   return {
     uri,
     base64,
