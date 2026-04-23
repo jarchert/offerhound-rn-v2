@@ -30,7 +30,7 @@ export default function SportPickerScreen() {
   return (
     <ScrollView style={s.root} contentContainerStyle={s.content}>
       <View style={s.header}>
-        <Image source={require('../../assets/logo-wordmark.png')} style={s.logo} resizeMode="contain" />
+        <Image source={require('../../../assets/logo-wordmark.png')} style={s.logo} resizeMode="contain" />
         <Text style={s.eyebrow}>DISCOVER</Text>
         <Text style={s.title}>Pick your sport</Text>
         <Text style={s.subtitle}>

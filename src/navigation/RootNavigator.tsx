@@ -30,6 +30,7 @@ import PublicTabs from '@/navigation/stacks/PublicTabs';
 import ProfileScreen from '@/screens/shared/ProfileScreen';
 import MessagesScreen from '@/screens/shared/MessagesScreen';
 import NotificationsScreen from '@/screens/shared/NotificationsScreen';
+import LetterComposerScreen from '@/screens/shared/LetterComposerScreen';
 import SmokeTestScreen from '@/screens/dev/SmokeTestScreen';
 
 export type RootStackParamList = {
@@ -51,6 +52,7 @@ export type RootStackParamList = {
   Profile: { userId?: string };
   Messages: undefined;
   Notifications: undefined;
+  LetterComposer: { seed?: any } | undefined;
   SmokeTest: undefined;
 };
 
@@ -122,6 +124,11 @@ export default function RootNavigator() {
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="Messages" component={MessagesScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
+          <Stack.Screen
+            name="LetterComposer"
+            component={LetterComposerScreen}
+            options={{ presentation: 'modal' }}
+          />
           <Stack.Screen name="SmokeTest" component={SmokeTestScreen} />
         </>
       )}
