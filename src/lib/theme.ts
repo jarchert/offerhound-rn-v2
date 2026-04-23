@@ -158,6 +158,11 @@ export const typography = {
     h5: 18,
     h6: 16,
   },
+  lineHeight: {
+    tight: 1.2,
+    normal: 1.5,
+    relaxed: 1.75,
+  },
 };
 
 export const shadows = {

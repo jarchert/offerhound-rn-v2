@@ -72,7 +72,7 @@ export default function ProfileScreen() {
 
           <Button
             variant="outline"
-            onPress={() => nav.navigate('Settings')}
+            onPress={() => nav.navigate('SettingsStack' as any)}
             leftIcon={<Edit size={16} color={colors.foreground} />}
           >
             Edit Profile

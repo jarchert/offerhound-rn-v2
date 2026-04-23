@@ -29,7 +29,7 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={Bell}
             label="Notifications"
-            onPress={() => nav.navigate('Notifications')}
+            onPress={() => nav.navigate('Notifications' as any)}
           />
         </SettingsGroup>
 
@@ -40,11 +40,11 @@ export default function SettingsScreen() {
         </SettingsGroup>
 
         <SettingsGroup title="Account">
-          <SettingsRow icon={Trash2} label="Delete account" onPress={() => nav.navigate('DeleteAccount')} destructive />
+          <SettingsRow icon={Trash2} label="Delete account" onPress={() => nav.navigate('DeleteAccount' as any)} destructive />
           <SettingsRow icon={LogOut} label="Sign out" onPress={signOut} destructive />
         </SettingsGroup>
 
-        <Pressable style={s.smokeTest} onPress={() => nav.navigate('SmokeTest')}>
+        <Pressable style={s.smokeTest} onPress={() => nav.navigate('SmokeTest' as any)}>
           <Text style={s.smokeTestText}>Run Smoke Test →</Text>
         </Pressable>
 
