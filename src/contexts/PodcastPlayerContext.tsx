@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useRef, useCallback } from 'react';
-import { Audio } from 'expo-av';
+import { useAudioPlayer, AudioPlayer } from 'expo-audio';
 
 export interface InfluencerPodcastEpisode {
   id: string;
@@ -42,77 +42,64 @@ export function usePodcastPlayer() {
 }
 
 export function PodcastPlayerProvider({ children }: { children: React.ReactNode }) {
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const player = useAudioPlayer(null);
   const [state, setState] = useState<PodcastPlayerState>({
     currentEpisode: null, isPlaying: false, currentTime: 0,
     duration: 0, volume: 1, playbackRate: 1, isMinimized: true,
   });
 
-  const playEpisode = useCallback(async (episode: InfluencerPodcastEpisode, startPosition = 0) => {
-    if (soundRef.current) {
-      await soundRef.current.unloadAsync();
+  const playEpisode = useCallback(async (episode: InfluencerPodcastEpisode, _startPosition = 0) => {
+    try {
+      (player as any).replace?.({ uri: episode.audio_file_url });
+      player.play();
+      setState(prev => ({ ...prev, currentEpisode: episode, isPlaying: true, isMinimized: true }));
+    } catch (e) {
+      console.warn('[PodcastPlayer] play failed', e);
     }
-    const { sound } = await Audio.Sound.createAsync(
-      { uri: episode.audio_file_url },
-      { positionMillis: startPosition * 1000, shouldPlay: true, volume: state.volume, rate: state.playbackRate },
-      (status) => {
-        if (status.isLoaded) {
-          setState(prev => ({
-            ...prev,
-            currentTime: (status.positionMillis || 0) / 1000,
-            duration: (status.durationMillis || 0) / 1000,
-            isPlaying: status.isPlaying || false,
-          }));
-        }
-      }
-    );
-    soundRef.current = sound;
-    setState(prev => ({ ...prev, currentEpisode: episode, isPlaying: true, isMinimized: true }));
-  }, [state.volume, state.playbackRate]);
+  }, [player]);
 
-  const pause = useCallback(async () => {
-    await soundRef.current?.pauseAsync();
+  const pause = useCallback(() => {
+    player.pause();
     setState(prev => ({ ...prev, isPlaying: false }));
-  }, []);
+  }, [player]);
 
-  const resume = useCallback(async () => {
-    await soundRef.current?.playAsync();
+  const resume = useCallback(() => {
+    player.play();
     setState(prev => ({ ...prev, isPlaying: true }));
-  }, []);
+  }, [player]);
 
-  const seek = useCallback(async (time: number) => {
-    await soundRef.current?.setPositionAsync(time * 1000);
+  const seek = useCallback((time: number) => {
+    (player as any).seekTo?.(time);
     setState(prev => ({ ...prev, currentTime: time }));
-  }, []);
+  }, [player]);
 
-  const skipForward = useCallback(async (seconds = 15) => {
+  const skipForward = useCallback((seconds = 15) => {
     const newTime = Math.min(state.currentTime + seconds, state.duration);
-    await soundRef.current?.setPositionAsync(newTime * 1000);
-  }, [state.currentTime, state.duration]);
+    (player as any).seekTo?.(newTime);
+  }, [player, state.currentTime, state.duration]);
 
-  const skipBackward = useCallback(async (seconds = 15) => {
+  const skipBackward = useCallback((seconds = 15) => {
     const newTime = Math.max(state.currentTime - seconds, 0);
-    await soundRef.current?.setPositionAsync(newTime * 1000);
-  }, [state.currentTime]);
+    (player as any).seekTo?.(newTime);
+  }, [player, state.currentTime]);
 
-  const setVolume = useCallback(async (v: number) => {
-    await soundRef.current?.setVolumeAsync(v);
+  const setVolume = useCallback((v: number) => {
+    player.volume = v;
     setState(prev => ({ ...prev, volume: v }));
-  }, []);
+  }, [player]);
 
-  const setPlaybackRate = useCallback(async (r: number) => {
-    await soundRef.current?.setRateAsync(r, true);
+  const setPlaybackRate = useCallback((r: number) => {
+    player.rate = r;
     setState(prev => ({ ...prev, playbackRate: r }));
-  }, []);
+  }, [player]);
 
   const toggleMinimized = useCallback(() => setState(prev => ({ ...prev, isMinimized: !prev.isMinimized })), []);
 
-  const closePlayer = useCallback(async () => {
-    await soundRef.current?.stopAsync();
-    await soundRef.current?.unloadAsync();
-    soundRef.current = null;
+  const closePlayer = useCallback(() => {
+    player.pause();
+    (player as any).replace?.(null);
     setState(prev => ({ ...prev, currentEpisode: null, isPlaying: false, currentTime: 0, duration: 0 }));
-  }, []);
+  }, [player]);
 
   return (
     <PodcastPlayerContext.Provider value={{ ...state, playEpisode, pause, resume, seek, skipForward, skipBackward, setVolume, setPlaybackRate, toggleMinimized, closePlayer }}>
