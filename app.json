@@ -111,7 +111,9 @@
       "expo-image",
       "expo-sharing",
       "expo-splash-screen",
-      "./plugins/with-app-clip"
+      "./plugins/with-app-clip",
+      "./plugins/with-widgets",
+      "./plugins/with-live-activities"
     ],
     "extra": {
       "eas": {

@@ -1,0 +1,41 @@
+{
+  "_comment": "Serve this file at https://offerhound.app/.well-known/apple-app-site-association AND https://www.offerhound.app/.well-known/apple-app-site-association with Content-Type: application/json, no extension, no redirects, HTTPS only. Apple's CDN will fetch and cache it. Use https://branch.io/resources/aasa-validator/ to verify.",
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["8MG7GFDJ62.com.emergentmindlab.offerhoundv2"],
+        "components": [
+          { "/": "/*" }
+        ]
+      }
+    ]
+  },
+  "appclips": {
+    "apps": [
+      "8MG7GFDJ62.com.emergentmindlab.offerhoundv2.Clip"
+    ],
+    "details": [
+      {
+        "appID": "8MG7GFDJ62.com.emergentmindlab.offerhoundv2.Clip",
+        "components": [
+          { "/": "/football", "comment": "Football landing" },
+          { "/": "/basketball", "comment": "Basketball landing" },
+          { "/": "/track-field", "comment": "Track & Field landing" },
+          { "/": "/soccer", "comment": "Soccer landing" },
+          { "/": "/baseball", "comment": "Baseball landing" },
+          { "/": "/lacrosse", "comment": "Lacrosse landing" },
+          { "/": "/golf", "comment": "Golf landing" },
+          { "/": "/volleyball", "comment": "Volleyball landing" },
+          { "/": "/swimming", "comment": "Swimming landing" },
+          { "/": "/softball", "comment": "Softball landing" },
+          { "/": "/hockey", "comment": "Hockey landing" },
+          { "/": "/cheerleading", "comment": "Cheerleading landing" },
+          { "/": "/wrestling", "comment": "Wrestling landing" }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["8MG7GFDJ62.com.emergentmindlab.offerhoundv2"]
+  }
+}
