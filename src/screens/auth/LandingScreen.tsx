@@ -32,7 +32,7 @@ import { ViewerTypeSelector, ViewerType } from '@/components/landing/ViewerTypeS
 import { FounderRibbon } from '@/components/landing/FounderRibbon';
 import { LandingHeroContent } from '@/components/landing/LandingHeroContent';
 import { LandingFeatures } from '@/components/landing/LandingFeatures';
-import { AIUseCasesSection } from '@/components/landing/AIUseCasesSection';
+import { AIUseCasesSection } from '@/components/AIUseCasesSection';
 
 const VIEWER_STORAGE_KEY = 'offerhound_viewer_type';
 const { width: SCREEN_W } = Dimensions.get('window');
