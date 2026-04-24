@@ -1,22 +1,50 @@
-// TODO(session4): Port full implementation from Ch.13 of the conversion guide.
-// This is a minimal scaffold so the bundle compiles.
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, typography, spacing } from '@/lib/theme';
+import { WifiOff } from "lucide-react-native";
+import { memo } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { useNetInfo } from "@react-native-community/netinfo";
 
-export function OfflineBanner(_props: any) {
+interface OfflineBannerProps {
+  isOfflineData?: boolean;
+}
+
+// Memoize to prevent unnecessary re-renders
+export const OfflineBanner = memo(({ isOfflineData }: OfflineBannerProps) => {
+  const netInfo = useNetInfo();
+  const isOffline = netInfo.isConnected === false;
+  const show = isOfflineData || isOffline;
+
+  if (!show) return null;
+
   return (
-    <View style={s.container}>
-      <Text style={s.text}>[OfflineBanner]</Text>
-      <Text style={s.hint}>Scaffold — port from Ch.13</Text>
+    <View style={styles.alert}>
+      <WifiOff size={16} color="#f59e0b" style={styles.icon} />
+      <Text style={styles.description}>
+        You're viewing cached data. Some features may be limited while offline.
+      </Text>
     </View>
   );
-}
+});
+
+OfflineBanner.displayName = 'OfflineBanner';
 
 export default OfflineBanner;
 
-const s = StyleSheet.create({
-  container: { padding: spacing.md, backgroundColor: colors.muted, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
-  text: { fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, fontSize: typography.fontSize.sm },
-  hint: { fontFamily: typography.fontFamily.body, color: colors.mutedForeground, fontSize: typography.fontSize.xs, marginTop: 2 },
+const styles = StyleSheet.create({
+  alert: {
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.5)',
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  icon: {
+    marginRight: 8,
+  },
+  description: {
+    color: '#f59e0b',
+    flex: 1,
+  },
 });
