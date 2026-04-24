@@ -1,22 +1,42 @@
-// TODO(session4): Port full implementation from Ch.13 of the conversion guide.
-// This is a minimal scaffold so the bundle compiles.
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, typography, spacing } from '@/lib/theme';
+import { useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { SEOAuditPanel } from './SEOAuditPanel';
+import { Search } from 'lucide-react-native';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/Tooltip';
+import { useAdminRole } from '@/hooks/useAdminRole';
 
-export function SEOAuditButton(_props: any) {
+/**
+ * SEO Audit Button - Floating button that opens the SEO audit panel
+ * Only visible to admin users
+ */
+export function SEOAuditButton() {
+  const [isOpen, setIsOpen] = useState(false);
+  const { isAdmin, loading } = useAdminRole();
+
+  // Only show for admin users
+  if (loading || !isAdmin) {
+    return null;
+  }
+
   return (
-    <View style={s.container}>
-      <Text style={s.text}>[SEOAuditButton]</Text>
-      <Text style={s.hint}>Scaffold — port from Ch.13</Text>
-    </View>
+    <>
+      {!isOpen && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              onClick={() => setIsOpen(true)}
+              className="fixed bottom-4 right-4 h-12 w-12 rounded-full shadow-lg z-40"
+              size="icon"
+            >
+              <Search className="h-5 w-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="left">
+            <p>SEO Audit</p>
+          </TooltipContent>
+        </Tooltip>
+      )}
+      <SEOAuditPanel isOpen={isOpen} onClose={() => setIsOpen(false)} />
+    </>
   );
 }
-
-export default SEOAuditButton;
-
-const s = StyleSheet.create({
-  container: { padding: spacing.md, backgroundColor: colors.muted, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
-  text: { fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, fontSize: typography.fontSize.sm },
-  hint: { fontFamily: typography.fontFamily.body, color: colors.mutedForeground, fontSize: typography.fontSize.xs, marginTop: 2 },
-});
