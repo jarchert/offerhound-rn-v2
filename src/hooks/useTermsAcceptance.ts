@@ -31,3 +31,9 @@ export function useAcceptTerms() {
     },
   });
 }
+
+// Ported verbatim from Lovable (offerhound-repo/src/hooks/useTermsAcceptance.ts)
+export function getCurrentTermsVersion() {
+  // This is now deprecated - use useActiveTermsVersion hook instead
+  return "1.0";
+}
