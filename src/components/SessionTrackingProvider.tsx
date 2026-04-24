@@ -1,22 +1,17 @@
-// TODO(session4): Port full implementation from Ch.13 of the conversion guide.
-// This is a minimal scaffold so the bundle compiles.
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, typography, spacing } from '@/lib/theme';
+import { useEffect } from "react";
+import { useSessionTracking, setGlobalTracker } from "@/hooks/useSessionTracking";
 
-export function SessionTrackingProvider(_props: any) {
-  return (
-    <View style={s.container}>
-      <Text style={s.text}>[SessionTrackingProvider]</Text>
-      <Text style={s.hint}>Scaffold — port from Ch.13</Text>
-    </View>
-  );
+interface SessionTrackingProviderProps {
+  children: React.ReactNode;
 }
 
-export default SessionTrackingProvider;
+export function SessionTrackingProvider({ children }: SessionTrackingProviderProps) {
+  const { trackEvent } = useSessionTracking();
 
-const s = StyleSheet.create({
-  container: { padding: spacing.md, backgroundColor: colors.muted, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
-  text: { fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, fontSize: typography.fontSize.sm },
-  hint: { fontFamily: typography.fontFamily.body, color: colors.mutedForeground, fontSize: typography.fontSize.xs, marginTop: 2 },
-});
+  // Set the global tracker for use outside of React components
+  useEffect(() => {
+    setGlobalTracker(trackEvent);
+  }, [trackEvent]);
+
+  return <>{children}</>;
+}
