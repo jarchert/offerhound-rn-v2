@@ -14,6 +14,28 @@ export interface TermsVersion {
   activated_at: string | null;
 }
 
+// Fetch the current active terms version
+export function useActiveTermsVersion() {
+  return useQuery({
+    queryKey: ["active-terms-version"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("terms_versions")
+        .select("*")
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error fetching active terms version:", error);
+        // Fall back to default version
+        return { version: "1.0", id: null } as unknown as Partial<TermsVersion>;
+      }
+
+      return data as TermsVersion | null;
+    },
+  });
+}
+
 // Admin: Fetch all terms versions
 export function useTermsVersions() {
   return useQuery({

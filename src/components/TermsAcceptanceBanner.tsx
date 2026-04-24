@@ -1,22 +1,84 @@
-// TODO(session4): Port full implementation from Ch.13 of the conversion guide.
-// This is a minimal scaffold so the bundle compiles.
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, typography, spacing } from '@/lib/theme';
+import { View, Text, StyleSheet } from "react-native";
+import { useNavigation, NavigationProp } from "@react-navigation/native";
+import { AlertTriangle } from "lucide-react-native";
+import { Button } from "@/components/ui/Button";
+import { useHasAcceptedTerms, useActiveTermsVersion } from "@/hooks/useTermsAcceptance";
+import { colors, spacing, radius, typography, shadows } from "@/lib/theme";
 
-export function TermsAcceptanceBanner(_props: any) {
+export function TermsAcceptanceBanner() {
+  const nav = useNavigation<NavigationProp<any>>();
+  const { hasAccepted, isLoading: acceptanceLoading } = useHasAcceptedTerms();
+  const { data: activeTerms, isLoading: termsLoading } = useActiveTermsVersion();
+
+  // Don't show banner while loading or if there's no active terms version
+  if (acceptanceLoading || termsLoading || !activeTerms) {
+    return null;
+  }
+
+  // User has already accepted the latest terms
+  if (hasAccepted) {
+    return null;
+  }
+
   return (
-    <View style={s.container}>
-      <Text style={s.text}>[TermsAcceptanceBanner]</Text>
-      <Text style={s.hint}>Scaffold — port from Ch.13</Text>
+    <View style={styles.banner}>
+      <View style={styles.row}>
+        <View style={styles.left}>
+          <AlertTriangle size={20} color="#451a03" style={styles.icon} />
+          <Text style={styles.message}>
+            Our Terms of Use have been updated (v{activeTerms.version}). Please review and accept to continue using all features.
+          </Text>
+        </View>
+        <Button
+          size="sm"
+          variant="outline"
+          onPress={() => nav.navigate("Terms" as any)}
+          style={styles.button}
+          textStyle={styles.buttonText}
+        >
+          Review Terms
+        </Button>
+      </View>
     </View>
   );
 }
 
-export default TermsAcceptanceBanner;
-
-const s = StyleSheet.create({
-  container: { padding: spacing.md, backgroundColor: colors.muted, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
-  text: { fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, fontSize: typography.fontSize.sm },
-  hint: { fontFamily: typography.fontFamily.body, color: colors.mutedForeground, fontSize: typography.fontSize.xs, marginTop: 2 },
+// bg-amber-500/90 → rgba(245,158,11,0.9); text-amber-950 → #451a03; border-amber-600 → #d97706
+const styles = StyleSheet.create({
+  banner: {
+    backgroundColor: "rgba(245, 158, 11, 0.9)",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 4, // py-3 ≈ 12px
+    borderRadius: radius.lg,
+    ...shadows.subtle,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+  },
+  left: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm + 4, // gap-3 ≈ 12px
+    flexShrink: 1,
+  },
+  icon: {
+    flexShrink: 0,
+  },
+  message: {
+    flexShrink: 1,
+    color: "#451a03",
+    fontSize: typography.size.sm,
+    fontFamily: typography.fontFamily.bodyMedium,
+  },
+  button: {
+    flexShrink: 0,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    borderColor: "#d97706",
+  },
+  buttonText: {
+    color: "#451a03",
+  },
 });
