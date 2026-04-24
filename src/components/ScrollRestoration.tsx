@@ -1,22 +1,32 @@
-// TODO(session4): Port full implementation from Ch.13 of the conversion guide.
-// This is a minimal scaffold so the bundle compiles.
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, typography, spacing } from '@/lib/theme';
+import { useEffect } from "react";
+import { useNavigationState } from "@react-navigation/native";
 
-export function ScrollRestoration(_props: any) {
-  return (
-    <View style={s.container}>
-      <Text style={s.text}>[ScrollRestoration]</Text>
-      <Text style={s.hint}>Scaffold — port from Ch.13</Text>
-    </View>
-  );
+/**
+ * Scrolls to the top of the page on route changes.
+ * Respects location.state.scrollTo for anchor navigation.
+ *
+ * RN PARITY NOTE:
+ * On web, this called `window.scrollTo(0, 0)` on every route change.
+ * React Native has no global scroll position — scrolling is per-ScrollView/FlatList.
+ * In RN, each screen is unmounted/remounted (or kept in its own stack frame) by
+ * React Navigation, so per-screen scroll state is already handled by the
+ * navigator. Individual screens that need to reset scroll on focus should use
+ * `useScrollToTop` from `@react-navigation/native` on their own ScrollView ref.
+ *
+ * This component is therefore a no-op wrapper, kept for structural parity with
+ * the Lovable web app so call sites (e.g. App.tsx) don't need to change.
+ * We still subscribe to navigation state so the effect fires on route change,
+ * mirroring the original `useLocation()` dependency, in case future per-screen
+ * logic wants to hook in here.
+ */
+export function ScrollRestoration() {
+  // Mirror web's `useLocation()` — re-run effect on route change.
+  const routeKey = useNavigationState((state) => state?.routes?.[state.index]?.key ?? null);
+
+  useEffect(() => {
+    // No-op in RN: scroll position is owned per-ScrollView, not globally.
+    // See component docblock for rationale.
+  }, [routeKey]);
+
+  return null;
 }
-
-export default ScrollRestoration;
-
-const s = StyleSheet.create({
-  container: { padding: spacing.md, backgroundColor: colors.muted, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
-  text: { fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, fontSize: typography.fontSize.sm },
-  hint: { fontFamily: typography.fontFamily.body, color: colors.mutedForeground, fontSize: typography.fontSize.xs, marginTop: 2 },
-});
