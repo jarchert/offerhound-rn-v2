@@ -25,6 +25,7 @@ import CampStack from '@/navigation/stacks/CampStack';
 import SettingsStack from '@/navigation/stacks/SettingsStack';
 import PublicProfileStack from '@/navigation/stacks/PublicProfileStack';
 import PublicTabs from '@/navigation/stacks/PublicTabs';
+import PublicSportStack from '@/navigation/stacks/PublicSportStack';
 
 // Shared screens accessed from any role
 import ProfileScreen from '@/screens/shared/ProfileScreen';
@@ -36,6 +37,7 @@ import SmokeTestScreen from '@/screens/dev/SmokeTestScreen';
 
 export type RootStackParamList = {
   PublicTabs: undefined;
+  PublicSportStack: undefined;
   AuthStack: undefined;
   OnboardingStack: undefined;
   AthleteTabs: undefined;
@@ -99,6 +101,7 @@ export default function RootNavigator() {
       {!user ? (
         <>
           <Stack.Screen name="PublicTabs" component={PublicTabs} />
+          <Stack.Screen name="PublicSportStack" component={PublicSportStack} />
           <Stack.Screen name="AuthStack" component={AuthStack} />
           <Stack.Screen name="PublicProfileStack" component={PublicProfileStack} />
           <Stack.Screen name="CampStack" component={CampStack} />
@@ -121,6 +124,7 @@ export default function RootNavigator() {
           <Stack.Screen name="CampStack" component={CampStack} />
           <Stack.Screen name="SettingsStack" component={SettingsStack} />
           <Stack.Screen name="PublicProfileStack" component={PublicProfileStack} />
+          <Stack.Screen name="PublicSportStack" component={PublicSportStack} />
 
           {/* Cross-cutting modals / shared screens */}
           <Stack.Screen name="Profile" component={ProfileScreen} />

@@ -26,6 +26,25 @@ export const linking: LinkingOptions<any> = {
         },
       },
 
+      // 13 discrete sport landing routes (deep-link parity with Lovable)
+      PublicSportStack: {
+        screens: {
+          SportLanding_football: 'football',
+          SportLanding_basketball: 'basketball',
+          SportLanding_soccer: 'soccer',
+          SportLanding_baseball: 'baseball',
+          SportLanding_softball: 'softball',
+          SportLanding_volleyball: 'volleyball',
+          SportLanding_lacrosse: 'lacrosse',
+          SportLanding_hockey: 'hockey',
+          SportLanding_swimming: 'swimming',
+          SportLanding_golf: 'golf',
+          SportLanding_trackfield: 'track-field',
+          SportLanding_cheerleading: 'cheerleading',
+          SportLanding_wrestling: 'wrestling',
+        },
+      },
+
       // Auth stack
       AuthStack: {
         screens: {
