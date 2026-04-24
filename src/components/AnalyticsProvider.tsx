@@ -1,22 +1,76 @@
-// TODO(session4): Port full implementation from Ch.13 of the conversion guide.
-// This is a minimal scaffold so the bundle compiles.
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, typography, spacing } from '@/lib/theme';
+// React Native port of Lovable's AnalyticsProvider.
+// Verbatim semantics preserved:
+//   - Initialize consent-aware analytics with optional IDs.
+//   - Fire trackPageView on every route change.
+// Web → RN adaptations:
+//   - react-router-dom `useLocation().pathname + search`
+//       → @react-navigation/native `useNavigationState` current route name + params.
+//   - JSX fragment wrapper preserved.
+// Documented gap: there is no "search" string in RN navigation; we serialize route params
+//   as a query-like suffix so the tracked value stays informative.
+import { useEffect } from "react";
+import { useNavigationState } from "@react-navigation/native";
+import {
+  useConsentAwareAnalytics,
+  trackPageView,
+} from "@/hooks/useConsentAwareAnalytics";
 
-export function AnalyticsProvider(_props: any) {
-  return (
-    <View style={s.container}>
-      <Text style={s.text}>[AnalyticsProvider]</Text>
-      <Text style={s.hint}>Scaffold — port from Ch.13</Text>
-    </View>
-  );
+interface AnalyticsProviderProps {
+  googleAnalyticsId?: string;
+  facebookPixelId?: string;
+  children: React.ReactNode;
+}
+
+function getCurrentPath(
+  state: ReturnType<typeof useNavigationState> | undefined,
+): string {
+  if (!state) return "/";
+  try {
+    const route = state.routes[state.index];
+    if (!route) return "/";
+    const name = route.name || "/";
+    const params = (route as any).params as Record<string, unknown> | undefined;
+    if (params && Object.keys(params).length > 0) {
+      try {
+        const qs = Object.entries(params)
+          .map(
+            ([k, v]) =>
+              `${encodeURIComponent(k)}=${encodeURIComponent(
+                typeof v === "string" ? v : JSON.stringify(v),
+              )}`,
+          )
+          .join("&");
+        return `/${name}?${qs}`;
+      } catch {
+        return `/${name}`;
+      }
+    }
+    return `/${name}`;
+  } catch {
+    return "/";
+  }
+}
+
+export function AnalyticsProvider({
+  googleAnalyticsId,
+  facebookPixelId,
+  children,
+}: AnalyticsProviderProps) {
+  // In RN the navigation state may be undefined outside a NavigationContainer.
+  const navState = useNavigationState((s) => s);
+
+  // Initialize analytics with consent checking
+  useConsentAwareAnalytics({
+    googleAnalyticsId,
+    facebookPixelId,
+  });
+
+  // Track page views on route changes
+  useEffect(() => {
+    trackPageView(getCurrentPath(navState));
+  }, [navState]);
+
+  return <>{children}</>;
 }
 
 export default AnalyticsProvider;
-
-const s = StyleSheet.create({
-  container: { padding: spacing.md, backgroundColor: colors.muted, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
-  text: { fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, fontSize: typography.fontSize.sm },
-  hint: { fontFamily: typography.fontFamily.body, color: colors.mutedForeground, fontSize: typography.fontSize.xs, marginTop: 2 },
-});
