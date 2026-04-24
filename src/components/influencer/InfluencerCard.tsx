@@ -1,22 +1,28 @@
-// TODO(session4): Port full implementation from Ch.13 of the conversion guide.
-// This is a minimal scaffold so the bundle compiles.
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, typography, spacing } from '@/lib/theme';
+import { InfluencerMatchCard } from '@/components/influencer/InfluencerMatchCard';
 
-export function InfluencerCard(_props: any) {
+/**
+ * Thin wrapper preserved for backward compatibility.
+ * All influencer contact rendering now uses the unified
+ * `InfluencerMatchCard` to match the platform-wide card style.
+ */
+export const InfluencerCard = ({
+  influencer,
+  snapshot,
+  showRank,
+}: {
+  influencer: any;
+  snapshot?: any;
+  showRank?: boolean;
+}) => {
   return (
-    <View style={s.container}>
-      <Text style={s.text}>[InfluencerCard]</Text>
-      <Text style={s.hint}>Scaffold — port from Ch.13</Text>
-    </View>
+    <InfluencerMatchCard
+      influencer={influencer}
+      snapshot={snapshot}
+      showRank={showRank}
+      variant="full"
+    />
   );
-}
+};
 
 export default InfluencerCard;
-
-const s = StyleSheet.create({
-  container: { padding: spacing.md, backgroundColor: colors.muted, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
-  text: { fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, fontSize: typography.fontSize.sm },
-  hint: { fontFamily: typography.fontFamily.body, color: colors.mutedForeground, fontSize: typography.fontSize.xs, marginTop: 2 },
-});
