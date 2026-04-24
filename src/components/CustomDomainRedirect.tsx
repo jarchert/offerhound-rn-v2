@@ -1,22 +1,15 @@
-// TODO(session4): Port full implementation from Ch.13 of the conversion guide.
-// This is a minimal scaffold so the bundle compiles.
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, typography, spacing } from '@/lib/theme';
+import React from "react";
 
-export function CustomDomainRedirect(_props: any) {
-  return (
-    <View style={s.container}>
-      <Text style={s.text}>[CustomDomainRedirect]</Text>
-      <Text style={s.hint}>Scaffold — port from Ch.13</Text>
-    </View>
-  );
-}
+// RN PARITY NO-OP:
+// The web version of this component (Lovable) inspects `window.location.hostname`
+// to redirect custom domains (e.g. aiziahthomas.com) to the athlete's
+// public profile route (`/p/:customUrl`). React Native apps do not have a
+// hostname / custom-domain concept — the app is opened by bundle id, not by URL —
+// so the entire custom-domain redirect mechanism is web-only and has no
+// equivalent here. We render children directly.
+//
+// Source: src/components/CustomDomainRedirect.tsx (Lovable)
 
-export default CustomDomainRedirect;
-
-const s = StyleSheet.create({
-  container: { padding: spacing.md, backgroundColor: colors.muted, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
-  text: { fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, fontSize: typography.fontSize.sm },
-  hint: { fontFamily: typography.fontFamily.body, color: colors.mutedForeground, fontSize: typography.fontSize.xs, marginTop: 2 },
-});
+export const CustomDomainRedirect = ({ children }: { children: React.ReactNode }) => {
+  return <>{children}</>;
+};
