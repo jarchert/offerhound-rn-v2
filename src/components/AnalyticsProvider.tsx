@@ -22,11 +22,11 @@ interface AnalyticsProviderProps {
 }
 
 function getCurrentPath(
-  state: ReturnType<typeof useNavigationState> | undefined,
+  state: any,
 ): string {
   if (!state) return "/";
   try {
-    const route = state.routes[state.index];
+    const route = state.routes?.[state.index];
     if (!route) return "/";
     const name = route.name || "/";
     const params = (route as any).params as Record<string, unknown> | undefined;
