@@ -1,19 +1,58 @@
 // Ported verbatim from Lovable src/components/AdminCampModeration.tsx
-// Mapping: shadcn Table -> FlashList rows; AlertDialog -> Dialog modal; sonner -> toast wrapper; lucide-react -> lucide-react-native.
+// Web → RN mapping:
+//   - Tailwind classes → StyleSheet using @/lib/theme tokens
+//   - shadcn/ui imports → @/components/ui/* (PascalCase)
+//   - lucide-react → lucide-react-native
+//   - <Table> → RN View-based rows (no shadcn Table primitive in RN port)
+//   - <AlertDialog> → <Dialog> from @/components/ui/Dialog (AlertDialog not ported;
+//     Dialog provides equivalent modal confirm UX)
+//   - asChild <a> wrapping a Button → Pressable + Linking.openURL
+//   - sonner toast → @/components/ui/toast (react-native-toast-message wrapper)
+//   - input onChange(e.target.value) → onChangeText(text)
+//   - peer-disabled / cursor-* utility classes are no-ops in RN
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Linking, useWindowDimensions } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  ActivityIndicator,
+  ScrollView,
+  Linking,
+} from 'react-native';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Label } from '@/components/ui/Label';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
-import { toast } from '@/components/ui/toast';
-import { Calendar, CheckCircle, XCircle, Search, ExternalLink, MapPin, Bell } from 'lucide-react-native';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/Dialog';
+import {
+  Calendar,
+  CheckCircle,
+  XCircle,
+  Search,
+  Loader2,
+  ExternalLink,
+  MapPin,
+  Bell,
+} from 'lucide-react-native';
 import { format } from 'date-fns';
+import { toast } from '@/components/ui/toast';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
 interface Camp {
@@ -47,18 +86,20 @@ export function AdminCampModeration() {
   const [subscriberCount, setSubscriberCount] = useState<number | null>(null);
   const [loadingSubscriberCount, setLoadingSubscriberCount] = useState(false);
 
-  const { width } = useWindowDimensions();
-  const isWide = width >= 640;
-
   const fetchCamps = async () => {
     try {
       setIsLoading(true);
-      let query = supabase.from('college_camps').select('*').order('created_at', { ascending: false });
+      let query = supabase
+        .from('college_camps')
+        .select('*')
+        .order('created_at', { ascending: false });
+
       if (filter === 'pending') {
         query = query.eq('is_verified', false).not('submitted_by', 'is', null);
       } else if (filter === 'verified') {
         query = query.eq('is_verified', true);
       }
+
       const { data, error } = await query;
       if (error) throw error;
       setCamps((data as Camp[]) || []);
@@ -78,25 +119,38 @@ export function AdminCampModeration() {
   const sendCampAlertNotifications = async (camp: Camp) => {
     try {
       setSendingNotifications(true);
-      const location = camp.city && camp.state ? `${camp.city}, ${camp.state}` : camp.location || undefined;
-      const { data, error } = await supabase.functions.invoke('send-camp-alert-notification', {
-        body: {
-          campId: camp.id,
-          campName: camp.name,
-          school: camp.school,
-          sport: camp.sport,
-          startDate: camp.start_date,
-          location,
-          registrationUrl: camp.registration_url,
+      const location =
+        camp.city && camp.state
+          ? `${camp.city}, ${camp.state}`
+          : camp.location || undefined;
+
+      const { data, error } = await supabase.functions.invoke(
+        'send-camp-alert-notification',
+        {
+          body: {
+            campId: camp.id,
+            campName: camp.name,
+            school: camp.school,
+            sport: camp.sport,
+            startDate: camp.start_date,
+            location,
+            registrationUrl: camp.registration_url,
+          },
         },
-      });
+      );
+
       if (error) {
         console.error('Error sending camp alert notifications:', error);
         toast.error('Camp verified but failed to send notifications');
       } else if (data) {
-        const { successCount, totalSubscribers } = data as { successCount: number; totalSubscribers: number };
+        const { successCount, totalSubscribers } = data as {
+          successCount: number;
+          totalSubscribers: number;
+        };
         if (totalSubscribers > 0) {
-          toast.success(`Notifications sent to ${successCount} ${camp.sport} subscribers`);
+          toast.success(
+            `Notifications sent to ${successCount} ${camp.sport} subscribers`,
+          );
         }
       }
     } catch (err) {
@@ -109,13 +163,22 @@ export function AdminCampModeration() {
   const handleVerify = async () => {
     if (!actionCamp) return;
     setIsProcessing(true);
+
     try {
-      const { error } = await supabase.from('college_camps').update({ is_verified: true }).eq('id', actionCamp.id);
+      const { error } = await supabase
+        .from('college_camps')
+        .update({ is_verified: true })
+        .eq('id', actionCamp.id);
+
       if (error) throw error;
+
       toast.success(`"${actionCamp.name}" has been verified`);
+
+      // Send notifications to subscribers of this sport (if enabled)
       if (shouldNotify) {
         await sendCampAlertNotifications(actionCamp);
       }
+
       await fetchCamps();
     } catch (err) {
       console.error('Error verifying camp:', err);
@@ -124,17 +187,23 @@ export function AdminCampModeration() {
       setIsProcessing(false);
       setActionCamp(null);
       setActionType(null);
-      setShouldNotify(true);
-      setSubscriberCount(null);
+      setShouldNotify(true); // Reset for next time
+      setSubscriberCount(null); // Reset subscriber count
     }
   };
 
   const handleReject = async () => {
     if (!actionCamp) return;
     setIsProcessing(true);
+
     try {
-      const { error } = await supabase.from('college_camps').delete().eq('id', actionCamp.id);
+      const { error } = await supabase
+        .from('college_camps')
+        .delete()
+        .eq('id', actionCamp.id);
+
       if (error) throw error;
+
       toast.success(`"${actionCamp.name}" has been rejected and removed`);
       await fetchCamps();
     } catch (err) {
@@ -175,42 +244,59 @@ export function AdminCampModeration() {
     }
   };
 
-return (
+  return (
     <Card>
       <CardHeader>
         <View style={s.titleRow}>
-          <Calendar size={20} color={colors.foreground} />
-          <CardTitle style={s.titleText}>Camp Moderation</CardTitle>
-          {pendingCount > 0 ? (
-            <View style={s.titleBadge}>
-              <Badge variant="destructive">{`${pendingCount} pending`}</Badge>
-            </View>
-          ) : null}
+          <Calendar width={20} height={20} color={colors.foreground} />
+          <CardTitle>Camp Moderation</CardTitle>
+          {pendingCount > 0 && (
+            <Badge variant="destructive" style={s.titleBadge}>
+              {pendingCount} pending
+            </Badge>
+          )}
         </View>
-        <CardDescription>Review and verify community-submitted camps</CardDescription>
+        <CardDescription>
+          Review and verify community-submitted camps
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <View style={[s.filtersRow, isWide ? s.filtersRowWide : s.filtersRowNarrow]}>
+        <View style={s.controlsRow}>
           <View style={s.searchWrap}>
             <View style={s.searchIcon} pointerEvents="none">
-              <Search size={16} color={colors.mutedForeground} />
+              <Search width={16} height={16} color={colors.mutedForeground} />
             </View>
             <Input
               placeholder="Search camps..."
               value={searchQuery}
-              onChangeText={setSearchQuery}
-              containerStyle={s.searchInputContainer}
+              onChangeText={(text) => setSearchQuery(text)}
               style={s.searchInput}
             />
           </View>
-          <View style={s.filterButtons}>
-            <Button variant={filter === 'pending' ? 'default' : 'outline'} size="sm" onPress={() => setFilter('pending')}>Pending</Button>
-            <Button variant={filter === 'verified' ? 'default' : 'outline'} size="sm" onPress={() => setFilter('verified')}>Verified</Button>
-            <Button variant={filter === 'all' ? 'default' : 'outline'} size="sm" onPress={() => setFilter('all')}>All</Button>
+          <View style={s.filterRow}>
+            <Button
+              variant={filter === 'pending' ? 'default' : 'outline'}
+              size="sm"
+              onPress={() => setFilter('pending')}
+            >
+              Pending
+            </Button>
+            <Button
+              variant={filter === 'verified' ? 'default' : 'outline'}
+              size="sm"
+              onPress={() => setFilter('verified')}
+            >
+              Verified
+            </Button>
+            <Button
+              variant={filter === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onPress={() => setFilter('all')}
+            >
+              All
+            </Button>
           </View>
         </View>
-
-        <View style={s.bodyGap} />
 
         {isLoading ? (
           <View style={s.loadingWrap}>
@@ -218,20 +304,120 @@ return (
           </View>
         ) : filteredCamps.length === 0 ? (
           <View style={s.emptyWrap}>
-            <Calendar size={48} color={colors.mutedForeground} />
+            <Calendar width={48} height={48} color={colors.mutedForeground} style={s.emptyIcon} />
             <Text style={s.emptyText}>No camps found</Text>
           </View>
         ) : (
-          <CampTable
-            camps={filteredCamps}
-            onVerify={onClickVerify}
-            onReject={(c) => { setActionCamp(c); setActionType('reject'); }}
-          />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={s.table}>
+              {/* Header */}
+              <View style={[s.row, s.headerRow]}>
+                <Text style={[s.headerCell, s.colCamp]}>Camp</Text>
+                <Text style={[s.headerCell, s.colSchool]}>School</Text>
+                <Text style={[s.headerCell, s.colDate]}>Date</Text>
+                <Text style={[s.headerCell, s.colLocation]}>Location</Text>
+                <Text style={[s.headerCell, s.colStatus]}>Status</Text>
+                <Text style={[s.headerCell, s.colActions, s.alignRight]}>Actions</Text>
+              </View>
+
+              {filteredCamps.map((camp) => (
+                <View key={camp.id} style={s.row}>
+                  {/* Camp */}
+                  <View style={s.colCamp}>
+                    <Text style={s.cellMedium}>{camp.name}</Text>
+                    <Badge variant="outline" style={s.typeBadge}>
+                      {camp.camp_type}
+                    </Badge>
+                  </View>
+                  {/* School */}
+                  <View style={s.colSchool}>
+                    <Text style={s.cellText}>{camp.school}</Text>
+                    {camp.division ? (
+                      <Text style={s.cellSubtle}>{camp.division}</Text>
+                    ) : null}
+                  </View>
+                  {/* Date */}
+                  <View style={s.colDate}>
+                    <Text style={s.cellText}>
+                      {format(new Date(camp.start_date), 'MMM d, yyyy')}
+                    </Text>
+                  </View>
+                  {/* Location */}
+                  <View style={s.colLocation}>
+                    {camp.city && camp.state ? (
+                      <View style={s.locationInline}>
+                        <MapPin width={12} height={12} color={colors.foreground} />
+                        <Text style={s.cellText}>
+                          {camp.city}, {camp.state}
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text style={s.cellSubtle}>—</Text>
+                    )}
+                  </View>
+                  {/* Status */}
+                  <View style={s.colStatus}>
+                    {camp.is_verified ? (
+                      <Badge variant="success" style={s.statusBadge}>
+                        ✓ Verified
+                      </Badge>
+                    ) : camp.submitted_by ? (
+                      <Badge variant="secondary">Pending Review</Badge>
+                    ) : (
+                      <Badge variant="outline">Official</Badge>
+                    )}
+                  </View>
+                  {/* Actions */}
+                  <View style={[s.colActions, s.actionsCell]}>
+                    {camp.registration_url ? (
+                      <Pressable
+                        onPress={() =>
+                          camp.registration_url &&
+                          Linking.openURL(camp.registration_url)
+                        }
+                        style={s.iconBtn}
+                      >
+                        <ExternalLink width={16} height={16} color={colors.foreground} />
+                      </Pressable>
+                    ) : null}
+                    {!camp.is_verified && camp.submitted_by ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onPress={() => {
+                            void onClickVerify(camp);
+                          }}
+                        >
+                          Verify
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onPress={() => {
+                            setActionCamp(camp);
+                            setActionType('reject');
+                          }}
+                        >
+                          Reject
+                        </Button>
+                      </>
+                    ) : null}
+                  </View>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
         )}
       </CardContent>
 
       {/* Verify dialog */}
-      <Dialog open={actionType === 'verify'} onOpenChange={(v) => { if (!v) setActionType(null); }}>
+      <Dialog
+        open={actionType === 'verify'}
+        onOpenChange={(open) => {
+          if (!open) setActionType(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Verify Camp</DialogTitle>
@@ -240,47 +426,72 @@ return (
             </DialogDescription>
           </DialogHeader>
 
-          <View style={s.notifyRow}>
-            <Checkbox checked={shouldNotify} onCheckedChange={(checked) => setShouldNotify(checked === true)} />
-            <View style={s.notifyLabelWrap}>
+          <View style={s.checkboxRow}>
+            <Checkbox
+              checked={shouldNotify}
+              onCheckedChange={(checked) => setShouldNotify(checked === true)}
+            />
+            <Pressable onPress={() => setShouldNotify(!shouldNotify)} style={s.checkboxLabelWrap}>
               <Label>
                 {`Send email notifications to ${actionCamp?.sport ?? ''} subscribers`}
                 {loadingSubscriberCount ? (
-                  <Text style={s.notifyMuted}> (loading...)</Text>
+                  <Text style={s.checkboxHint}> (loading...)</Text>
                 ) : subscriberCount !== null ? (
-                  <Text style={s.notifyMuted}>
+                  <Text style={s.checkboxHint}>
                     {` (${subscriberCount} subscriber${subscriberCount !== 1 ? 's' : ''})`}
                   </Text>
                 ) : null}
               </Label>
-            </View>
+            </Pressable>
           </View>
 
           <DialogFooter>
-            <Button variant="outline" onPress={() => setActionType(null)} disabled={isProcessing || sendingNotifications}>Cancel</Button>
             <Button
-              onPress={handleVerify}
+              variant="outline"
+              onPress={() => setActionType(null)}
               disabled={isProcessing || sendingNotifications}
-              leftIcon={
-                isProcessing || sendingNotifications ? (
-                  <ActivityIndicator size="small" color={colors.primaryForeground} />
-                ) : shouldNotify ? (
-                  <Bell size={16} color={colors.primaryForeground} />
-                ) : (
-                  <CheckCircle size={16} color={colors.primaryForeground} />
-                )
-              }
             >
-              {isProcessing || sendingNotifications
-                ? (sendingNotifications ? 'Notifying...' : 'Verifying...')
-                : (shouldNotify ? 'Verify & Notify' : 'Verify Only')}
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              onPress={() => {
+                void handleVerify();
+              }}
+              disabled={isProcessing || sendingNotifications}
+            >
+              <View style={s.btnInline}>
+                {isProcessing || sendingNotifications ? (
+                  <>
+                    <Loader2 width={16} height={16} color={colors.primaryForeground} />
+                    <Text style={s.btnInlineText}>
+                      {sendingNotifications ? 'Notifying...' : 'Verifying...'}
+                    </Text>
+                  </>
+                ) : shouldNotify ? (
+                  <>
+                    <Bell width={16} height={16} color={colors.primaryForeground} />
+                    <Text style={s.btnInlineText}>Verify & Notify</Text>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle width={16} height={16} color={colors.primaryForeground} />
+                    <Text style={s.btnInlineText}>Verify Only</Text>
+                  </>
+                )}
+              </View>
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Reject dialog */}
-      <Dialog open={actionType === 'reject'} onOpenChange={(v) => { if (!v) setActionType(null); }}>
+      <Dialog
+        open={actionType === 'reject'}
+        onOpenChange={(open) => {
+          if (!open) setActionType(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Reject Camp</DialogTitle>
@@ -289,14 +500,28 @@ return (
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onPress={() => setActionType(null)} disabled={isProcessing}>Cancel</Button>
+            <Button
+              variant="outline"
+              onPress={() => setActionType(null)}
+              disabled={isProcessing}
+            >
+              Cancel
+            </Button>
             <Button
               variant="destructive"
-              onPress={handleReject}
+              onPress={() => {
+                void handleReject();
+              }}
               disabled={isProcessing}
-              leftIcon={isProcessing ? <ActivityIndicator size="small" color={colors.destructiveForeground} /> : undefined}
             >
-              Reject & Delete
+              <View style={s.btnInline}>
+                {isProcessing ? (
+                  <Loader2 width={16} height={16} color={colors.destructiveForeground} />
+                ) : null}
+                <Text style={[s.btnInlineText, { color: colors.destructiveForeground }]}>
+                  Reject & Delete
+                </Text>
+              </View>
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -305,173 +530,76 @@ return (
   );
 }
 
-export default AdminCampModeration;
-
-// ---------------- Table ----------------
-function CampTable({
-  camps,
-  onVerify,
-  onReject,
-}: {
-  camps: Camp[];
-  onVerify: (c: Camp) => void;
-  onReject: (c: Camp) => void;
-}) {
-  return (
-    <View style={s.tableWrap}>
-      <View style={[s.tableRow, s.tableHeaderRow]}>
-        <Text style={[s.th, s.colCamp]}>Camp</Text>
-        <Text style={[s.th, s.colSchool]}>School</Text>
-        <Text style={[s.th, s.colDate]}>Date</Text>
-        <Text style={[s.th, s.colLocation]}>Location</Text>
-        <Text style={[s.th, s.colStatus]}>Status</Text>
-        <Text style={[s.th, s.colActions, s.thRight]}>Actions</Text>
-      </View>
-      <View style={{ height: Math.min(600, camps.length * 72 + 40) }}>
-        <FlashList
-          data={camps}
-          keyExtractor={(c) => c.id}
-          renderItem={({ item: camp }) => (
-            <View style={s.tableRow}>
-              <View style={s.colCamp}>
-                <Text style={s.cellMedium} numberOfLines={2}>{camp.name}</Text>
-                <View style={s.typeBadgeWrap}>
-                  <Badge variant="outline">{String(camp.camp_type).toLowerCase()}</Badge>
-                </View>
-              </View>
-              <View style={s.colSchool}>
-                <Text style={s.cellText} numberOfLines={2}>{camp.school}</Text>
-                {camp.division ? (
-                  <Text style={s.cellTextMuted} numberOfLines={1}>{camp.division}</Text>
-                ) : null}
-              </View>
-              <Text style={[s.colDate, s.cellText]}>
-                {format(new Date(camp.start_date), 'MMM d, yyyy')}
-              </Text>
-              <View style={s.colLocation}>
-                {camp.city && camp.state ? (
-                  <View style={s.locationRow}>
-                    <MapPin size={12} color={colors.foreground} />
-                    <Text style={s.cellText} numberOfLines={1}>{`${camp.city}, ${camp.state}`}</Text>
-                  </View>
-                ) : (
-                  <Text style={s.cellTextMuted}>—</Text>
-                )}
-              </View>
-              <View style={s.colStatus}>
-                {camp.is_verified ? (
-                  <Badge variant="success">
-                    <View style={s.statusBadgeInner}>
-                      <CheckCircle size={12} color="#ffffff" />
-                      <Text style={s.statusBadgeText}> Verified</Text>
-                    </View>
-                  </Badge>
-                ) : camp.submitted_by ? (
-                  <Badge variant="secondary">Pending Review</Badge>
-                ) : (
-                  <Badge variant="outline">Official</Badge>
-                )}
-              </View>
-              <View style={[s.colActions, s.actionsCell]}>
-                {camp.registration_url ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onPress={() => Linking.openURL(camp.registration_url!)}
-                    leftIcon={<ExternalLink size={16} color={colors.foreground} />}
-                  />
-                ) : null}
-                {!camp.is_verified && camp.submitted_by ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onPress={() => onVerify(camp)}
-                      leftIcon={<CheckCircle size={16} color={colors.foreground} />}
-                    >
-                      Verify
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onPress={() => onReject(camp)}
-                      leftIcon={<XCircle size={16} color={colors.destructiveForeground} />}
-                    >
-                      Reject
-                    </Button>
-                  </>
-                ) : null}
-              </View>
-            </View>
-          )}
-        />
-      </View>
-    </View>
-  );
-}
-
 const s = StyleSheet.create({
-  // Header
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  titleText: {
-    fontFamily: typography.fontFamily.heading,
-    fontSize: typography.fontSize.lg,
-    color: colors.foreground,
-    letterSpacing: typography.letterSpacing.heading,
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   titleBadge: { marginLeft: spacing.sm },
-
-  // Filters
-  filtersRow: { flexDirection: 'row', gap: spacing.sm + 4 },
-  filtersRowWide: { flexDirection: 'row', alignItems: 'center' },
-  filtersRowNarrow: { flexDirection: 'column' },
-  searchWrap: { flex: 1, minWidth: 200, position: 'relative' },
+  controlsRow: {
+    flexDirection: 'column',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  searchWrap: {
+    flex: 1,
+    position: 'relative',
+    justifyContent: 'center',
+  },
   searchIcon: {
     position: 'absolute',
-    left: spacing.sm + 4,
+    left: spacing.sm,
     top: 0,
     bottom: 0,
     justifyContent: 'center',
     zIndex: 1,
   },
-  searchInputContainer: { flex: 1 },
-  searchInput: { paddingLeft: spacing.xl + 6 },
-  filterButtons: { flexDirection: 'row', gap: spacing.sm },
-
-  bodyGap: { height: spacing.md },
-
-  // Loading / empty
-  loadingWrap: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xl * 1.5 },
-  emptyWrap: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xl * 1.5, gap: spacing.sm + 2, opacity: 0.85 },
-  emptyText: {
-    fontFamily: typography.fontFamily.body,
-    fontSize: typography.fontSize.base,
-    color: colors.mutedForeground,
+  searchInput: {
+    paddingLeft: spacing.xl,
   },
-
-  // Table
-  tableWrap: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    overflow: 'hidden',
-  },
-  tableRow: {
+  filterRow: {
     flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  loadingWrap: {
+    paddingVertical: spacing.xl,
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
+    justifyContent: 'center',
+  },
+  emptyWrap: {
+    paddingVertical: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyIcon: { opacity: 0.5, marginBottom: spacing.sm },
+  emptyText: {
+    color: colors.mutedForeground,
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.sm,
+    textAlign: 'center',
+  },
+  table: {
+    minWidth: 760,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     gap: spacing.sm,
   },
-  tableHeaderRow: { backgroundColor: colors.muted },
-  th: {
-    fontFamily: typography.fontFamily.bodySemiBold,
-    fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
+  headerRow: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  thRight: { textAlign: 'right' },
+  headerCell: {
+    fontFamily: typography.fontFamily.bodySemiBold,
+    fontSize: typography.fontSize.xs,
+    color: colors.mutedForeground,
+    textTransform: 'uppercase',
+  },
   cellText: {
     fontFamily: typography.fontFamily.body,
     fontSize: typography.fontSize.sm,
@@ -482,30 +610,59 @@ const s = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.foreground,
   },
-  cellTextMuted: {
+  cellSubtle: {
     fontFamily: typography.fontFamily.body,
     fontSize: typography.fontSize.xs,
     color: colors.mutedForeground,
   },
-  typeBadgeWrap: { marginTop: 4, alignSelf: 'flex-start' },
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  statusBadgeInner: { flexDirection: 'row', alignItems: 'center' },
-  statusBadgeText: {
-    color: '#ffffff',
-    fontFamily: typography.fontFamily.bodySemiBold,
-    fontSize: typography.fontSize.xs,
+  colCamp: { width: 200 },
+  colSchool: { width: 160 },
+  colDate: { width: 110 },
+  colLocation: { width: 140 },
+  colStatus: { width: 130 },
+  colActions: { width: 200 },
+  alignRight: { textAlign: 'right' },
+  typeBadge: { alignSelf: 'flex-start', marginTop: 4 },
+  statusBadge: { alignSelf: 'flex-start' },
+  locationInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
-  actionsCell: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm },
-
-  colCamp: { flex: 2, minWidth: 160 },
-  colSchool: { flex: 2, minWidth: 140 },
-  colDate: { width: 120 },
-  colLocation: { flex: 1.5, minWidth: 140 },
-  colStatus: { width: 140 },
-  colActions: { width: 220 },
-
-  // Dialog
-  notifyRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingVertical: spacing.md },
-  notifyLabelWrap: { flex: 1 },
-  notifyMuted: { color: colors.mutedForeground, fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.sm },
+  actionsCell: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+  },
+  iconBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.sm,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+  },
+  checkboxLabelWrap: { flex: 1 },
+  checkboxHint: {
+    color: colors.mutedForeground,
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.sm,
+  },
+  btnInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  btnInlineText: {
+    fontFamily: typography.fontFamily.bodySemiBold,
+    color: colors.primaryForeground,
+    fontSize: typography.fontSize.sm,
+  },
 });
