@@ -2,8 +2,8 @@ import React from 'react';
 import { Pressable, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle, View } from 'react-native';
 import { colors, typography, spacing } from '@/lib/theme';
 
-export type ButtonVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
-export type ButtonSize = 'default' | 'sm' | 'lg' | 'icon';
+export type ButtonVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link' | 'hero';
+export type ButtonSize = 'default' | 'sm' | 'lg' | 'xl' | 'icon';
 
 interface ButtonProps {
   children?: React.ReactNode;
@@ -71,6 +71,15 @@ const variantStyles: Record<ButtonVariant, ViewStyle> = {
   secondary: { backgroundColor: colors.secondary },
   ghost: { backgroundColor: 'transparent' },
   link: { backgroundColor: 'transparent' },
+  // Lovable 'hero' variant: filled primary gold with signature gold shadow.
+  hero: {
+    backgroundColor: colors.primary,
+    shadowColor: '#e7af08',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 6,
+  },
 };
 
 const variantTextColors: Record<ButtonVariant, string> = {
@@ -80,11 +89,13 @@ const variantTextColors: Record<ButtonVariant, string> = {
   secondary: colors.secondaryForeground,
   ghost: colors.foreground,
   link: colors.primary,
+  hero: colors.primaryForeground,
 };
 
 const sizeStyles: Record<ButtonSize, ViewStyle> = {
   default: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, minHeight: 44 },
   sm: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, minHeight: 36 },
   lg: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, minHeight: 52 },
+  xl: { paddingHorizontal: spacing.xl, paddingVertical: spacing.md + 4, minHeight: 56 },
   icon: { width: 44, height: 44 },
 };

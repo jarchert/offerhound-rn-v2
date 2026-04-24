@@ -89,7 +89,7 @@ export function PodcastPlayerProvider({ children }: { children: React.ReactNode 
   }, [player]);
 
   const setPlaybackRate = useCallback((r: number) => {
-    player.rate = r;
+    (player as any).rate = r;
     setState(prev => ({ ...prev, playbackRate: r }));
   }, [player]);
 
