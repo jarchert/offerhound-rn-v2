@@ -6,12 +6,22 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_INCLUDE_APP_CLIP": "false",
+        "EXPO_INCLUDE_WIDGETS": "false",
+        "EXPO_INCLUDE_LIVE_ACTIVITIES": "false"
+      }
     },
     "preview": {
       "distribution": "internal",
       "ios": {
         "simulator": false
+      },
+      "env": {
+        "EXPO_INCLUDE_APP_CLIP": "true",
+        "EXPO_INCLUDE_WIDGETS": "true",
+        "EXPO_INCLUDE_LIVE_ACTIVITIES": "true"
       }
     },
     "production": {
@@ -22,12 +32,25 @@
       },
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_INCLUDE_APP_CLIP": "true",
+        "EXPO_INCLUDE_WIDGETS": "true",
+        "EXPO_INCLUDE_LIVE_ACTIVITIES": "true",
+        "APP_CLIP_BUNDLE_ID": "com.emergentmindlab.offerhoundv2.Clip",
+        "WIDGETS_BUNDLE_ID": "com.emergentmindlab.offerhoundv2.widgets",
+        "APP_GROUP_ID": "group.com.emergentmindlab.offerhoundv2.shared"
       }
     },
     "production-play": {
       "extends": "production",
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_INCLUDE_APP_CLIP": "false",
+        "EXPO_INCLUDE_WIDGETS": "false",
+        "EXPO_INCLUDE_LIVE_ACTIVITIES": "false"
       }
     }
   },
