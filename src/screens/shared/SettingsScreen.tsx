@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, SafeAreaView, Pressable, Switch, Linking } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, SafeAreaView, Pressable, Switch } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-import { Bell, Moon, Shield, FileText, Trash2, LogOut, ChevronRight } from 'lucide-react-native';
+import { Bell, Moon, Shield, FileText, Trash2, LogOut, ChevronRight, Users, Cookie, Eye } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Navbar } from '@/components/Navbar';
@@ -34,9 +34,12 @@ export default function SettingsScreen() {
         </SettingsGroup>
 
         <SettingsGroup title="Legal">
-          <SettingsRow icon={Shield} label="Privacy Policy" onPress={() => Linking.openURL('https://offer-hound.com/privacy')} />
-          <SettingsRow icon={FileText} label="Terms of Service" onPress={() => Linking.openURL('https://offer-hound.com/terms')} />
-          <SettingsRow icon={FileText} label="Community Guidelines" onPress={() => Linking.openURL('https://offer-hound.com/community-guidelines')} />
+          <SettingsRow icon={Shield} label="Privacy Policy" onPress={() => nav.navigate('SettingsStack' as any, { screen: 'LegalStack', params: { screen: 'PrivacyPolicy' } })} />
+          <SettingsRow icon={FileText} label="Terms of Use" onPress={() => nav.navigate('SettingsStack' as any, { screen: 'LegalStack', params: { screen: 'TermsOfUse' } })} />
+          <SettingsRow icon={Users} label="Community Guidelines" onPress={() => nav.navigate('SettingsStack' as any, { screen: 'LegalStack', params: { screen: 'CommunityGuidelines' } })} />
+          <SettingsRow icon={Shield} label="California Privacy Rights" onPress={() => nav.navigate('SettingsStack' as any, { screen: 'LegalStack', params: { screen: 'CCPARights' } })} />
+          <SettingsRow icon={Cookie} label="Cookies Policy" onPress={() => nav.navigate('SettingsStack' as any, { screen: 'LegalStack', params: { screen: 'CookiesPolicy' } })} />
+          <SettingsRow icon={Eye} label="Accessibility" onPress={() => nav.navigate('SettingsStack' as any, { screen: 'LegalStack', params: { screen: 'Accessibility' } })} />
         </SettingsGroup>
 
         <SettingsGroup title="Account">

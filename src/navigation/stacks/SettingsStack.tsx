@@ -7,6 +7,7 @@ import SettingsScreen from '@/screens/shared/SettingsScreen';
 import NotificationsScreen from '@/screens/shared/NotificationsScreen';
 import DeleteAccountScreen from '@/screens/shared/DeleteAccountScreen';
 import PrivacySettingsScreen from '@/screens/shared/PrivacySettingsScreen';
+import LegalStack from '@/navigation/stacks/LegalStack';
 import { makePlaceholder } from '@/navigation/PlaceholderScreen';
 
 // PORT-PENDING: Lovable source at offerhound-repo/src/pages/FollowingSettings.tsx (112 LOC) — schedule in next wave
@@ -18,6 +19,7 @@ export type SettingsStackParamList = {
   FollowingSettings: undefined;
   CookieSettings: undefined;
   DeleteAccount: undefined;
+  LegalStack: undefined;
 };
 
 const Stack = createNativeStackNavigator<SettingsStackParamList>();
@@ -34,6 +36,7 @@ export default function SettingsStack() {
       <Stack.Screen name="FollowingSettings" component={FollowingSettingsScreen} />
       <Stack.Screen name="CookieSettings" component={PrivacySettingsScreen} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
+      <Stack.Screen name="LegalStack" component={LegalStack} />
     </Stack.Navigator>
   );
 }

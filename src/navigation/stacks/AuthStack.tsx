@@ -8,6 +8,7 @@ import SignInScreen from '@/screens/auth/SignInScreen';
 import SignUpScreen from '@/screens/auth/SignUpScreen';
 import LandingScreen from '@/screens/auth/LandingScreen';
 import DeleteAccountScreen from '@/screens/shared/DeleteAccountScreen';
+import LegalStack from '@/navigation/stacks/LegalStack';
 import { makePlaceholder } from '@/navigation/PlaceholderScreen';
 
 // PORT-PENDING: Lovable source at offerhound-repo/src/pages/BetaRegister.tsx (36 LOC) — schedule in next wave
@@ -25,6 +26,7 @@ export type AuthStackParamList = {
   ParentalConsent: undefined;
   DeleteAccount: undefined;
   PasswordReset: undefined;
+  LegalStack: undefined;
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
@@ -43,6 +45,7 @@ export default function AuthStack() {
       <Stack.Screen name="ParentalConsent" component={ParentalConsentScreen} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
       <Stack.Screen name="PasswordReset" component={PasswordResetScreen} />
+      <Stack.Screen name="LegalStack" component={LegalStack} />
     </Stack.Navigator>
   );
 }
