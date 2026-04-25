@@ -8,6 +8,7 @@ import DeleteAccountScreen from '@/screens/shared/DeleteAccountScreen';
 import PrivacySettingsScreen from '@/screens/shared/PrivacySettingsScreen';
 import AccountSettingsScreen from '@/screens/settings/AccountSettingsScreen';
 import NotificationSettingsScreen from '@/screens/settings/NotificationSettingsScreen';
+import OrganizationSettingsScreen from '@/screens/settings/OrganizationSettingsScreen';
 import LegalStack from '@/navigation/stacks/LegalStack';
 import { makePlaceholder } from '@/navigation/PlaceholderScreen';
 
@@ -38,6 +39,7 @@ export default function SettingsStack() {
       <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
       <Stack.Screen name="FollowingSettings" component={FollowingSettingsScreen} />
+      <Stack.Screen name="OrganizationSettings" component={OrganizationSettingsScreen} />
       <Stack.Screen name="CookieSettings" component={PrivacySettingsScreen} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
       <Stack.Screen name="LegalStack" component={LegalStack} />
