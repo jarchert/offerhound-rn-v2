@@ -5,10 +5,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
 
 import CampsScreen from '@/screens/shared/CampsScreen';
-import { makePlaceholder } from '@/navigation/PlaceholderScreen';
-
-const ClubCoachDashboard = makePlaceholder('Club Coach Dashboard', 'Arrives in Session 8', 'Club Coach role lands in Session 8 with full CRM + messaging + calendar integration.');
-const ClubLettersScreen = makePlaceholder('Club Letters', 'Arrives in Session 4', 'AI letter composer.');
+import ClubCoachDashboardScreen from '@/screens/club/ClubCoachDashboardScreen';
+import LetterComposerScreen from '@/screens/shared/LetterComposerScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -29,9 +27,9 @@ export default function ClubCoachTabs() {
           letterSpacing: 0.5,
         },
       }}>
-      <Tab.Screen name="DashboardTab" component={ClubCoachDashboard} options={{ title: 'Home' }} />
+      <Tab.Screen name="DashboardTab" component={ClubCoachDashboardScreen} options={{ title: 'Home' }} />
       <Tab.Screen name="CampsTab" component={CampsScreen} options={{ title: 'Camps' }} />
-      <Tab.Screen name="LettersTab" component={ClubLettersScreen} options={{ title: 'Letters' }} />
+      <Tab.Screen name="LettersTab" component={LetterComposerScreen} options={{ title: 'Letters' }} />
     </Tab.Navigator>
   );
 }
