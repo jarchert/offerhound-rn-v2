@@ -23,40 +23,31 @@ import { CampRecruitingActions } from "./CampRecruitingActions";
 import { CampMonetizationManager } from "./CampMonetizationManager";
 import { colors, typography, spacing } from "@/lib/theme";
 
-// ----- Local stubs for sibling components not yet ported (Ch.13 follow-up) -----
-// These keep this file self-contained until each is ported one-by-one.
-function _Stub(props: { label: string }) {
-  return (
-    <View style={{ padding: spacing.md, backgroundColor: colors.muted, borderRadius: 8, borderWidth: 1, borderColor: colors.border }}>
-      <Text style={{ fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, fontSize: typography.fontSize.sm }}>[{props.label}]</Text>
-      <Text style={{ fontFamily: typography.fontFamily.body, color: colors.mutedForeground, fontSize: typography.fontSize.xs, marginTop: 2 }}>Scaffold — port pending</Text>
-    </View>
-  );
-}
-const CampHeroImageUpload = (_p: any) => <_Stub label="CampHeroImageUpload" />;
-const CampAnalyticsPanel = (_p: any) => <_Stub label="CampAnalyticsPanel" />;
-const CampLinkBuilder = (_p: any) => <_Stub label="CampLinkBuilder" />;
-const CampEmailTemplateEditor = (_p: any) => <_Stub label="CampEmailTemplateEditor" />;
-const EditCampDialog = (_p: any) => null as any;
-const CampScheduleBuilder = (_p: any) => <_Stub label="CampScheduleBuilder" />;
-const CampResultsView = (_p: any) => <_Stub label="CampResultsView" />;
-const CloneCampDialog = (_p: any) => null as any;
-const CampNPSResultsDialog = (_p: any) => null as any;
-const CampRecruiterAttendanceLog = (_p: any) => <_Stub label="CampRecruiterAttendanceLog" />;
-const CampTopPerformerShare = (_p: any) => <_Stub label="CampTopPerformerShare" />;
-const CampCrossCampTrending = (_p: any) => <_Stub label="CampCrossCampTrending" />;
-const CampSmsBroadcastDialog = (_p: any) => null as any;
-const AddToCalendarButton = (_p: any) => null as any;
-const CampRefundReviewQueue = (_p: any) => <_Stub label="CampRefundReviewQueue" />;
-const CampAuditEventsLog = (_p: any) => <_Stub label="CampAuditEventsLog" />;
-const CampWaiverManager = (_p: any) => <_Stub label="CampWaiverManager" />;
-const CampInsuranceManager = (_p: any) => <_Stub label="CampInsuranceManager" />;
-const CampStaffScheduler = (_p: any) => <_Stub label="CampStaffScheduler" />;
-const CampLeaderboardEmbedBuilder = (_p: any) => <_Stub label="CampLeaderboardEmbedBuilder" />;
-const CampRecruiterHeatmap = (_p: any) => <_Stub label="CampRecruiterHeatmap" />;
-const CampTop10PacketButton = (_p: any) => null as any;
-const CampCrossCampInviteDialog = (_p: any) => null as any;
-const RescheduleCampDialog = (_p: any) => null as any;
+// ----- Real Wave 22 ports (replaces previous _Stub scaffolding) -----
+import { CampHeroImageUpload } from "@/components/CampHeroImageUpload";
+import { CampAnalyticsPanel } from "@/components/CampAnalyticsPanel";
+import { CampLinkBuilder } from "@/components/CampLinkBuilder";
+import { CampEmailTemplateEditor } from "@/components/CampEmailTemplateEditor";
+import { EditCampDialog } from "@/components/EditCampDialog";
+import { CampScheduleBuilder } from "@/components/CampScheduleBuilder";
+import { CampResultsView } from "@/components/CampResultsView";
+import { CloneCampDialog } from "@/components/CloneCampDialog";
+import { CampNPSResultsDialog } from "@/components/CampNPSResultsDialog";
+import { CampRecruiterAttendanceLog } from "@/components/CampRecruiterAttendanceLog";
+import { CampTopPerformerShare } from "@/components/CampTopPerformerShare";
+import { CampCrossCampTrending } from "@/components/CampCrossCampTrending";
+import { CampSmsBroadcastDialog } from "@/components/CampSmsBroadcastDialog";
+import { AddToCalendarButton } from "@/components/AddToCalendarButton";
+import { CampRefundReviewQueue } from "@/components/CampRefundReviewQueue";
+import { CampAuditEventsLog } from "@/components/CampAuditEventsLog";
+import { CampWaiverManager } from "@/components/CampWaiverManager";
+import { CampInsuranceManager } from "@/components/CampInsuranceManager";
+import { CampStaffScheduler } from "@/components/CampStaffScheduler";
+import { CampLeaderboardEmbedBuilder } from "@/components/CampLeaderboardEmbedBuilder";
+import { CampRecruiterHeatmap } from "@/components/CampRecruiterHeatmap";
+import { CampTop10PacketButton } from "@/components/CampTop10PacketButton";
+import { CampCrossCampInviteDialog } from "@/components/CampCrossCampInviteDialog";
+import { RescheduleCampDialog } from "@/components/RescheduleCampDialog";
 
 // Local stub data — campManagerSports module not yet ported
 const CAMP_MANAGER_SUPPORTED_SPORTS: string[] = ["football","basketball","baseball","soccer","volleyball","lacrosse","hockey","softball","track","wrestling"];
