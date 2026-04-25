@@ -10,8 +10,11 @@ import LandingScreen from '@/screens/auth/LandingScreen';
 import DeleteAccountScreen from '@/screens/shared/DeleteAccountScreen';
 import { makePlaceholder } from '@/navigation/PlaceholderScreen';
 
+// PORT-PENDING: Lovable source at offerhound-repo/src/pages/BetaRegister.tsx (36 LOC) — schedule in next wave
 const BetaRegisterScreen = makePlaceholder('Beta Register', 'Arrives in Session 7', 'Beta tester registration flow.');
+// PORT-PENDING: Lovable source at offerhound-repo/src/pages/ParentalConsent.tsx (21 LOC) — schedule in next wave
 const ParentalConsentScreen = makePlaceholder('Parental Consent', 'Arrives in Session 7', 'COPPA verifiable parental consent flow.');
+// PORT-PENDING: no Lovable page — PasswordReset is the Supabase deep-link target; needs a dedicated RN screen wrapping supabase.auth.updateUser. Schedule in next wave.
 const PasswordResetScreen = makePlaceholder('Password Reset', 'Supabase password reset link target.');
 
 export type AuthStackParamList = {
