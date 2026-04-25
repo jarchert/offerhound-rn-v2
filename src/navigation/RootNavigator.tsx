@@ -31,6 +31,7 @@ import PublicSportStack from '@/navigation/stacks/PublicSportStack';
 import ProfileScreen from '@/screens/shared/ProfileScreen';
 import MessagesScreen from '@/screens/shared/MessagesScreen';
 import NotificationsScreen from '@/screens/shared/NotificationsScreen';
+import InboxScreen from '@/screens/shared/InboxScreen';
 import LetterComposerScreen from '@/screens/shared/LetterComposerScreen';
 import AICoachScreen from '@/screens/shared/AICoachScreen';
 import SmokeTestScreen from '@/screens/dev/SmokeTestScreen';
@@ -55,6 +56,7 @@ export type RootStackParamList = {
   Profile: { userId?: string };
   Messages: undefined;
   Notifications: undefined;
+  Inbox: undefined;
   LetterComposer: { seed?: any } | undefined;
   AICoach: undefined;
   SmokeTest: undefined;
@@ -130,6 +132,7 @@ export default function RootNavigator() {
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="Messages" component={MessagesScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
+          <Stack.Screen name="Inbox" component={InboxScreen} />
           <Stack.Screen
             name="LetterComposer"
             component={LetterComposerScreen}
