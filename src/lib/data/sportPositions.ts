@@ -477,3 +477,181 @@ export const getPositionCategories = (sport: string): string[] => {
   const positions = getPositionsForSport(sport);
   return [...new Set(positions.map(p => p.category))];
 };
+
+// ----------------------------------------------------------------------------
+// Event-based sports: Track & Field and Swimming
+// Ported from web src/lib/data/sportPositions.ts (parity with Lovable).
+// ----------------------------------------------------------------------------
+
+export interface SportEventOption {
+  key: string;
+  label: string;
+  /** Format hint for the PB/season-best inputs */
+  format?: "time" | "distance" | "height" | "score";
+  /** Elite benchmark for radar scoring (lower-is-better for time-based) */
+  benchmark?: number;
+  /** Maps to a radar axis */
+  radarAxis?: RadarAxis;
+  /** Whether splits input is shown */
+  hasSplits?: boolean;
+}
+
+export interface SportEventCategory {
+  key: string;
+  label: string;
+  events: SportEventOption[];
+}
+
+export const SPORT_EVENT_CATALOG: Record<string, SportEventCategory[]> = {
+  "track-field": [
+    {
+      key: "sprints", label: "Sprints",
+      events: [
+        { key: "60m", label: "60m", format: "time", benchmark: 6.8, radarAxis: "Speed" },
+        { key: "100m", label: "100m", format: "time", benchmark: 10.5, radarAxis: "Speed" },
+        { key: "200m", label: "200m", format: "time", benchmark: 21.5, radarAxis: "Speed" },
+        { key: "400m", label: "400m", format: "time", benchmark: 47.5, radarAxis: "Speed", hasSplits: true },
+      ],
+    },
+    {
+      key: "middle_distance", label: "Middle Distance",
+      events: [
+        { key: "800m", label: "800m", format: "time", benchmark: 110, radarAxis: "Endurance", hasSplits: true },
+        { key: "1500m", label: "1500m / Mile", format: "time", benchmark: 245, radarAxis: "Endurance", hasSplits: true },
+        { key: "3000m", label: "3000m", format: "time", benchmark: 510, radarAxis: "Endurance", hasSplits: true },
+      ],
+    },
+    {
+      key: "distance", label: "Distance",
+      events: [
+        { key: "5k", label: "5K", format: "time", benchmark: 900, radarAxis: "Endurance", hasSplits: true },
+        { key: "xc", label: "Cross Country", format: "time", benchmark: 950, radarAxis: "Endurance", hasSplits: true },
+      ],
+    },
+    {
+      key: "hurdles", label: "Hurdles",
+      events: [
+        { key: "100mh", label: "100m H (W)", format: "time", benchmark: 13.5, radarAxis: "Technique" },
+        { key: "110mh", label: "110m H (M)", format: "time", benchmark: 14.0, radarAxis: "Technique" },
+        { key: "300mh", label: "300m H", format: "time", benchmark: 39.0, radarAxis: "Technique" },
+        { key: "400mh", label: "400m H", format: "time", benchmark: 52.0, radarAxis: "Technique" },
+      ],
+    },
+    {
+      key: "relays", label: "Relays",
+      events: [
+        { key: "4x100", label: "4x100m", format: "time", benchmark: 41.0, radarAxis: "Speed", hasSplits: true },
+        { key: "4x200", label: "4x200m", format: "time", benchmark: 89.0, radarAxis: "Speed", hasSplits: true },
+        { key: "4x400", label: "4x400m", format: "time", benchmark: 200.0, radarAxis: "Endurance", hasSplits: true },
+      ],
+    },
+    {
+      key: "jumps", label: "Jumps",
+      events: [
+        { key: "long_jump", label: "Long Jump", format: "distance", benchmark: 22, radarAxis: "Power" },
+        { key: "triple_jump", label: "Triple Jump", format: "distance", benchmark: 45, radarAxis: "Power" },
+        { key: "high_jump", label: "High Jump", format: "height", benchmark: 6.5, radarAxis: "Power" },
+        { key: "pole_vault", label: "Pole Vault", format: "height", benchmark: 14, radarAxis: "Technique" },
+      ],
+    },
+    {
+      key: "throws", label: "Throws",
+      events: [
+        { key: "shot_put", label: "Shot Put", format: "distance", benchmark: 55, radarAxis: "Power" },
+        { key: "discus", label: "Discus", format: "distance", benchmark: 160, radarAxis: "Power" },
+        { key: "javelin", label: "Javelin", format: "distance", benchmark: 180, radarAxis: "Power" },
+        { key: "hammer", label: "Hammer", format: "distance", benchmark: 180, radarAxis: "Power" },
+      ],
+    },
+    {
+      key: "multi_event", label: "Multi-Event",
+      events: [
+        { key: "heptathlon", label: "Heptathlon", format: "score", benchmark: 5500, radarAxis: "Versatility" },
+        { key: "decathlon", label: "Decathlon", format: "score", benchmark: 7500, radarAxis: "Versatility" },
+      ],
+    },
+  ],
+  swimming: [
+    {
+      key: "freestyle", label: "Freestyle",
+      events: [
+        { key: "50_free", label: "50 Free", format: "time", benchmark: 21.0, radarAxis: "Sprint Speed" },
+        { key: "100_free", label: "100 Free", format: "time", benchmark: 47.0, radarAxis: "Sprint Speed" },
+        { key: "200_free", label: "200 Free", format: "time", benchmark: 105.0, radarAxis: "Endurance", hasSplits: true },
+        { key: "500_free", label: "500 Free", format: "time", benchmark: 280.0, radarAxis: "Endurance", hasSplits: true },
+        { key: "1000_free", label: "1000 Free", format: "time", benchmark: 580.0, radarAxis: "Endurance", hasSplits: true },
+        { key: "1650_free", label: "1650 Free", format: "time", benchmark: 950.0, radarAxis: "Endurance", hasSplits: true },
+      ],
+    },
+    {
+      key: "backstroke", label: "Backstroke",
+      events: [
+        { key: "50_back", label: "50 Back", format: "time", benchmark: 23.5, radarAxis: "Stroke Versatility" },
+        { key: "100_back", label: "100 Back", format: "time", benchmark: 50.0, radarAxis: "Stroke Versatility" },
+        { key: "200_back", label: "200 Back", format: "time", benchmark: 110.0, radarAxis: "Stroke Versatility", hasSplits: true },
+      ],
+    },
+    {
+      key: "breaststroke", label: "Breaststroke",
+      events: [
+        { key: "50_breast", label: "50 Breast", format: "time", benchmark: 26.0, radarAxis: "Stroke Versatility" },
+        { key: "100_breast", label: "100 Breast", format: "time", benchmark: 56.0, radarAxis: "Stroke Versatility" },
+        { key: "200_breast", label: "200 Breast", format: "time", benchmark: 122.0, radarAxis: "Stroke Versatility", hasSplits: true },
+      ],
+    },
+    {
+      key: "butterfly", label: "Butterfly",
+      events: [
+        { key: "50_fly", label: "50 Fly", format: "time", benchmark: 22.5, radarAxis: "Power" },
+        { key: "100_fly", label: "100 Fly", format: "time", benchmark: 49.0, radarAxis: "Power" },
+        { key: "200_fly", label: "200 Fly", format: "time", benchmark: 110.0, radarAxis: "Power", hasSplits: true },
+      ],
+    },
+    {
+      key: "im", label: "Individual Medley",
+      events: [
+        { key: "100_im", label: "100 IM", format: "time", benchmark: 51.0, radarAxis: "Stroke Versatility" },
+        { key: "200_im", label: "200 IM", format: "time", benchmark: 112.0, radarAxis: "Stroke Versatility", hasSplits: true },
+        { key: "400_im", label: "400 IM", format: "time", benchmark: 240.0, radarAxis: "Endurance", hasSplits: true },
+      ],
+    },
+    {
+      key: "relays", label: "Relays",
+      events: [
+        { key: "200_free_relay", label: "200 Free Relay", format: "time", benchmark: 86.0, radarAxis: "Sprint Speed", hasSplits: true },
+        { key: "400_free_relay", label: "400 Free Relay", format: "time", benchmark: 190.0, radarAxis: "Sprint Speed", hasSplits: true },
+        { key: "200_medley_relay", label: "200 Medley Relay", format: "time", benchmark: 95.0, radarAxis: "Stroke Versatility", hasSplits: true },
+        { key: "400_medley_relay", label: "400 Medley Relay", format: "time", benchmark: 205.0, radarAxis: "Stroke Versatility", hasSplits: true },
+      ],
+    },
+  ],
+};
+
+export interface AthleteEventEntry {
+  key: string;
+  category: string;
+  label: string;
+  pb?: string;
+  seasonBest?: string;
+  placement?: string;
+  splits?: string;
+  record?: string;
+}
+
+export const isEventBasedSport = (sport: string): boolean =>
+  sport === "track-field" || sport === "swimming";
+
+export const getEventCatalogForSport = (sport: string): SportEventCategory[] =>
+  SPORT_EVENT_CATALOG[sport] || [];
+
+export const findEventOption = (
+  sport: string,
+  eventKey: string,
+): { category: SportEventCategory; event: SportEventOption } | null => {
+  const cats = getEventCatalogForSport(sport);
+  for (const c of cats) {
+    const e = c.events.find(ev => ev.key === eventKey);
+    if (e) return { category: c, event: e };
+  }
+  return null;
+};
