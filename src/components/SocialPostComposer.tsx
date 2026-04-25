@@ -172,7 +172,7 @@ export function SocialPostComposer({
           value={postText}
           onChangeText={setPostText}
           placeholder="Share your latest accomplishment, highlight reel, or training update..."
-          numberOfLines={4}
+          rows={4}
         />
         <View style={s.row}>
           <Text style={s.metaText}>{fullText.length} characters</Text>
