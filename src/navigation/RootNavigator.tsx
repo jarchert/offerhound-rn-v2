@@ -44,6 +44,9 @@ import SupportScreen from '@/screens/shared/SupportScreen';
 import CoachCampaignsScreen from '@/screens/coach/CoachCampaignsScreen';
 import CoachCommunicationRulesScreen from '@/screens/coach/CoachCommunicationRulesScreen';
 
+// Persistent post-auth overlay
+import FloatingAICoach from '@/components/FloatingAICoach';
+
 export type RootStackParamList = {
   PublicTabs: undefined;
   PublicSportStack: undefined;
@@ -110,6 +113,7 @@ export default function RootNavigator() {
     : ('PublicTabs' as keyof RootStackParamList);
 
   return (
+    <>
     <Stack.Navigator
       initialRouteName={initialRouteName}
       screenOptions={{
@@ -176,5 +180,8 @@ export default function RootNavigator() {
         </>
       )}
     </Stack.Navigator>
+    {/* Authenticated-only floating AI coach — never rendered for signed-out users. */}
+    {user ? <FloatingAICoach /> : null}
+    </>
   );
 }
