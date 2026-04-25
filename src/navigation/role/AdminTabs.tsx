@@ -6,12 +6,10 @@ import { colors, typography } from '@/lib/theme';
 
 import AdminDashboard from '@/screens/admin/AdminDashboard';
 import AdminUsersScreen from '@/screens/admin/AdminUsersScreen';
-import { makePlaceholder } from '@/navigation/PlaceholderScreen';
-
-const AdminModerationScreen = makePlaceholder('Moderation', 'Arrives in Session 8', 'Camp moderation + community guidelines.');
-const AdminContentScreen = makePlaceholder('Content', 'Arrives in Session 8', 'Media center + influencers + podcasts + letter analytics.');
-const AdminAuditScreen = makePlaceholder('Audit Log', 'Arrives in Session 8', 'Full audit trail viewer.');
-const AdminSettingsScreen = makePlaceholder('Admin Settings', 'Arrives in Session 8', 'Terms management + legal center.');
+import AdminModerationScreen from '@/screens/admin/AdminModerationScreen';
+import AdminContentScreen from '@/screens/admin/AdminContentScreen';
+import AdminAuditScreen from '@/screens/admin/AdminAuditScreen';
+import AdminSettingsScreen from '@/screens/admin/AdminSettingsScreen';
 
 const Tab = createBottomTabNavigator();
 
