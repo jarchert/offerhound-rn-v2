@@ -21,6 +21,7 @@ import { Linking } from 'react-native';
 import { LetterTypeCard } from './LetterTypeCard';
 import { LetterComposer } from './LetterComposer';
 import type { RecipientType, RecipientCategory, SenderType } from './LetterComposer';
+import { sanitizeLetterPrefill } from '@/hooks/useLetterCenter';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
 interface LetterTypeConfig { type: string; title: string; description: string; category?: string; audiences?: RecipientCategory[]; }
@@ -49,24 +50,6 @@ const CATEGORY_META: Record<RecipientCategory, { label: string; icon: any; descr
   'hs-coach': { label: 'High School Coach', icon: School, description: 'Outreach to a high school head coach', defaultRecipientType: 'coach' },
   'influencer': { label: 'Influencer / Media', icon: Building2, description: 'Outreach to a recruiting media creator', defaultRecipientType: 'coach' },
 };
-
-// Local prefill sanitizer (mirrors useLetterCenter.sanitizeLetterPrefill on web).
-function sanitizeLetterPrefill(params: Record<string, any> = {}) {
-  const str = (v: any) => (typeof v === 'string' && v.trim() ? v.trim() : undefined);
-  const cat = str(params.recipientCategory) as RecipientCategory | undefined;
-  const validCats: RecipientCategory[] = ['athlete','parent','college-coach','club-coach','scout','hs-coach','influencer'];
-  const validTypes: RecipientType[] = ['athlete','parent','coach'];
-  const rt = str(params.recipientType) as RecipientType | undefined;
-  return {
-    recipientCategory: cat && validCats.includes(cat) ? cat : undefined,
-    recipientType: rt && validTypes.includes(rt) ? rt : undefined,
-    recipientName: str(params.recipientName),
-    recipientEmail: str(params.recipientEmail),
-    organizationName: str(params.organizationName),
-    recipientTitle: str(params.recipientTitle),
-    letterType: str(params.letterType),
-  };
-}
 
 export function LetterDashboard({ senderType, senderProfile, letterTypes, history, historyLoading, onSendLetter, onDeleteHistory, isSending, pageTitle, pageDescription }: LetterDashboardProps) {
   const route = useRoute<any>();
