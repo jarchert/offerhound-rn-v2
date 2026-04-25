@@ -48,24 +48,88 @@
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            { "scheme": "https", "host": "offerhound.app" },
-            { "scheme": "https", "host": "www.offerhound.app" },
-            { "scheme": "https", "host": "playbook-promoter.lovable.app" },
-            { "scheme": "https", "host": "offerhound.app", "pathPrefix": "/football" },
-            { "scheme": "https", "host": "offerhound.app", "pathPrefix": "/basketball" },
-            { "scheme": "https", "host": "offerhound.app", "pathPrefix": "/soccer" },
-            { "scheme": "https", "host": "offerhound.app", "pathPrefix": "/baseball" },
-            { "scheme": "https", "host": "offerhound.app", "pathPrefix": "/softball" },
-            { "scheme": "https", "host": "offerhound.app", "pathPrefix": "/volleyball" },
-            { "scheme": "https", "host": "offerhound.app", "pathPrefix": "/lacrosse" },
-            { "scheme": "https", "host": "offerhound.app", "pathPrefix": "/hockey" },
-            { "scheme": "https", "host": "offerhound.app", "pathPrefix": "/swimming" },
-            { "scheme": "https", "host": "offerhound.app", "pathPrefix": "/golf" },
-            { "scheme": "https", "host": "offerhound.app", "pathPrefix": "/track-field" },
-            { "scheme": "https", "host": "offerhound.app", "pathPrefix": "/cheerleading" },
-            { "scheme": "https", "host": "offerhound.app", "pathPrefix": "/wrestling" }
+            {
+              "scheme": "https",
+              "host": "offerhound.app"
+            },
+            {
+              "scheme": "https",
+              "host": "www.offerhound.app"
+            },
+            {
+              "scheme": "https",
+              "host": "playbook-promoter.lovable.app"
+            },
+            {
+              "scheme": "https",
+              "host": "offerhound.app",
+              "pathPrefix": "/football"
+            },
+            {
+              "scheme": "https",
+              "host": "offerhound.app",
+              "pathPrefix": "/basketball"
+            },
+            {
+              "scheme": "https",
+              "host": "offerhound.app",
+              "pathPrefix": "/soccer"
+            },
+            {
+              "scheme": "https",
+              "host": "offerhound.app",
+              "pathPrefix": "/baseball"
+            },
+            {
+              "scheme": "https",
+              "host": "offerhound.app",
+              "pathPrefix": "/softball"
+            },
+            {
+              "scheme": "https",
+              "host": "offerhound.app",
+              "pathPrefix": "/volleyball"
+            },
+            {
+              "scheme": "https",
+              "host": "offerhound.app",
+              "pathPrefix": "/lacrosse"
+            },
+            {
+              "scheme": "https",
+              "host": "offerhound.app",
+              "pathPrefix": "/hockey"
+            },
+            {
+              "scheme": "https",
+              "host": "offerhound.app",
+              "pathPrefix": "/swimming"
+            },
+            {
+              "scheme": "https",
+              "host": "offerhound.app",
+              "pathPrefix": "/golf"
+            },
+            {
+              "scheme": "https",
+              "host": "offerhound.app",
+              "pathPrefix": "/track-field"
+            },
+            {
+              "scheme": "https",
+              "host": "offerhound.app",
+              "pathPrefix": "/cheerleading"
+            },
+            {
+              "scheme": "https",
+              "host": "offerhound.app",
+              "pathPrefix": "/wrestling"
+            }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ],
       "permissions": [
@@ -113,7 +177,8 @@
       "expo-splash-screen",
       "./plugins/with-app-clip",
       "./plugins/with-widgets",
-      "./plugins/with-live-activities"
+      "./plugins/with-live-activities",
+      "expo-iap"
     ],
     "extra": {
       "eas": {
