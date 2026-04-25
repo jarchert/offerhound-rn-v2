@@ -16,7 +16,7 @@
     "preview": {
       "distribution": "internal",
       "ios": {
-        "simulator": false
+        "simulator": true
       },
       "env": {
         "EXPO_INCLUDE_APP_CLIP": "true",
