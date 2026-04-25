@@ -7,11 +7,12 @@
 // - lucide-react icons → lucide-react-native.
 // - useToast → Alert.alert.
 // - "Manage Subscription" customer-portal: opens returned URL via Linking.openURL.
+//   On iOS, opens Apple's subscription management page instead (Guideline 3.1.1).
 // - "Change Password" navigates into AuthStack → PasswordReset deep-link surface.
 // - Notification toggles here are local-only mirrors of the web (web also has no
 //   persistence). Kept stateful for parity. Real prefs live on NotificationSettingsScreen.
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, SafeAreaView, ActivityIndicator, TextInput, Pressable, Switch, Alert, Linking } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, SafeAreaView, ActivityIndicator, TextInput, Pressable, Switch, Alert, Linking, Platform } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Mail, Lock, User as UserIcon, Shield, Bell, Phone, Crown, Zap, ExternalLink } from 'lucide-react-native';
 import { BackButton } from '@/components/BackButton';
@@ -53,6 +54,17 @@ export default function AccountSettingsScreen() {
   };
 
   const handleManageSubscription = async () => {
+    // App Store Guideline 3.1.1: route iOS users to Apple's subscription
+    // management page instead of the Stripe customer portal (which is a
+    // payment surface for digital subscriptions consumed in-app).
+    if (Platform.OS === 'ios') {
+      try {
+        await Linking.openURL('https://apps.apple.com/account/subscriptions');
+      } catch {
+        // best-effort
+      }
+      return;
+    }
     setIsOpeningPortal(true);
     try {
       const { data, error } = await supabase.functions.invoke('customer-portal');
