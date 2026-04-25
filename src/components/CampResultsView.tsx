@@ -6,16 +6,13 @@
 //   lucide-react → lucide-react-native
 //   onChange e.target.value → onChangeText
 //   defaultValue on Tabs → controlled state (RN Tabs is controlled-only)
-// GAPs:
-//   - Canvas-based scorecard PNG renderer is not available in RN. The
-//     scorecard CTAs build a JSON snapshot (analogous to "save camp history")
-//     and offer it via expo Sharing/FileSystem if available, otherwise
-//     surface a toast describing the data captured. Same pattern matches
-//     how other parity ports stub canvas/blob exports.
-//   - exportCampHistory writes the JSON via Sharing if available; on web
-//     it falls back to a Linking-based blob URL.
-import React, { useMemo, useState } from 'react';
+//   Canvas-based scorecard PNG → native View rendered offscreen, captured
+//     via react-native-view-shot's captureRef → expo-sharing share sheet.
+import React, { useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { captureRef } from 'react-native-view-shot';
+import * as Sharing from 'expo-sharing';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -79,6 +76,8 @@ export function CampResultsView({ camp, onBack }: CampResultsViewProps) {
   const [search, setSearch] = useState('');
   const [scoringId, setScoringId] = useState<string | null>(null);
   const [tab, setTab] = useState('leaderboard');
+  const [scorecardData, setScorecardData] = useState<ScorecardData | null>(null);
+  const scorecardRef = useRef<View>(null);
 
   const { data: scores = [], isLoading: scoresLoading } = useQuery({
     queryKey: ['camp-results-scores', camp.id],
@@ -182,25 +181,47 @@ export function CampResultsView({ camp, onBack }: CampResultsViewProps) {
   const generateScorecard = async (row: (typeof rows)[number]) => {
     setScoringId(row.scoreId);
     try {
-      // GAP: canvas not available — emit JSON snapshot via toast for parity.
-      const snapshot = {
-        athlete: row.name,
-        rank: row.rank,
+      // 1. Mount the offscreen scorecard with this athlete's data.
+      const data: ScorecardData = {
+        athleteName: row.name,
+        position: row.position,
+        graduationYear: row.graduation_year,
+        school: row.school,
         composite: row.composite,
-        sub: {
-          speed: row.speed,
-          agility: row.agility,
-          explosiveness: row.explosiveness,
-          position: row.positionScore,
-        },
-        camp: { name: camp.name, date: camp.start_date },
+        speed: row.speed,
+        agility: row.agility,
+        explosiveness: row.explosiveness,
+        positionScore: row.positionScore,
+        rank: row.rank,
+        campName: camp.name,
+        campDate: camp.start_date,
       };
-      // eslint-disable-next-line no-console
-      console.log('[CampResultsView] scorecard snapshot', snapshot);
-      toast({
-        title: 'Scorecard ready',
-        description: `${row.name} — composite ${row.composite.toFixed(1)} (rank #${row.rank})`,
+      setScorecardData(data);
+      // Wait one frame so the offscreen view layout commits before capture.
+      await new Promise<void>((r) => requestAnimationFrame(() => r()));
+      await new Promise<void>((r) => setTimeout(r, 50));
+
+      // 2. Capture the View as a PNG file URI.
+      if (!scorecardRef.current) throw new Error('Scorecard view not mounted');
+      const uri = await captureRef(scorecardRef, {
+        format: 'png',
+        quality: 1,
       });
+
+      // 3. Surface the native share sheet.
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/png',
+          dialogTitle: 'Share Scorecard',
+          UTI: 'public.png',
+        });
+      } else {
+        toast({
+          title: 'Scorecard ready',
+          description: `${row.name} — composite ${row.composite.toFixed(1)} (rank #${row.rank})`,
+        });
+      }
     } catch (err: any) {
       toast({
         title: 'Error',
@@ -209,6 +230,7 @@ export function CampResultsView({ camp, onBack }: CampResultsViewProps) {
       });
     } finally {
       setScoringId(null);
+      setScorecardData(null);
     }
   };
 
@@ -406,9 +428,272 @@ export function CampResultsView({ camp, onBack }: CampResultsViewProps) {
           </View>
         </TabsContent>
       </Tabs>
+
+      {/* Offscreen scorecard for captureRef. Rendered absolutely off-screen
+          so the user never sees it but the layout still commits and is
+          captureable as a PNG. */}
+      {scorecardData ? (
+        <View pointerEvents="none" style={s.offscreen} collapsable={false}>
+          <ScorecardView ref={scorecardRef} data={scorecardData} />
+        </View>
+      ) : null}
     </View>
   );
 }
+
+// ---- Scorecard renderer (captureRef → PNG share) -----------------------
+// Visual layout ported from Lovable web's <canvas> drawing logic.
+// Logical canvas is 1080×1350 (Instagram portrait); we render at native
+// pixel density and let captureRef rasterize at quality 1.
+
+interface ScorecardData {
+  athleteName: string;
+  position?: string | null;
+  graduationYear?: string | number | null;
+  school?: string | null;
+  composite: number;
+  speed?: number | null;
+  agility?: number | null;
+  explosiveness?: number | null;
+  positionScore?: number | null;
+  rank: number;
+  campName: string;
+  campDate: string;
+}
+
+function formatScorecardDate(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  } catch {
+    return iso;
+  }
+}
+
+const SCORECARD_W = 1080;
+const SCORECARD_H = 1350;
+
+const ScorecardView = React.forwardRef<View, { data: ScorecardData }>(
+  function ScorecardView({ data }, ref) {
+    const subParts = [
+      data.position,
+      data.graduationYear ? `Class of ${data.graduationYear}` : null,
+      data.school,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+
+    const subScores: Array<{ label: string; value: number | null | undefined }> = [
+      { label: 'SPEED', value: data.speed },
+      { label: 'AGILITY', value: data.agility },
+      { label: 'EXPLOSIVE', value: data.explosiveness },
+      { label: 'POSITION', value: data.positionScore },
+    ];
+
+    return (
+      <View ref={ref} collapsable={false} style={sc.root}>
+        <LinearGradient
+          colors={['#0f172a', '#1e293b']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+
+        {/* Header band */}
+        <View style={sc.headerBand}>
+          <Text style={sc.headerBrand}>OFFERHOUND™</Text>
+          <Text style={sc.headerLabel}>CAMP SCORECARD</Text>
+        </View>
+
+        {/* Camp meta */}
+        <View style={sc.metaWrap}>
+          <View style={{ flex: 1 }}>
+            <Text style={sc.campName} numberOfLines={1}>
+              {data.campName.toUpperCase()}
+            </Text>
+            <Text style={sc.campDate}>{formatScorecardDate(data.campDate)}</Text>
+          </View>
+          <View style={sc.rankChip}>
+            <Text style={sc.rankChipText}>#{data.rank}</Text>
+          </View>
+        </View>
+
+        {/* Athlete name */}
+        <Text style={sc.athleteName} numberOfLines={2}>
+          {data.athleteName.toUpperCase()}
+        </Text>
+        {subParts ? <Text style={sc.athleteSub}>{subParts}</Text> : null}
+
+        {/* Composite hero */}
+        <View style={sc.compositeWrap}>
+          <Text style={sc.compositeNum}>{data.composite.toFixed(1)}</Text>
+          <Text style={sc.compositeLabel}>COMPOSITE SCORE</Text>
+        </View>
+
+        {/* Sub-score grid */}
+        <View style={sc.subGrid}>
+          {subScores.map((sub) => (
+            <View key={sub.label} style={sc.subCard}>
+              <Text style={sc.subValue}>
+                {sub.value != null ? sub.value.toFixed(1) : '—'}
+              </Text>
+              <Text style={sc.subLabel}>{sub.label}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Footer */}
+        <Text style={sc.footer}>
+          AI-evaluated · Patent Pending · offerhound.com
+        </Text>
+      </View>
+    );
+  }
+);
+
+const sc = StyleSheet.create({
+  root: {
+    width: SCORECARD_W,
+    height: SCORECARD_H,
+    overflow: 'hidden',
+    backgroundColor: '#0f172a',
+  },
+  headerBand: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0,
+    height: 80,
+    backgroundColor: '#fb923c',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 60,
+  },
+  headerBrand: {
+    color: '#0f172a',
+    fontSize: 36,
+    fontWeight: 'bold',
+  },
+  headerLabel: {
+    color: '#0f172a',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  metaWrap: {
+    position: 'absolute',
+    top: 120,
+    left: 60,
+    right: 60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 24,
+  },
+  campName: {
+    color: '#fed7aa',
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
+  campDate: {
+    color: '#94a3b8',
+    fontSize: 20,
+    marginTop: 6,
+  },
+  rankChip: {
+    width: 160,
+    height: 80,
+    borderRadius: 16,
+    backgroundColor: '#fb923c',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rankChipText: {
+    color: '#0f172a',
+    fontSize: 56,
+    fontWeight: 'bold',
+  },
+  athleteName: {
+    position: 'absolute',
+    top: 280,
+    left: 60,
+    right: 60,
+    color: '#ffffff',
+    fontSize: 72,
+    fontWeight: 'bold',
+    lineHeight: 78,
+  },
+  athleteSub: {
+    position: 'absolute',
+    top: 440,
+    left: 60,
+    right: 60,
+    color: '#cbd5e1',
+    fontSize: 28,
+  },
+  compositeWrap: {
+    position: 'absolute',
+    top: 520,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  compositeNum: {
+    color: '#fb923c',
+    fontSize: 220,
+    fontWeight: 'bold',
+    lineHeight: 230,
+    textAlign: 'center',
+  },
+  compositeLabel: {
+    color: '#94a3b8',
+    fontSize: 24,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+    marginTop: 8,
+  },
+  subGrid: {
+    position: 'absolute',
+    top: 870,
+    left: 60,
+    right: 60,
+    flexDirection: 'row',
+    gap: 30,
+  },
+  subCard: {
+    flex: 1,
+    height: 180,
+    borderRadius: 18,
+    backgroundColor: '#1e293b',
+    borderWidth: 2,
+    borderColor: '#334155',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  subValue: {
+    color: '#fb923c',
+    fontSize: 56,
+    fontWeight: 'bold',
+  },
+  subLabel: {
+    color: '#94a3b8',
+    fontSize: 18,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+    marginTop: 16,
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 60,
+    left: 0,
+    right: 0,
+    color: '#475569',
+    fontSize: 20,
+    textAlign: 'center',
+  },
+});
 
 // ---- Camp history archive (RN-safe; no Blob/URL) ---------------------
 async function buildCampHistoryArchive(
@@ -474,6 +759,12 @@ async function buildCampHistoryArchive(
 
 const s = StyleSheet.create({
   root: { gap: spacing.md },
+  offscreen: {
+    position: 'absolute',
+    left: -10000,
+    top: 0,
+    opacity: 0,
+  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
