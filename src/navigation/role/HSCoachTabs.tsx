@@ -4,10 +4,8 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
 
-import { makePlaceholder } from '@/navigation/PlaceholderScreen';
-
-const HSCoachDashboard = makePlaceholder('HS Coach Dashboard', 'Arrives in Session 8', 'HS Coach role lands in Session 8 with endorsement composer + film/transcript verification.');
-const HSCoachLettersScreen = makePlaceholder('HS Coach Letters', 'Arrives in Session 4', 'AI letter composer.');
+import HSCoachDashboardScreen from '@/screens/hs-coach/HSCoachDashboardScreen';
+import LetterComposerScreen from '@/screens/shared/LetterComposerScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -28,8 +26,8 @@ export default function HSCoachTabs() {
           letterSpacing: 0.5,
         },
       }}>
-      <Tab.Screen name="DashboardTab" component={HSCoachDashboard} options={{ title: 'Home' }} />
-      <Tab.Screen name="LettersTab" component={HSCoachLettersScreen} options={{ title: 'Letters' }} />
+      <Tab.Screen name="DashboardTab" component={HSCoachDashboardScreen} options={{ title: 'Home' }} />
+      <Tab.Screen name="LettersTab" component={LetterComposerScreen} options={{ title: 'Letters' }} />
     </Tab.Navigator>
   );
 }
