@@ -13,18 +13,19 @@ import CampSpectatorViewScreen from '@/screens/camps/CampSpectatorViewScreen';
 import CampLiveLeaderboardScreen from '@/screens/camps/CampLiveLeaderboardScreen';
 import CampMobileCheckinScreen from '@/screens/camps/CampMobileCheckinScreen';
 import CampEvaluatorScoringScreen from '@/screens/camps/CampEvaluatorScoringScreen';
+import PublicCampRegistrationScreen from '@/screens/camps/PublicCampRegistrationScreen';
+import CampStaffCheckinScreen from '@/screens/camps/CampStaffCheckinScreen';
+import CampAthleteDeliverablesScreen from '@/screens/camps/CampAthleteDeliverablesScreen';
 import { makePlaceholder } from '@/navigation/PlaceholderScreen';
 
 const CampDiscovery = CampDiscoveryScreen;
 const ClaimCampSpot = ClaimCampSpotScreen;
-// PORT-PENDING: no dedicated Lovable CampDetail page — the detail surface lives inside CampManagerDashboard / public registration; schedule a focused detail screen in next wave.
-const CampDetail = makePlaceholder('Camp Detail', 'Arrives in Session 6', 'Camp details + enrollment.');
+// CampDetail is served by the public registration page (Lovable: PublicCampRegistration.tsx).
+const CampDetail = PublicCampRegistrationScreen;
 const CampLeaderboard = CampLiveLeaderboardScreen;
-// PORT-PENDING: Lovable source at offerhound-repo/src/pages/CampAthleteDeliverables.tsx (116 LOC) — schedule in next wave
-const CampDeliverables = makePlaceholder('Camp Deliverables', 'Arrives in Session 6', 'Athlete performance deliverables.');
+const CampDeliverables = CampAthleteDeliverablesScreen;
 const CampSpectator = CampSpectatorViewScreen;
-// PORT-PENDING: Lovable source at offerhound-repo/src/pages/CampStaffCheckin.tsx (78 LOC) — schedule in next wave
-const CampStaffCheckin = makePlaceholder('Staff Check-In', 'Arrives in Session 6', 'Staff-side QR check-in.');
+const CampStaffCheckin = CampStaffCheckinScreen;
 const CampMobileCheckin = CampMobileCheckinScreen;
 const CampEvaluatorScoring = CampEvaluatorScoringScreen;
 const CampLeaderboardEmbed = CampLeaderboardEmbedScreen;
