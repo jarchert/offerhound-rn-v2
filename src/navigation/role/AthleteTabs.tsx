@@ -4,7 +4,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
 
-import AthleteDashboard from '@/screens/athlete/AthleteDashboard';
+import DashboardScreen from '@/screens/shared/DashboardScreen';
 import AthleteMatchesScreen from '@/screens/athlete/AthleteMatchesScreen';
 import LettersScreen from '@/screens/athlete/LettersScreen';
 import MessagesScreen from '@/screens/shared/MessagesScreen';
@@ -29,7 +29,7 @@ export default function AthleteTabs() {
           letterSpacing: 0.5,
         },
       }}>
-      <Tab.Screen name="HomeTab" component={AthleteDashboard} options={{ title: 'Home' }} />
+      <Tab.Screen name="HomeTab" component={DashboardScreen} options={{ title: 'Home' }} />
       <Tab.Screen name="MatchesTab" component={AthleteMatchesScreen} options={{ title: 'Matches' }} />
       <Tab.Screen name="MessagesTab" component={MessagesScreen} options={{ title: 'Messages' }} />
       <Tab.Screen name="LettersTab" component={LettersScreen} options={{ title: 'Letters' }} />
