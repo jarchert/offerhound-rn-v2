@@ -1,5 +1,7 @@
-// ClubCoachTabs — 3 tabs per Part 2 §2.1: Dashboard, Camps, Letters
-// Part 34 of the conversion guide describes club coach CRM + messaging hub.
+// ClubCoachTabs — 3 tabs per Part 2 §2.1: Dashboard, Camps, Letters.
+// The Home tab now points at the full ported ClubCoachDashboardScreen
+// (Lovable parity: 13 inner tabs covering teams, camps, calendar, staff,
+// CRM, messaging, media, social, insights, directory, saved athletes, profile).
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
