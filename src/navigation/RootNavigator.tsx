@@ -39,6 +39,10 @@ import InstallScreen from '@/screens/shared/InstallScreen';
 import FounderMessageScreen from '@/screens/shared/FounderMessageScreen';
 import PricingScreen from '@/screens/shared/PricingScreen';
 import SubscriptionSuccessScreen from '@/screens/shared/SubscriptionSuccessScreen';
+import NILIntelligenceScreen from '@/screens/shared/NILIntelligenceScreen';
+import SupportScreen from '@/screens/shared/SupportScreen';
+import CoachCampaignsScreen from '@/screens/coach/CoachCampaignsScreen';
+import CoachCommunicationRulesScreen from '@/screens/coach/CoachCommunicationRulesScreen';
 
 export type RootStackParamList = {
   PublicTabs: undefined;
@@ -68,6 +72,10 @@ export type RootStackParamList = {
   FounderMessage: undefined;
   Pricing: undefined;
   SubscriptionSuccess: undefined;
+  NILIntelligence: undefined;
+  Support: undefined;
+  CoachCampaigns: undefined;
+  CoachCommunicationRules: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -118,6 +126,8 @@ export default function RootNavigator() {
           <Stack.Screen name="Install" component={InstallScreen} />
           <Stack.Screen name="FounderMessage" component={FounderMessageScreen} />
           <Stack.Screen name="Pricing" component={PricingScreen} />
+          <Stack.Screen name="Support" component={SupportScreen} />
+          <Stack.Screen name="CoachCommunicationRules" component={CoachCommunicationRulesScreen} />
         </>
       ) : (
         <>
@@ -159,6 +169,10 @@ export default function RootNavigator() {
           <Stack.Screen name="FounderMessage" component={FounderMessageScreen} />
           <Stack.Screen name="Pricing" component={PricingScreen} options={{ presentation: 'modal' }} />
           <Stack.Screen name="SubscriptionSuccess" component={SubscriptionSuccessScreen} />
+          <Stack.Screen name="NILIntelligence" component={NILIntelligenceScreen} />
+          <Stack.Screen name="Support" component={SupportScreen} />
+          <Stack.Screen name="CoachCampaigns" component={CoachCampaignsScreen} />
+          <Stack.Screen name="CoachCommunicationRules" component={CoachCommunicationRulesScreen} />
         </>
       )}
     </Stack.Navigator>
