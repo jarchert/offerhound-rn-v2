@@ -8,6 +8,7 @@ import ProfileScreen from '@/screens/shared/ProfileScreen';
 import PublicProfileScreen from '@/screens/public/PublicProfileScreen';
 import PublicScoutProfileScreen from '@/screens/public/PublicScoutProfileScreen';
 import InfluencerProfileScreen from '@/screens/public/InfluencerProfileScreen';
+import InfluencerBlogPostScreen from '@/screens/public/InfluencerBlogPostScreen';
 import { makePlaceholder } from '@/navigation/PlaceholderScreen';
 
 // PORT-PENDING: Lovable source at offerhound-repo/src/pages/PublicProfile.tsx (219 LOC) — ported in this commit.
@@ -16,8 +17,8 @@ const PublicAthleteProfile = PublicProfileScreen;
 const PublicScoutProfile = PublicScoutProfileScreen;
 // PORT-PENDING: Lovable source at offerhound-repo/src/pages/InfluencerProfile.tsx (317 LOC) — ported in this commit.
 const InfluencerProfile = InfluencerProfileScreen;
-// PORT-PENDING: Lovable source at offerhound-repo/src/pages/InfluencerBlogPost.tsx (210 LOC) — schedule in next wave
-const InfluencerBlogPost = makePlaceholder('Blog Post', 'Arrives in Session 8', 'Influencer blog post renderer.');
+// PORT-PENDING: Lovable source at offerhound-repo/src/pages/InfluencerBlogPost.tsx (210 LOC) — ported in this commit.
+const InfluencerBlogPost = InfluencerBlogPostScreen;
 // PORT-PENDING: Lovable source at offerhound-repo/src/pages/InviteShareCard.tsx (295 LOC); ShareRoleCardDialog / SharePlayerCardDialog components are ported but the standalone share-card screen isn't. Schedule in next wave.
 const InviteShareCard = makePlaceholder('Invite Card', 'Arrives in Session 3', 'Share-card invite preview.');
 
