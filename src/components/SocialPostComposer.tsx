@@ -19,7 +19,7 @@ import {
   StyleSheet,
   Linking,
   KeyboardAvoidingView,
-  Platform,
+  Platform as RNPlatform,
   ScrollView,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -36,62 +36,58 @@ import {
   Send,
   Image as ImageIcon,
   Hash,
-  Twitter,
-  Facebook,
-  Instagram,
-  Youtube,
 } from 'lucide-react-native';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
-interface Platform {
+interface SocialPlatform {
   key: string;
   label: string;
   color: string;        // background
   fg: string;           // foreground
+  monogram: string;     // 1–2 char badge (brand icons removed from lucide v1)
   shareUrl: (text: string) => string;
-  renderIcon: (color: string) => React.ReactNode;
 }
 
-const PLATFORMS: Platform[] = [
+const PLATFORMS: SocialPlatform[] = [
   {
     key: 'x',
     label: 'X (Twitter)',
     color: '#000000',
     fg: '#ffffff',
+    monogram: 'X',
     shareUrl: (text) => `https://x.com/intent/tweet?text=${encodeURIComponent(text)}`,
-    renderIcon: (c) => <Twitter size={16} color={c} />,
   },
   {
     key: 'facebook',
     label: 'Facebook',
     color: '#1877F2',
     fg: '#ffffff',
+    monogram: 'f',
     shareUrl: (text) => `https://www.facebook.com/sharer/sharer.php?quote=${encodeURIComponent(text)}`,
-    renderIcon: (c) => <Facebook size={16} color={c} />,
   },
   {
     key: 'instagram',
     label: 'Instagram',
     color: '#bc1888',
     fg: '#ffffff',
+    monogram: 'IG',
     shareUrl: () => `https://instagram.com`,
-    renderIcon: (c) => <Instagram size={16} color={c} />,
   },
   {
     key: 'tiktok',
     label: 'TikTok',
     color: '#000000',
     fg: '#ffffff',
+    monogram: 'TT',
     shareUrl: () => `https://tiktok.com/upload`,
-    renderIcon: (c) => <Text style={{ color: c, fontFamily: typography.fontFamily.bodyBold, fontSize: 14 }}>TT</Text>,
   },
   {
     key: 'youtube',
     label: 'YouTube',
     color: '#FF0000',
     fg: '#ffffff',
+    monogram: 'YT',
     shareUrl: () => `https://studio.youtube.com`,
-    renderIcon: (c) => <Youtube size={16} color={c} />,
   },
 ];
 
@@ -224,7 +220,9 @@ export function SocialPostComposer({
                     : { backgroundColor: colors.muted, borderColor: colors.border },
                 ]}
               >
-                {p.renderIcon(isSelected ? p.fg : colors.mutedForeground)}
+                <View style={[s.monogramPill, { backgroundColor: isSelected ? 'rgba(255,255,255,0.15)' : 'transparent' }]}>
+                  <Text style={[s.monogram, { color: isSelected ? p.fg : colors.mutedForeground }]}>{p.monogram}</Text>
+                </View>
                 <Text
                   style={[
                     s.platformText,
@@ -293,7 +291,7 @@ export function SocialPostComposer({
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={RNPlatform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={80}
     >
       {content}
@@ -321,6 +319,8 @@ const s = StyleSheet.create({
     borderRadius: radius.lg, borderWidth: 1,
   },
   platformText: { fontFamily: typography.fontFamily.bodyMedium, fontSize: typography.fontSize.sm },
+  monogramPill: { minWidth: 20, alignItems: 'center', justifyContent: 'center', borderRadius: 4, paddingHorizontal: 2 },
+  monogram: { fontFamily: typography.fontFamily.bodyBold, fontSize: 12 },
   preview: {
     backgroundColor: colors.muted, borderRadius: radius.lg, padding: spacing.md,
     borderWidth: 1, borderColor: colors.border, gap: 4,
