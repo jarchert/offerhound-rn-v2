@@ -12,10 +12,7 @@ import QuickStartSelectScreen from '@/screens/onboarding/QuickStartSelectScreen'
 import QuickStartCoachScreen from '@/screens/onboarding/QuickStartCoachScreen';
 import QuickStartScoutScreen from '@/screens/onboarding/QuickStartScoutScreen';
 import QuickStartOrganizationScreen from '@/screens/onboarding/QuickStartOrganizationScreen';
-import { makePlaceholder } from '@/navigation/PlaceholderScreen';
-
-// PORT-PENDING: no Lovable QuickStartAthlete page — AthleteQuickStartGuide dialog component is ported but the page-level wrapper (auth + redirects + role gating) is not. Schedule in next wave.
-const QuickStartAthlete = makePlaceholder('Quick Start: Athlete', 'Arrives in Session 7', 'Athlete quick start guide.');
+import QuickStartAthleteScreen from '@/screens/onboarding/QuickStartAthleteScreen';
 
 export type OnboardingStackParamList = {
   Onboarding: undefined;
@@ -46,7 +43,7 @@ export default function OnboardingStack() {
       <Stack.Screen name="QuickStartCoach" component={QuickStartCoachScreen} />
       <Stack.Screen name="QuickStartScout" component={QuickStartScoutScreen} />
       <Stack.Screen name="QuickStartOrganization" component={QuickStartOrganizationScreen} />
-      <Stack.Screen name="QuickStartAthlete" component={QuickStartAthlete} />
+      <Stack.Screen name="QuickStartAthlete" component={QuickStartAthleteScreen} />
     </Stack.Navigator>
   );
 }
