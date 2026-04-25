@@ -5,11 +5,12 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { colors } from '@/lib/theme';
 
 import ProfileScreen from '@/screens/shared/ProfileScreen';
+import PublicProfileScreen from '@/screens/public/PublicProfileScreen';
 import PublicScoutProfileScreen from '@/screens/public/PublicScoutProfileScreen';
 import { makePlaceholder } from '@/navigation/PlaceholderScreen';
 
-// PORT-PENDING: Lovable source at offerhound-repo/src/pages/PublicProfile.tsx (219 LOC); the inner AthleteProfile component is ported, but a wrapper that fetches by customUrl + renders share-card flows is needed. Schedule in next wave.
-const PublicAthleteProfile = makePlaceholder('Athlete Profile', 'Arrives in Session 3', 'Public athlete profile with highlight media + share card.');
+// PORT-PENDING: Lovable source at offerhound-repo/src/pages/PublicProfile.tsx (219 LOC) — ported in this commit.
+const PublicAthleteProfile = PublicProfileScreen;
 // PORT-PENDING: Lovable source at offerhound-repo/src/pages/PublicScoutProfile.tsx (122 LOC) — ported in this commit; aliased name kept for stack mapping.
 const PublicScoutProfile = PublicScoutProfileScreen;
 // PORT-PENDING: Lovable source at offerhound-repo/src/pages/InfluencerProfile.tsx (317 LOC) — schedule in next wave
