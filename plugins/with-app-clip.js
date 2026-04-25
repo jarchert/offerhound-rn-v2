@@ -200,6 +200,41 @@ const withAppClipXcodeTarget = (config) =>
     const project = cfg.modResults;
     const targetName = APP_CLIP_TARGET_NAME;
 
+    // The bundled `xcode` package's PRODUCTTYPE_BY_TARGETTYPE map does not
+    // include `application.on-demand-install-capable` (the App Clip product
+    // type), so addTarget() throws before we get a chance to register one.
+    // Monkey-patch the project instance to inject a synthetic mapping just
+    // for this target. Mirrors what newer forks of xcode do natively.
+    if (!project.__appClipPatch) {
+      const origAddTarget = project.addTarget.bind(project);
+      project.addTarget = function patchedAddTarget(name, type, subfolder, bundleId) {
+        if (type === 'application.on-demand-install-capable') {
+          // Build the target manually using xcode's `application` flow, then
+          // overwrite the productType to the App Clip one.
+          const t = origAddTarget(name, 'application', subfolder, bundleId);
+          try {
+            const nativeTargets = project.pbxNativeTargetSection();
+            const tgt = nativeTargets[t.uuid];
+            if (tgt) tgt.productType = '"com.apple.product-type.application.on-demand-install-capable"';
+            // Also patch the matching PBXNativeTarget productType in build configs
+            const buildConfigs = project.pbxXCBuildConfigurationSection();
+            Object.keys(buildConfigs).forEach((k) => {
+              const cfgEntry = buildConfigs[k];
+              if (cfgEntry && typeof cfgEntry === 'object' && cfgEntry.buildSettings && cfgEntry.buildSettings.PRODUCT_BUNDLE_IDENTIFIER === bundleId) {
+                // ensure the App Clip flag is set in build settings
+                cfgEntry.buildSettings.PRODUCT_NAME = `"${name}"`;
+              }
+            });
+          } catch (e) {
+            // best-effort; non-fatal — prebuild has already produced the target
+          }
+          return t;
+        }
+        return origAddTarget(name, type, subfolder, bundleId);
+      };
+      project.__appClipPatch = true;
+    }
+
     // Bail if target already exists (re-run safety)
     const existing = project.pbxNativeTargetSection();
     for (const key of Object.keys(existing)) {
