@@ -4,10 +4,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { colors } from '@/lib/theme';
 
 import SettingsScreen from '@/screens/shared/SettingsScreen';
-import NotificationsScreen from '@/screens/shared/NotificationsScreen';
 import DeleteAccountScreen from '@/screens/shared/DeleteAccountScreen';
 import PrivacySettingsScreen from '@/screens/shared/PrivacySettingsScreen';
 import AccountSettingsScreen from '@/screens/settings/AccountSettingsScreen';
+import NotificationSettingsScreen from '@/screens/settings/NotificationSettingsScreen';
 import LegalStack from '@/navigation/stacks/LegalStack';
 import { makePlaceholder } from '@/navigation/PlaceholderScreen';
 
@@ -36,7 +36,7 @@ export default function SettingsStack() {
       }}>
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
-      <Stack.Screen name="NotificationSettings" component={NotificationsScreen} />
+      <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
       <Stack.Screen name="FollowingSettings" component={FollowingSettingsScreen} />
       <Stack.Screen name="CookieSettings" component={PrivacySettingsScreen} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
