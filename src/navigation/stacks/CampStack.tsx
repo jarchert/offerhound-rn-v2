@@ -10,23 +10,23 @@ import ClaimCampSpotScreen from '@/screens/camps/ClaimCampSpotScreen';
 import CampLeaderboardEmbedScreen from '@/screens/camps/CampLeaderboardEmbedScreen';
 import UnsubscribeCampAlertsScreen from '@/screens/camps/UnsubscribeCampAlertsScreen';
 import CampSpectatorViewScreen from '@/screens/camps/CampSpectatorViewScreen';
+import CampLiveLeaderboardScreen from '@/screens/camps/CampLiveLeaderboardScreen';
+import CampMobileCheckinScreen from '@/screens/camps/CampMobileCheckinScreen';
+import CampEvaluatorScoringScreen from '@/screens/camps/CampEvaluatorScoringScreen';
 import { makePlaceholder } from '@/navigation/PlaceholderScreen';
 
 const CampDiscovery = CampDiscoveryScreen;
 const ClaimCampSpot = ClaimCampSpotScreen;
 // PORT-PENDING: no dedicated Lovable CampDetail page — the detail surface lives inside CampManagerDashboard / public registration; schedule a focused detail screen in next wave.
 const CampDetail = makePlaceholder('Camp Detail', 'Arrives in Session 6', 'Camp details + enrollment.');
-// PORT-PENDING: Lovable source at offerhound-repo/src/pages/CampLiveLeaderboard.tsx (307 LOC) — schedule in next wave
-const CampLeaderboard = makePlaceholder('Camp Leaderboard', 'Arrives in Session 6', 'Live leaderboard during camp.');
+const CampLeaderboard = CampLiveLeaderboardScreen;
 // PORT-PENDING: Lovable source at offerhound-repo/src/pages/CampAthleteDeliverables.tsx (116 LOC) — schedule in next wave
 const CampDeliverables = makePlaceholder('Camp Deliverables', 'Arrives in Session 6', 'Athlete performance deliverables.');
 const CampSpectator = CampSpectatorViewScreen;
 // PORT-PENDING: Lovable source at offerhound-repo/src/pages/CampStaffCheckin.tsx (78 LOC) — schedule in next wave
 const CampStaffCheckin = makePlaceholder('Staff Check-In', 'Arrives in Session 6', 'Staff-side QR check-in.');
-// PORT-PENDING: Lovable source at offerhound-repo/src/pages/CampMobileCheckin.tsx (433 LOC) — schedule in next wave
-const CampMobileCheckin = makePlaceholder('Mobile Check-In', 'Arrives in Session 6', 'Coach-side mobile check-in.');
-// PORT-PENDING: Lovable source at offerhound-repo/src/pages/CampEvaluatorScoring.tsx (441 LOC) — schedule in next wave
-const CampEvaluatorScoring = makePlaceholder('Evaluator Scoring', 'Arrives in Session 6', 'Evaluator scoring interface.');
+const CampMobileCheckin = CampMobileCheckinScreen;
+const CampEvaluatorScoring = CampEvaluatorScoringScreen;
 const CampLeaderboardEmbed = CampLeaderboardEmbedScreen;
 const UnsubscribeCampAlerts = UnsubscribeCampAlertsScreen;
 
