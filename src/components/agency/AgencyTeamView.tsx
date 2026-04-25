@@ -308,7 +308,7 @@ const s = StyleSheet.create({
 
   name: {
     fontFamily: typography.fontFamily.bodySemiBold,
-    fontSize: typography.fontSize.md,
+    fontSize: typography.fontSize.base,
     color: colors.foreground,
     flexShrink: 1,
   },
