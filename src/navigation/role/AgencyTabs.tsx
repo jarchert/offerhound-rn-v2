@@ -1,5 +1,7 @@
 // AgencyTabs — 2 tabs per Part 2 §2.1: Dashboard, Letters
 // Part 35 describes agency multi-recruiter collaboration + staff management.
+// AgencyDashboardScreen is now the full RN port of the Lovable AgencyDashboard page
+// (see screens/agency/AgencyDashboardScreen.tsx).
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
