@@ -6,35 +6,35 @@ import { colors } from '@/lib/theme';
 
 import CampsScreen from '@/screens/shared/CampsScreen';
 import CampDiscoveryScreen from '@/screens/shared/CampDiscoveryScreen';
+import ClaimCampSpotScreen from '@/screens/camps/ClaimCampSpotScreen';
+import CampLeaderboardEmbedScreen from '@/screens/camps/CampLeaderboardEmbedScreen';
+import UnsubscribeCampAlertsScreen from '@/screens/camps/UnsubscribeCampAlertsScreen';
+import CampSpectatorViewScreen from '@/screens/camps/CampSpectatorViewScreen';
 import { makePlaceholder } from '@/navigation/PlaceholderScreen';
 
 const CampDiscovery = CampDiscoveryScreen;
-// PORT-PENDING: Lovable source at offerhound-repo/src/pages/ClaimCampSpot.tsx (176 LOC) — schedule in next wave
-const ClaimCampSpot = makePlaceholder('Claim Camp Spot', 'Arrives in Session 6', 'Register for a camp.');
+const ClaimCampSpot = ClaimCampSpotScreen;
 // PORT-PENDING: no dedicated Lovable CampDetail page — the detail surface lives inside CampManagerDashboard / public registration; schedule a focused detail screen in next wave.
 const CampDetail = makePlaceholder('Camp Detail', 'Arrives in Session 6', 'Camp details + enrollment.');
 // PORT-PENDING: Lovable source at offerhound-repo/src/pages/CampLiveLeaderboard.tsx (307 LOC) — schedule in next wave
 const CampLeaderboard = makePlaceholder('Camp Leaderboard', 'Arrives in Session 6', 'Live leaderboard during camp.');
 // PORT-PENDING: Lovable source at offerhound-repo/src/pages/CampAthleteDeliverables.tsx (116 LOC) — schedule in next wave
 const CampDeliverables = makePlaceholder('Camp Deliverables', 'Arrives in Session 6', 'Athlete performance deliverables.');
-// PORT-PENDING: Lovable source at offerhound-repo/src/pages/CampSpectatorView.tsx (256 LOC) — schedule in next wave
-const CampSpectator = makePlaceholder('Camp Spectator', 'Arrives in Session 6', 'Spectator view of live camp.');
+const CampSpectator = CampSpectatorViewScreen;
 // PORT-PENDING: Lovable source at offerhound-repo/src/pages/CampStaffCheckin.tsx (78 LOC) — schedule in next wave
 const CampStaffCheckin = makePlaceholder('Staff Check-In', 'Arrives in Session 6', 'Staff-side QR check-in.');
 // PORT-PENDING: Lovable source at offerhound-repo/src/pages/CampMobileCheckin.tsx (433 LOC) — schedule in next wave
 const CampMobileCheckin = makePlaceholder('Mobile Check-In', 'Arrives in Session 6', 'Coach-side mobile check-in.');
 // PORT-PENDING: Lovable source at offerhound-repo/src/pages/CampEvaluatorScoring.tsx (441 LOC) — schedule in next wave
 const CampEvaluatorScoring = makePlaceholder('Evaluator Scoring', 'Arrives in Session 6', 'Evaluator scoring interface.');
-// PORT-PENDING: Lovable source at offerhound-repo/src/pages/CampLeaderboardEmbed.tsx (103 LOC) — schedule in next wave
-const CampLeaderboardEmbed = makePlaceholder('Leaderboard Embed', 'Arrives in Session 6', 'Embeddable leaderboard view.');
-// PORT-PENDING: Lovable source at offerhound-repo/src/pages/UnsubscribeCampAlerts.tsx (138 LOC) — schedule in next wave
-const UnsubscribeCampAlerts = makePlaceholder('Unsubscribe', 'Arrives in Session 6', 'Unsubscribe from camp alerts.');
+const CampLeaderboardEmbed = CampLeaderboardEmbedScreen;
+const UnsubscribeCampAlerts = UnsubscribeCampAlertsScreen;
 
 export type CampStackParamList = {
   CampDiscovery: undefined;
   CampsList: undefined;
   CampsDiscover: undefined;
-  ClaimCampSpot: undefined;
+  ClaimCampSpot: { token?: string } | undefined;
   CampDetail: { campId: string };
   CampLeaderboard: { campId: string };
   CampDeliverables: { campId: string; enrollmentId: string };
@@ -42,8 +42,8 @@ export type CampStackParamList = {
   CampStaffCheckin: { token: string };
   CampMobileCheckin: { campId: string };
   CampEvaluatorScoring: { campId: string };
-  CampLeaderboardEmbed: { campId: string };
-  UnsubscribeCampAlerts: undefined;
+  CampLeaderboardEmbed: { campId: string; metric?: string; limit?: number | string; theme?: string };
+  UnsubscribeCampAlerts: { email?: string } | undefined;
 };
 
 const Stack = createNativeStackNavigator<CampStackParamList>();
