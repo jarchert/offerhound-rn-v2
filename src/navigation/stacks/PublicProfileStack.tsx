@@ -1,27 +1,23 @@
 // PublicProfileStack — deep-linked share targets per Part 2 §2.1
 // PublicProfile (/p/:customUrl), PublicScoutProfile, InfluencerProfile, InfluencerBlogPost, InviteShareCard
+// Session-parity-port phase 1-2: + Gallery, SampleAthlete, SampleAthleteGallery,
+// PublicClubDiscovery, ContactActivity, SubmitTestimonial, SubmitReference.
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { colors } from '@/lib/theme';
 
-import ProfileScreen from '@/screens/shared/ProfileScreen';
 import PublicProfileScreen from '@/screens/public/PublicProfileScreen';
 import PublicScoutProfileScreen from '@/screens/public/PublicScoutProfileScreen';
 import InfluencerProfileScreen from '@/screens/public/InfluencerProfileScreen';
 import InfluencerBlogPostScreen from '@/screens/public/InfluencerBlogPostScreen';
 import InviteShareCardScreen from '@/screens/public/InviteShareCardScreen';
-import { makePlaceholder } from '@/navigation/PlaceholderScreen';
-
-// PORT-PENDING: Lovable source at offerhound-repo/src/pages/PublicProfile.tsx (219 LOC) — ported in this commit.
-const PublicAthleteProfile = PublicProfileScreen;
-// PORT-PENDING: Lovable source at offerhound-repo/src/pages/PublicScoutProfile.tsx (122 LOC) — ported in this commit; aliased name kept for stack mapping.
-const PublicScoutProfile = PublicScoutProfileScreen;
-// PORT-PENDING: Lovable source at offerhound-repo/src/pages/InfluencerProfile.tsx (317 LOC) — ported in this commit.
-const InfluencerProfile = InfluencerProfileScreen;
-// PORT-PENDING: Lovable source at offerhound-repo/src/pages/InfluencerBlogPost.tsx (210 LOC) — ported in this commit.
-const InfluencerBlogPost = InfluencerBlogPostScreen;
-// PORT-PENDING: Lovable source at offerhound-repo/src/pages/InviteShareCard.tsx (295 LOC) — ported in this commit.
-const InviteShareCard = InviteShareCardScreen;
+import GalleryScreen from '@/screens/public/GalleryScreen';
+import SampleAthleteScreen from '@/screens/public/SampleAthleteScreen';
+import SampleAthleteGalleryScreen from '@/screens/public/SampleAthleteGalleryScreen';
+import PublicClubDiscoveryScreen from '@/screens/public/PublicClubDiscoveryScreen';
+import ContactActivityScreen from '@/screens/public/ContactActivityScreen';
+import SubmitTestimonialScreen from '@/screens/public/SubmitTestimonialScreen';
+import SubmitReferenceScreen from '@/screens/public/SubmitReferenceScreen';
 
 export type PublicProfileStackParamList = {
   PublicProfile: { customUrl: string };
@@ -31,6 +27,13 @@ export type PublicProfileStackParamList = {
   InfluencerProfile: { handle: string };
   InfluencerBlogPost: { handle: string; slug: string };
   InviteShareCard: { token?: string; from?: string; role?: string } | undefined;
+  Gallery: undefined;
+  SampleAthlete: undefined;
+  SampleAthleteGallery: undefined;
+  PublicClubDiscovery: undefined;
+  ContactActivity: undefined;
+  SubmitTestimonial: { profile?: string } | undefined;
+  SubmitReference: { token?: string } | undefined;
 };
 
 const Stack = createNativeStackNavigator<PublicProfileStackParamList>();
@@ -42,13 +45,20 @@ export default function PublicProfileStack() {
         headerShown: false,
         contentStyle: { backgroundColor: colors.background },
       }}>
-      <Stack.Screen name="PublicProfile" component={PublicAthleteProfile} />
-      <Stack.Screen name="AthleteProfileByUrl" component={PublicAthleteProfile} />
-      <Stack.Screen name="ProfileLegacy" component={PublicAthleteProfile} />
-      <Stack.Screen name="PublicScoutProfile" component={PublicScoutProfile} />
-      <Stack.Screen name="InfluencerProfile" component={InfluencerProfile} />
-      <Stack.Screen name="InfluencerBlogPost" component={InfluencerBlogPost} />
-      <Stack.Screen name="InviteShareCard" component={InviteShareCard} />
+      <Stack.Screen name="PublicProfile" component={PublicProfileScreen} />
+      <Stack.Screen name="AthleteProfileByUrl" component={PublicProfileScreen} />
+      <Stack.Screen name="ProfileLegacy" component={PublicProfileScreen} />
+      <Stack.Screen name="PublicScoutProfile" component={PublicScoutProfileScreen} />
+      <Stack.Screen name="InfluencerProfile" component={InfluencerProfileScreen} />
+      <Stack.Screen name="InfluencerBlogPost" component={InfluencerBlogPostScreen} />
+      <Stack.Screen name="InviteShareCard" component={InviteShareCardScreen} />
+      <Stack.Screen name="Gallery" component={GalleryScreen} />
+      <Stack.Screen name="SampleAthlete" component={SampleAthleteScreen} />
+      <Stack.Screen name="SampleAthleteGallery" component={SampleAthleteGalleryScreen} />
+      <Stack.Screen name="PublicClubDiscovery" component={PublicClubDiscoveryScreen} />
+      <Stack.Screen name="ContactActivity" component={ContactActivityScreen} />
+      <Stack.Screen name="SubmitTestimonial" component={SubmitTestimonialScreen} />
+      <Stack.Screen name="SubmitReference" component={SubmitReferenceScreen} />
     </Stack.Navigator>
   );
 }
