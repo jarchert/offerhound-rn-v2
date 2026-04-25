@@ -373,7 +373,7 @@ export function CampResultsView({ camp, onBack }: CampResultsViewProps) {
                   ? s.podiumSilver
                   : s.podiumBronze;
               return (
-                <Card key={r.scoreId} style={[s.podiumCard, podiumStyle]}>
+                <Card key={r.scoreId} style={{ ...s.podiumCard, ...podiumStyle }}>
                   <CardHeader style={s.podiumHeader}>
                     <Award size={32} color={colors.primary} />
                     <CardTitle style={s.podiumRank}>#{i + 1}</CardTitle>

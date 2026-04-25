@@ -227,7 +227,6 @@ export function CampScheduleBuilder({ camp, onBack }: CampScheduleBuilderProps) 
                       size="icon"
                       onPress={() => move(st.id, -1)}
                       disabled={idx === 0}
-                      accessibilityLabel="Move up"
                     >
                       <ChevronUp size={16} color={colors.foreground} />
                     </Button>
@@ -236,7 +235,6 @@ export function CampScheduleBuilder({ camp, onBack }: CampScheduleBuilderProps) 
                       size="icon"
                       onPress={() => move(st.id, 1)}
                       disabled={idx === stations.length - 1}
-                      accessibilityLabel="Move down"
                     >
                       <ChevronDown size={16} color={colors.foreground} />
                     </Button>
@@ -244,7 +242,6 @@ export function CampScheduleBuilder({ camp, onBack }: CampScheduleBuilderProps) 
                       variant="ghost"
                       size="icon"
                       onPress={() => removeStation(st.id)}
-                      accessibilityLabel="Remove station"
                     >
                       <Trash2 size={16} color={colors.destructive} />
                     </Button>

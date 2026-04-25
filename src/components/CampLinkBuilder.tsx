@@ -337,7 +337,6 @@ export function CampLinkBuilder({
               variant="outline"
               size="icon"
               onPress={() => handleCopy(trackedUrl, 'main')}
-              accessibilityLabel="Copy URL"
             >
               {copiedKey === 'main' ? (
                 <Check size={16} color={colors.foreground} />
