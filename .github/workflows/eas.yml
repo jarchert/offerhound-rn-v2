@@ -29,6 +29,7 @@ env:
   EXPO_APPLE_ID: ${{ secrets.APPLE_ID }}
   EXPO_APPLE_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
   EXPO_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+  EXPO_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
 
 jobs:
   build:
@@ -54,9 +55,9 @@ jobs:
         run: npm ci
 
       - name: Build iOS
-        if: ${{ inputs.platform == 'ios' || (inputs.platform == null && github.event.inputs.platform != 'android') }}
+        if: ${{ github.event.inputs.platform != 'android' }}
         run: eas build --platform ios --profile ${{ inputs.profile || 'preview' }} --non-interactive
 
       - name: Build Android
-        if: ${{ inputs.platform == 'android' || (inputs.platform == null && github.event.inputs.platform != 'ios') }}
+        if: ${{ github.event.inputs.platform != 'ios' }}
         run: eas build --platform android --profile ${{ inputs.profile || 'preview' }} --non-interactive
