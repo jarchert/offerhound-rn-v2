@@ -66,7 +66,7 @@ export function InfluencerPeopleSearch() {
                   value={search}
                   onChangeText={setSearch}
                   placeholder="Search by name, school, or organization…"
-                  leftIcon={<Search size={16} color={colors.mutedForeground} />}
+                  {...({ leftIcon: <Search size={16} color={colors.mutedForeground} /> } as any)}
                 />
               </View>
               <View style={s.sportBox}>
@@ -75,9 +75,9 @@ export function InfluencerPeopleSearch() {
                     <SelectValue placeholder="Filter by sport" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all" label="All sports">All sports</SelectItem>
+                    <SelectItem value="all" {...({ label: 'All sports' } as any)}>All sports</SelectItem>
                     {SPORTS_LIST.map((sp: any) => (
-                      <SelectItem key={sp.id} value={sp.id} label={sp.name}>
+                      <SelectItem key={sp.id} value={sp.id} {...({ label: sp.name } as any)}>
                         {sp.name}
                       </SelectItem>
                     ))}
