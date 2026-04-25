@@ -8,10 +8,6 @@
 //   "Manual" token-entry tab. When expo-barcode-scanner is installed, replace
 //   <ScanStub /> with a real <BarCodeScanner /> wrapper.
 //
-// PORT-PENDING (offline queue):
-//   Web uses useCampCheckinSync + checkinQueue (IndexedDB). RN replacement (AsyncStorage
-//   + NetInfo) is not yet ported. We always treat the device as online and call Supabase
-//   directly. When the offline queue lands, swap `isOnline=true` with the hook's value.
 //
 // PORT-PENDING (walk-up registration):
 //   CampWalkupRegistration component is web-only. We render an inline placeholder card
@@ -41,6 +37,8 @@ import {
 } from 'lucide-react-native';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useCampCheckinSync } from '@/hooks/useCampCheckinSync';
+import { enqueueOp } from '@/lib/checkinQueue';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -78,12 +76,9 @@ export default function CampMobileCheckinScreen() {
   const [tab, setTab] = useState('scan');
   const [manualToken, setManualToken] = useState('');
 
-  // PORT-PENDING: offline queue not yet wired in RN. Always treat as online.
-  const isOnline = true;
-  const queueCount = 0;
-  const isFlushing = false;
-  const flushNow = () => {};
-  const refreshQueue = () => {};
+  const { isOnline, queueCount, isFlushing, flushNow, refreshQueue } = useCampCheckinSync(
+    campId ?? '',
+  );
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -127,7 +122,15 @@ export default function CampMobileCheckinScreen() {
 
   const checkInMutation = useMutation({
     mutationFn: async (enrollmentId: string) => {
-      // PORT-PENDING: when offline queue ships, branch on isOnline and enqueueOp here.
+      if (!isOnline) {
+        await enqueueOp({
+          kind: 'check_in',
+          campId: campId ?? '',
+          payload: { enrollmentId },
+        });
+        await refreshQueue();
+        return { queued: true as const, enrollmentId };
+      }
       const { error } = await supabase
         .from('camp_enrollments')
         .update({
@@ -138,8 +141,11 @@ export default function CampMobileCheckinScreen() {
       if (error) throw error;
       return { queued: false as const, enrollmentId };
     },
-    onSuccess: () => {
-      toast({ title: '✓ Checked in' });
+    onSuccess: (result) => {
+      toast({
+        title: result.queued ? '✓ Queued for sync' : '✓ Checked in',
+        description: result.queued ? 'Will sync when back online.' : undefined,
+      });
       queryClient.invalidateQueries({ queryKey: ['camp-ops-enrollments', campId] });
     },
     onError: (err: any) => {
@@ -245,7 +251,7 @@ export default function CampMobileCheckinScreen() {
         <View style={styles.headerRight}>
           <Badge variant="secondary" style={styles.statusBadge}>
             <Wifi size={12} color={colors.foreground} />
-            <Text style={styles.statusBadgeText}> Online</Text>
+            <Text style={styles.statusBadgeText}> {isOnline ? 'Online' : 'Offline'}</Text>
           </Badge>
           {queueCount > 0 ? (
             <Badge variant="outline" style={styles.statusBadge}>
