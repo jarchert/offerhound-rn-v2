@@ -7,9 +7,9 @@
 //   - lucide-react              → lucide-react-native
 //   - useNavigate (router)      → useNavigation (react-navigation)
 //   - SEO component             → omitted (RN has no <head>)
-//   - useLetterCenter hook      → not yet ported in RN; we build a minimal
-//                                 inline `goToLetterForAthlete` that opens
-//                                 the LetterComposer modal with seed payload.
+//   - useLetterCenter hook      → uses the ported `@/hooks/useLetterCenter`
+//                                 to route to the role-appropriate Letter
+//                                 Center with athlete prefill.
 //   - LetterButton (web)        → PORT-PENDING; rendered as a small Button
 //                                 that triggers the same navigation.
 //   - AthleteMatchCard          → already ported (src/components/athlete)
@@ -34,6 +34,7 @@ import { Button } from '@/components/ui/Button';
 import { AthleteMatchCard } from '@/components/athlete/AthleteMatchCard';
 import { useCoachAthleteMatches } from '@/hooks/useCoachAthleteMatches';
 import { useRefreshCoachAthleteMatches } from '@/hooks/useRefreshCoachAthleteMatches';
+import { useLetterCenter } from '@/hooks/useLetterCenter';
 import { colors, typography, spacing } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 
@@ -41,18 +42,7 @@ export default function CoachAthleteMatchesScreen() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
   const { data: matches = [], isLoading } = useCoachAthleteMatches();
   const { refreshMatches, isRefreshing } = useRefreshCoachAthleteMatches();
-
-  // PORT-PENDING: useLetterCenter hook (Lovable). Inline minimal version.
-  const goToLetterForAthlete = (athlete: any) => {
-    nav.navigate('LetterComposer', {
-      seed: {
-        recipientCategory: 'athlete',
-        recipientName: athlete?.full_name,
-        recipientEmail: athlete?.email,
-        athleteProfileId: athlete?.id,
-      },
-    });
-  };
+  const { goToLetterForAthlete } = useLetterCenter();
 
   const goToMessages = (athlete: any) => {
     // RN Messages screen takes no params today; PORT-PENDING for athlete
