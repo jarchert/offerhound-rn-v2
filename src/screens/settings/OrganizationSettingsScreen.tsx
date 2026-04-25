@@ -21,7 +21,9 @@ type TabKey = 'general' | 'members';
 export default function OrganizationSettingsScreen() {
   const { data } = useScoutOrganization();
   const org = (data as any)?.organization ?? null;
+  const isOwner = !!(data as any)?.isOwner;
   const [tab, setTab] = useState<TabKey>('general');
+  const [logoUrl, setLogoUrl] = useState<string | null>(org?.logo_url ?? null);
 
   return (
     <SafeAreaView style={s.container}>
@@ -47,7 +49,15 @@ export default function OrganizationSettingsScreen() {
               <CardTitle>Organization Profile</CardTitle>
             </CardHeader>
             <CardContent style={s.cardBody}>
-              <OrganizationLogoUpload />
+              {org ? (
+                <OrganizationLogoUpload
+                  organizationId={org.id}
+                  currentLogoUrl={logoUrl}
+                  organizationName={org.name || 'Your Organization'}
+                  onLogoUpdated={setLogoUrl}
+                  isOwner={isOwner}
+                />
+              ) : null}
               <Text style={s.muted}>{org ? org.name || 'Your Organization' : 'No organization found.'}</Text>
             </CardContent>
           </Card>
