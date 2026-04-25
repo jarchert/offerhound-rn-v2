@@ -5,10 +5,12 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
 
 import ScoutDashboard from '@/screens/scout/ScoutDashboard';
+import ScoutLettersScreen from '@/screens/scout/ScoutLettersScreen';
 import { makePlaceholder } from '@/navigation/PlaceholderScreen';
 
-const ScoutLettersScreen = makePlaceholder('Scout Letters', 'Arrives in Session 4', 'AI letter composer with streaming generation.');
+// PORT-PENDING: Lovable source at offerhound-repo/src/pages/ScoutTrends.tsx (171 LOC) — schedule in next wave
 const ScoutTrendsScreen = makePlaceholder('Scout Trends', 'Arrives in Session 4', 'Victory Native charts + gesture-driven tooltips.');
+// PORT-PENDING: Lovable source at offerhound-repo/src/pages/ScoutOnboarding.tsx (154 LOC) — schedule in next wave
 const ScoutOnboardingScreen = makePlaceholder('Scout Onboarding', 'Arrives in Session 7', 'Scout-specific onboarding flow.');
 
 const Tab = createBottomTabNavigator();
