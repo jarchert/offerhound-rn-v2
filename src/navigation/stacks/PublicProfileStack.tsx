@@ -9,6 +9,7 @@ import PublicProfileScreen from '@/screens/public/PublicProfileScreen';
 import PublicScoutProfileScreen from '@/screens/public/PublicScoutProfileScreen';
 import InfluencerProfileScreen from '@/screens/public/InfluencerProfileScreen';
 import InfluencerBlogPostScreen from '@/screens/public/InfluencerBlogPostScreen';
+import InviteShareCardScreen from '@/screens/public/InviteShareCardScreen';
 import { makePlaceholder } from '@/navigation/PlaceholderScreen';
 
 // PORT-PENDING: Lovable source at offerhound-repo/src/pages/PublicProfile.tsx (219 LOC) — ported in this commit.
@@ -19,8 +20,8 @@ const PublicScoutProfile = PublicScoutProfileScreen;
 const InfluencerProfile = InfluencerProfileScreen;
 // PORT-PENDING: Lovable source at offerhound-repo/src/pages/InfluencerBlogPost.tsx (210 LOC) — ported in this commit.
 const InfluencerBlogPost = InfluencerBlogPostScreen;
-// PORT-PENDING: Lovable source at offerhound-repo/src/pages/InviteShareCard.tsx (295 LOC); ShareRoleCardDialog / SharePlayerCardDialog components are ported but the standalone share-card screen isn't. Schedule in next wave.
-const InviteShareCard = makePlaceholder('Invite Card', 'Arrives in Session 3', 'Share-card invite preview.');
+// PORT-PENDING: Lovable source at offerhound-repo/src/pages/InviteShareCard.tsx (295 LOC) — ported in this commit.
+const InviteShareCard = InviteShareCardScreen;
 
 export type PublicProfileStackParamList = {
   PublicProfile: { customUrl: string };
@@ -29,7 +30,7 @@ export type PublicProfileStackParamList = {
   PublicScoutProfile: { scoutId: string };
   InfluencerProfile: { handle: string };
   InfluencerBlogPost: { handle: string; slug: string };
-  InviteShareCard: undefined;
+  InviteShareCard: { token?: string; from?: string; role?: string } | undefined;
 };
 
 const Stack = createNativeStackNavigator<PublicProfileStackParamList>();
