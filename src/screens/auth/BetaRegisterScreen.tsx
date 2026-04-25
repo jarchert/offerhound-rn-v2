@@ -17,7 +17,7 @@ export default function BetaRegisterScreen() {
     if (!token || !user) return;
     setLoading(true);
     try {
-      const { data } = await supabase.rpc('use_beta_invitation' as any, { token, new_user_id: user.id } as any);
+      const { data } = await (supabase.rpc as any)('use_beta_invitation', { token, new_user_id: user.id });
       if (data) Alert.alert('Beta access granted!');
       else Alert.alert('Invalid or expired token.');
     } catch {

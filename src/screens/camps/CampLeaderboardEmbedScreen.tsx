@@ -43,7 +43,7 @@ export default function CampLeaderboardEmbedScreen() {
     enabled: !!campId,
     refetchInterval: 30_000,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_camp_leaderboard_public', { p_camp_id: campId! });
+      const { data, error } = await (supabase.rpc as any)('get_camp_leaderboard_public', { p_camp_id: campId! });
       if (error) throw error;
       return (data ?? []) as PublicRow[];
     },

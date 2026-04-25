@@ -47,7 +47,7 @@ export function CampRecruiterHeatmap({ campId, campName }: Props) {
         .select('recruiter_name, school_name, division, positions_watching')
         .eq('camp_id', campId);
 
-      const list = rows || [];
+      const list = (rows || []) as any[];
       const positionMap = new Map<string, PositionBucket>();
       const schoolMap = new Map<string, SchoolBucket>();
       const divisionMap = new Map<string, number>();
@@ -64,7 +64,7 @@ export function CampRecruiterHeatmap({ campId, campName }: Props) {
         }
         if (r.school_name) {
           const sk = r.school_name.trim();
-          const sc = schoolMap.get(sk) || { school: sk, count: 0, divisions: [] };
+          const sc: SchoolBucket = schoolMap.get(sk) || { school: sk, count: 0, divisions: [] as string[] };
           sc.count += 1;
           if (r.division && !sc.divisions.includes(r.division)) sc.divisions.push(r.division);
           schoolMap.set(sk, sc);
