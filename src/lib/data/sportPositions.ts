@@ -490,8 +490,8 @@ export interface SportEventOption {
   format?: "time" | "distance" | "height" | "score";
   /** Elite benchmark for radar scoring (lower-is-better for time-based) */
   benchmark?: number;
-  /** Maps to a radar axis */
-  radarAxis?: RadarAxis;
+  /** Maps to a radar axis (string in RN; full union lives in web src) */
+  radarAxis?: string;
   /** Whether splits input is shown */
   hasSplits?: boolean;
 }
