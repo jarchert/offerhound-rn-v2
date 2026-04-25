@@ -9,11 +9,8 @@ import PrivacySettingsScreen from '@/screens/shared/PrivacySettingsScreen';
 import AccountSettingsScreen from '@/screens/settings/AccountSettingsScreen';
 import NotificationSettingsScreen from '@/screens/settings/NotificationSettingsScreen';
 import OrganizationSettingsScreen from '@/screens/settings/OrganizationSettingsScreen';
+import FollowingSettingsScreen from '@/screens/settings/FollowingSettingsScreen';
 import LegalStack from '@/navigation/stacks/LegalStack';
-import { makePlaceholder } from '@/navigation/PlaceholderScreen';
-
-// PORT-PENDING: Lovable source at offerhound-repo/src/pages/FollowingSettings.tsx (112 LOC) — schedule in next wave
-const FollowingSettingsScreen = makePlaceholder('Following Settings', 'Arrives in Session 8', 'Manage followed athletes, coaches, and camps.');
 
 export type SettingsStackParamList = {
   Settings: undefined;
