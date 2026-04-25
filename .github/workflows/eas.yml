@@ -24,6 +24,9 @@ on:
     branches:
       - 'session-parity-port-phase1-2'
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   build:
     name: Build (${{ inputs.platform || 'all' }} / ${{ inputs.profile || 'preview' }})
@@ -37,7 +40,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: app/package-lock.json
+          cache-dependency-path: package-lock.json
+          working-directory: .
 
       - name: Setup EAS
         uses: expo/expo-github-action@v8
