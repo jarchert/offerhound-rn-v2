@@ -16,7 +16,11 @@ import CampEvaluatorScoringScreen from '@/screens/camps/CampEvaluatorScoringScre
 import PublicCampRegistrationScreen from '@/screens/camps/PublicCampRegistrationScreen';
 import CampStaffCheckinScreen from '@/screens/camps/CampStaffCheckinScreen';
 import CampAthleteDeliverablesScreen from '@/screens/camps/CampAthleteDeliverablesScreen';
-import { makePlaceholder } from '@/navigation/PlaceholderScreen';
+
+// PORT-PENDING: no remaining placeholders in CampStack — every route maps to a ported screen.
+// (CampDetail intentionally aliases PublicCampRegistrationScreen, matching Lovable's
+// PublicCampRegistration.tsx serving as the camp detail page.) If new camp surfaces are
+// added in Lovable they should be ported here and an explicit placeholder reintroduced.
 
 const CampDiscovery = CampDiscoveryScreen;
 const ClaimCampSpot = ClaimCampSpotScreen;
