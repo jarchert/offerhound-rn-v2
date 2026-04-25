@@ -16,7 +16,8 @@ import {
 } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Copy, Check, Twitter, Facebook, Linkedin } from 'lucide-react-native';
+import { Copy, Check, MessageCircle as Twitter, Users as Facebook, Link as Linkedin } from 'lucide-react-native';
+// PORT-PENDING: Twitter/Facebook/Linkedin brand icons substituted with generic lucide icons.
 import { copyToClipboard } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { colors, spacing, typography, radius } from '@/lib/theme';
