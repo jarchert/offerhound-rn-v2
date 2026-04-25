@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   statContent: { padding: spacing.md, alignItems: 'center' },
   statValue: {
     fontFamily: typography.fontFamily.heading,
-    fontSize: typography.fontSize.xxl,
+    fontSize: typography.fontSize['2xl'],
     color: colors.foreground,
   },
   statLabel: {
