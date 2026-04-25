@@ -7,6 +7,7 @@ import SettingsScreen from '@/screens/shared/SettingsScreen';
 import NotificationsScreen from '@/screens/shared/NotificationsScreen';
 import DeleteAccountScreen from '@/screens/shared/DeleteAccountScreen';
 import PrivacySettingsScreen from '@/screens/shared/PrivacySettingsScreen';
+import AccountSettingsScreen from '@/screens/settings/AccountSettingsScreen';
 import LegalStack from '@/navigation/stacks/LegalStack';
 import { makePlaceholder } from '@/navigation/PlaceholderScreen';
 
@@ -15,8 +16,10 @@ const FollowingSettingsScreen = makePlaceholder('Following Settings', 'Arrives i
 
 export type SettingsStackParamList = {
   Settings: undefined;
+  AccountSettings: undefined;
   NotificationSettings: undefined;
   FollowingSettings: undefined;
+  OrganizationSettings: undefined;
   CookieSettings: undefined;
   DeleteAccount: undefined;
   LegalStack: undefined;
@@ -32,6 +35,7 @@ export default function SettingsStack() {
         contentStyle: { backgroundColor: colors.background },
       }}>
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
       <Stack.Screen name="NotificationSettings" component={NotificationsScreen} />
       <Stack.Screen name="FollowingSettings" component={FollowingSettingsScreen} />
       <Stack.Screen name="CookieSettings" component={PrivacySettingsScreen} />
