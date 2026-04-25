@@ -1,0 +1,67 @@
+name: EAS Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - ios
+          - android
+      profile:
+        description: 'Build profile'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+          - preview
+          - production
+  push:
+    branches:
+      - 'session-parity-port-phase1-2'
+
+jobs:
+  build:
+    name: Build (${{ inputs.platform || 'all' }} / ${{ inputs.profile || 'preview' }})
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EAS_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: app
+
+      - name: Install Ruby gems (for iOS)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: app/ios
+
+      - name: Build iOS
+        if: ${{ inputs.platform == 'ios' || (inputs.platform == null && github.event.inputs.platform != 'android') }}
+        run: eas build --platform ios --profile ${{ inputs.profile || 'preview' }} --non-interactive
+        working-directory: app
+
+      - name: Build Android
+        if: ${{ inputs.platform == 'android' || (inputs.platform == null && github.event.inputs.platform != 'ios') }}
+        run: eas build --platform android --profile ${{ inputs.profile || 'preview' }} --non-interactive
+        working-directory: app
