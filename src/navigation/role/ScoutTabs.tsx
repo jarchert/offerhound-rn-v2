@@ -7,10 +7,7 @@ import { colors, typography } from '@/lib/theme';
 import ScoutDashboard from '@/screens/scout/ScoutDashboard';
 import ScoutLettersScreen from '@/screens/scout/ScoutLettersScreen';
 import ScoutTrendsScreen from '@/screens/scout/ScoutTrendsScreen';
-import { makePlaceholder } from '@/navigation/PlaceholderScreen';
-
-// PORT-PENDING: Lovable source at offerhound-repo/src/pages/ScoutOnboarding.tsx (154 LOC) — schedule in next wave
-const ScoutOnboardingScreen = makePlaceholder('Scout Onboarding', 'Arrives in Session 7', 'Scout-specific onboarding flow.');
+import ScoutOnboardingScreen from '@/screens/onboarding/ScoutOnboardingScreen';
 
 const Tab = createBottomTabNavigator();
 
