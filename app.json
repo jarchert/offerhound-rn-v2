@@ -22,6 +22,7 @@
       "infoPlist": {
         "NSCameraUsageDescription": "OfferHound needs camera access to upload profile photos and highlight videos.",
         "NSPhotoLibraryUsageDescription": "OfferHound needs photo library access to upload profile photos and highlight videos.",
+        "NSPhotoLibraryAddUsageDescription": "OfferHound saves share cards and highlight images to your photo library.",
         "NSMicrophoneUsageDescription": "OfferHound needs microphone access for video recording.",
         "NSCalendarsUsageDescription": "OfferHound adds upcoming college camps and recruiting events to your calendar.",
         "NSCalendarsFullAccessUsageDescription": "OfferHound adds upcoming college camps and recruiting events to your calendar.",
