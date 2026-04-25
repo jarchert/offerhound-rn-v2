@@ -196,7 +196,7 @@ export default function ScoutTrendsScreen() {
         ) : (
           <View style={[s.cardsWrap, isWide && s.cardsWrapWide]}>
             {/* Top Positions */}
-            <Card style={[s.chartCard, isWide && s.chartCardWide]}>
+            <Card style={[s.chartCard, isWide && s.chartCardWide] as any}>
               <View style={s.chartHeader}>
                 <Trophy size={18} color={colors.primary} />
                 <Text style={s.cardTitleText}>Top Positions</Text>
@@ -222,7 +222,7 @@ export default function ScoutTrendsScreen() {
             </Card>
 
             {/* Top States */}
-            <Card style={[s.chartCard, isWide && s.chartCardWide]}>
+            <Card style={[s.chartCard, isWide && s.chartCardWide] as any}>
               <View style={s.chartHeader}>
                 <MapPin size={18} color={colors.primary} />
                 <Text style={s.cardTitleText}>Top States</Text>
@@ -248,7 +248,7 @@ export default function ScoutTrendsScreen() {
             </Card>
 
             {/* Sport Breakdown */}
-            <Card style={[s.chartCard, isWide && s.chartCardWide]}>
+            <Card style={[s.chartCard, isWide && s.chartCardWide] as any}>
               <View style={s.chartHeader}>
                 <BarChart3 size={18} color={colors.primary} />
                 <Text style={s.cardTitleText}>Sport Breakdown</Text>
@@ -271,7 +271,7 @@ export default function ScoutTrendsScreen() {
             </Card>
 
             {/* Grad Year Distribution */}
-            <Card style={[s.chartCard, isWide && s.chartCardWide]}>
+            <Card style={[s.chartCard, isWide && s.chartCardWide] as any}>
               <View style={s.chartHeader}>
                 <GraduationCap size={18} color={colors.primary} />
                 <Text style={s.cardTitleText}>Graduation Year</Text>

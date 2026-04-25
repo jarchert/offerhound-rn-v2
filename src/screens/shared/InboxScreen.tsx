@@ -388,7 +388,7 @@ function MessagesList({
         const unread = (c.unread_count || 0) > 0;
         return (
           <Pressable key={c.id} onPress={() => onPress(c)}>
-            <Card style={[s.itemCard, unread && s.itemCardUnread]}>
+            <Card style={[s.itemCard, unread && s.itemCardUnread] as any}>
               <View style={s.row}>
                 <View style={s.rowLeft}>
                   <View style={s.avatar}>
@@ -457,7 +457,7 @@ function AlertsList({
                   const unread = !n.is_read;
                   return (
                     <Pressable key={n.id} onPress={() => onPress(n)}>
-                      <Card style={[s.itemCard, unread && s.itemCardUnread]}>
+                      <Card style={[s.itemCard, unread && s.itemCardUnread] as any}>
                         <View style={s.alertRow}>
                           <View style={s.avatarSm}>
                             <Bell size={16} color={colors.primary} />
