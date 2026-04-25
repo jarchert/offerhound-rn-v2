@@ -5,10 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
 
 import ParentDashboard from '@/screens/parent/ParentDashboard';
-import { makePlaceholder } from '@/navigation/PlaceholderScreen';
-
-// PORT-PENDING: Lovable source at offerhound-repo/src/pages/ParentTrustSafety.tsx (21 LOC) — schedule in next wave
-const ParentTrustSafetyScreen = makePlaceholder('Trust & Safety', 'Arrives in Session 8', 'Parental oversight, consent management, and safety controls.');
+import ParentTrustSafetyScreen from '@/screens/parent/ParentTrustSafetyScreen';
 
 const Tab = createBottomTabNavigator();
 
