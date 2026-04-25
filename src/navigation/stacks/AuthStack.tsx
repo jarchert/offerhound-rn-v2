@@ -7,6 +7,7 @@ import { colors } from '@/lib/theme';
 import SignInScreen from '@/screens/auth/SignInScreen';
 import SignUpScreen from '@/screens/auth/SignUpScreen';
 import LandingScreen from '@/screens/auth/LandingScreen';
+import AuthScreen from '@/screens/auth/AuthScreen';
 import ParentalConsentScreen from '@/screens/auth/ParentalConsentScreen';
 import BetaRegisterScreen from '@/screens/auth/BetaRegisterScreen';
 import DeleteAccountScreen from '@/screens/shared/DeleteAccountScreen';
@@ -18,6 +19,7 @@ const PasswordResetScreen = makePlaceholder('Password Reset', 'Supabase password
 
 export type AuthStackParamList = {
   Landing: undefined;
+  Auth: { mode?: 'signin' | 'signup' | 'reset'; parent_token?: string; redirect?: string } | undefined;
   SignIn: undefined;
   SignUp: undefined;
   BetaRegister: undefined;
@@ -37,6 +39,7 @@ export default function AuthStack() {
         contentStyle: { backgroundColor: colors.background },
       }}>
       <Stack.Screen name="Landing" component={LandingScreen} />
+      <Stack.Screen name="Auth" component={AuthScreen} />
       <Stack.Screen name="SignIn" component={SignInScreen} />
       <Stack.Screen name="SignUp" component={SignUpScreen} />
       <Stack.Screen name="BetaRegister" component={BetaRegisterScreen} />
