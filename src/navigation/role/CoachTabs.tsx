@@ -8,9 +8,7 @@ import CoachDashboard from '@/screens/coach/CoachDashboard';
 import CoachRosterScreen from '@/screens/coach/CoachRosterScreen';
 import CoachSearchAthletesScreen from '@/screens/coach/CoachSearchAthletesScreen';
 import CampsScreen from '@/screens/shared/CampsScreen';
-import { makePlaceholder } from '@/navigation/PlaceholderScreen';
-
-const CoachLettersScreen = makePlaceholder('Coach Letters', 'Arrives in Session 4', 'AI letter composer with streaming generation.');
+import LetterComposerScreen from '@/screens/shared/LetterComposerScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -34,7 +32,7 @@ export default function CoachTabs() {
       <Tab.Screen name="DashboardTab" component={CoachDashboard} options={{ title: 'Home' }} />
       <Tab.Screen name="PipelineTab" component={CoachRosterScreen} options={{ title: 'Pipeline' }} />
       <Tab.Screen name="CampsTab" component={CampsScreen} options={{ title: 'Camps' }} />
-      <Tab.Screen name="LettersTab" component={CoachLettersScreen} options={{ title: 'Letters' }} />
+      <Tab.Screen name="LettersTab" component={LetterComposerScreen} options={{ title: 'Letters' }} />
       <Tab.Screen name="DirectoryTab" component={CoachSearchAthletesScreen} options={{ title: 'Directory' }} />
     </Tab.Navigator>
   );
