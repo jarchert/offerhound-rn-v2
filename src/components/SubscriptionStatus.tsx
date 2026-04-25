@@ -8,7 +8,7 @@
 // `customer-portal` edge function locally and opening the returned URL.
 
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Linking, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, Linking, ActivityIndicator, Platform } from "react-native";
 import { Crown, CreditCard, Calendar, ExternalLink, Sparkles, Users } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -29,6 +29,16 @@ export function SubscriptionStatus() {
   const planType = tierName && tierName.toLowerCase().includes("year") ? "yearly" : "monthly";
 
   const handleManageSubscription = async () => {
+    // App Store Guideline 3.1.1: route iOS users to Apple's subscription
+    // management page instead of the Stripe customer portal.
+    if (Platform.OS === 'ios') {
+      try {
+        await Linking.openURL('https://apps.apple.com/account/subscriptions');
+      } catch (e) {
+        // best-effort, swallow
+      }
+      return;
+    }
     setIsOpeningPortal(true);
     try {
       const { data, error } = await supabase.functions.invoke("customer-portal");

@@ -7,7 +7,7 @@
 //   - Loader2 spinner → ActivityIndicator (Button's loading prop)
 //   - md:grid-cols-2 / grid-cols-4 → fixed flex rows with flex: 1 children
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Linking } from 'react-native';
+import { View, Text, StyleSheet, Linking, Platform } from 'react-native';
 import { Shield, Calendar, BarChart3, Users, Check } from 'lucide-react-native';
 import {
   Card,
@@ -22,12 +22,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { PRICING_TIERS } from '@/lib/pricing';
 import { colors, spacing, typography } from '@/lib/theme';
+import { PaywallSheet } from '@/components/Paywall';
+import { TIER_TO_PRODUCT_ID } from '@/lib/iap';
 
 const PER_EVENT_TIER = PRICING_TIERS.find((t) => t.id === 'camp-manager-event')!;
 const ANNUAL_TIER = PRICING_TIERS.find((t) => t.id === 'camp-manager-annual')!;
 
+// iOS App Store compliance: native IAP product ids for the Camp Manager tiers.
+const CAMP_MANAGER_IAP_SKUS = (Platform.OS === 'ios'
+  ? [TIER_TO_PRODUCT_ID['camp-manager-event'].ios, TIER_TO_PRODUCT_ID['camp-manager-annual'].ios]
+  : [TIER_TO_PRODUCT_ID['camp-manager-event'].android, TIER_TO_PRODUCT_ID['camp-manager-annual'].android]);
+
 export function CampManagerPaywall() {
   const [loadingTier, setLoadingTier] = useState<string | null>(null);
+  const [iapPaywallOpen, setIapPaywallOpen] = useState(false);
   const { toast } = useToast();
 
   const handleCheckout = async (
@@ -35,6 +43,12 @@ export function CampManagerPaywall() {
     mode: 'subscription' | 'payment',
     tierId: string,
   ) => {
+    // App Store Guideline 3.1.1: digital subscriptions on iOS MUST use IAP,
+    // not external/web checkout. Surface the native paywall sheet instead.
+    if (Platform.OS === 'ios') {
+      setIapPaywallOpen(true);
+      return;
+    }
     setLoadingTier(tierId);
     try {
       const { data, error } = await supabase.functions.invoke('create-checkout', {
@@ -161,6 +175,17 @@ export function CampManagerPaywall() {
           </View>
         ))}
       </View>
+
+      {/* iOS native paywall (App Store IAP) — only mounted on iOS. */}
+      {Platform.OS === 'ios' && (
+        <PaywallSheet
+          tier="Camp Manager"
+          productIds={CAMP_MANAGER_IAP_SKUS}
+          visible={iapPaywallOpen}
+          onClose={() => setIapPaywallOpen(false)}
+          onPurchaseComplete={() => setIapPaywallOpen(false)}
+        />
+      )}
     </View>
   );
 }
