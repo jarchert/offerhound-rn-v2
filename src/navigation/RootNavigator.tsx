@@ -35,6 +35,10 @@ import InboxScreen from '@/screens/shared/InboxScreen';
 import LetterComposerScreen from '@/screens/shared/LetterComposerScreen';
 import AICoachScreen from '@/screens/shared/AICoachScreen';
 import SmokeTestScreen from '@/screens/dev/SmokeTestScreen';
+import InstallScreen from '@/screens/shared/InstallScreen';
+import FounderMessageScreen from '@/screens/shared/FounderMessageScreen';
+import PricingScreen from '@/screens/shared/PricingScreen';
+import SubscriptionSuccessScreen from '@/screens/shared/SubscriptionSuccessScreen';
 
 export type RootStackParamList = {
   PublicTabs: undefined;
@@ -60,6 +64,10 @@ export type RootStackParamList = {
   LetterComposer: { seed?: any } | undefined;
   AICoach: undefined;
   SmokeTest: undefined;
+  Install: undefined;
+  FounderMessage: undefined;
+  Pricing: undefined;
+  SubscriptionSuccess: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -107,6 +115,9 @@ export default function RootNavigator() {
           <Stack.Screen name="AuthStack" component={AuthStack} />
           <Stack.Screen name="PublicProfileStack" component={PublicProfileStack} />
           <Stack.Screen name="CampStack" component={CampStack} />
+          <Stack.Screen name="Install" component={InstallScreen} />
+          <Stack.Screen name="FounderMessage" component={FounderMessageScreen} />
+          <Stack.Screen name="Pricing" component={PricingScreen} />
         </>
       ) : (
         <>
@@ -144,6 +155,10 @@ export default function RootNavigator() {
             options={{ presentation: 'modal' }}
           />
           <Stack.Screen name="SmokeTest" component={SmokeTestScreen} />
+          <Stack.Screen name="Install" component={InstallScreen} />
+          <Stack.Screen name="FounderMessage" component={FounderMessageScreen} />
+          <Stack.Screen name="Pricing" component={PricingScreen} options={{ presentation: 'modal' }} />
+          <Stack.Screen name="SubscriptionSuccess" component={SubscriptionSuccessScreen} />
         </>
       )}
     </Stack.Navigator>

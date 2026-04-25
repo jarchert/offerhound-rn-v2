@@ -202,6 +202,12 @@ export const linking: LinkingOptions<any> = {
         },
       },
 
+      // Cross-cutting public screens
+      Install: 'install',
+      FounderMessage: 'founder',
+      Pricing: 'pricing',
+      SubscriptionSuccess: 'subscription-success',
+
       // Fallback not-found (optional; RN v7 supports this)
       NotFound: '*',
     },
