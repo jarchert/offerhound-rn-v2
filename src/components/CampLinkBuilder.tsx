@@ -5,14 +5,6 @@
 //   @/components/ui/* (lowercase) → PascalCase RN ports
 //   lucide-react → lucide-react-native
 //   onChange e.target.value → onChangeText
-// GAPs (matching established parity-port convention):
-//   - @/lib/utm and @/lib/canonicalDomain are not yet ported. Minimal inline
-//     equivalents are embedded below so this component is functionally complete.
-//     When utm.ts is ported, replace inline helpers with imports.
-//   - SharePreviewModal not ported — preview button is wired but renders a
-//     basic Dialog with the URL/title/description (functional placeholder).
-//   - logShareLinkAudit becomes a no-op stub (web also writes through Supabase
-//     RPC; that side will be re-attached when @/lib/utm lands).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import {
@@ -33,112 +25,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/Dialog';
 import { Copy, Check, Link2, Eye, Sparkles } from 'lucide-react-native';
 import { copyToClipboard } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { colors, spacing, typography, radius } from '@/lib/theme';
+import * as utm from '@/lib/utm';
+import { buildCanonicalUrl } from '@/lib/canonicalDomain';
+import { SharePreviewModal } from '@/components/SharePreviewModal';
 
-// ---- Inline UTM helpers (GAP: @/lib/utm not yet ported) -----------------------
-interface UtmParams {
-  source: string;
-  medium: string;
-  campaign: string;
-  content?: string;
-  term?: string;
-}
-
-const STRIPPABLE_KEYS = ['gclid', 'fbclid', 'msclkid', 'mc_cid', 'mc_eid', '_hsenc', '_hsmi'];
-
-const CAMPAIGN_SOURCE_OPTIONS: { value: string; label: string; medium: string }[] = [
-  { value: 'hudl', label: 'Hudl profile', medium: 'profile' },
-  { value: 'twitter', label: 'X / Twitter', medium: 'social' },
-  { value: 'instagram', label: 'Instagram', medium: 'social' },
-  { value: 'facebook', label: 'Facebook', medium: 'social' },
-  { value: 'email', label: 'Email blast', medium: 'email' },
-  { value: 'sms', label: 'SMS', medium: 'message' },
-  { value: 'qr', label: 'QR / flyer', medium: 'print' },
-  { value: 'website', label: 'Website / blog', medium: 'web' },
-];
-
-const UTM_PRESETS: { label: string; source: string; medium: string }[] = [
-  { label: 'Hudl profile', source: 'hudl', medium: 'profile' },
-  { label: 'X post', source: 'twitter', medium: 'social' },
-  { label: 'Instagram bio', source: 'instagram', medium: 'social' },
-  { label: 'Email blast', source: 'email', medium: 'email' },
-  { label: 'SMS blast', source: 'sms', medium: 'message' },
-  { label: 'QR flyer', source: 'qr', medium: 'print' },
-];
-
-interface UtmReport {
-  url: string;
-  strippedKeys: string[];
-  hadHash: boolean;
-}
-
-function buildUtmUrlWithReport(base: string, p: UtmParams): UtmReport {
-  let url = base;
-  const strippedKeys: string[] = [];
-  let hadHash = false;
-  // strip hash
-  const hashIdx = url.indexOf('#');
-  if (hashIdx >= 0) {
-    hadHash = true;
-    url = url.slice(0, hashIdx);
-  }
-  // strip known tracker keys from existing query
-  const qIdx = url.indexOf('?');
-  if (qIdx >= 0) {
-    const head = url.slice(0, qIdx);
-    const qs = url
-      .slice(qIdx + 1)
-      .split('&')
-      .filter((kv) => {
-        const k = kv.split('=')[0];
-        if (STRIPPABLE_KEYS.includes(k)) {
-          strippedKeys.push(k);
-          return false;
-        }
-        return true;
-      })
-      .join('&');
-    url = qs ? `${head}?${qs}` : head;
-  }
-  // append utm params
-  const utm: [string, string | undefined][] = [
-    ['utm_source', p.source],
-    ['utm_medium', p.medium],
-    ['utm_campaign', p.campaign],
-    ['utm_content', p.content || undefined],
-    ['utm_term', p.term || undefined],
-  ];
-  const utmStr = utm
-    .filter(([, v]) => v && v.length > 0)
-    .map(([k, v]) => `${k}=${encodeURIComponent(v as string)}`)
-    .join('&');
-  if (utmStr) url += url.includes('?') ? `&${utmStr}` : `?${utmStr}`;
-  return { url, strippedKeys, hadHash };
-}
-
-function buildUtmUrl(base: string, p: UtmParams): string {
-  return buildUtmUrlWithReport(base, p).url;
-}
-
-async function logShareLinkAudit(_args: any): Promise<void> {
-  // GAP: real audit logging will land with @/lib/utm port.
-  return;
-}
-
-// canonicalDomain GAP — fall back to relative-style URL.
-function buildCanonicalUrl(path: string): string {
-  return `https://offerhound.app${path.startsWith('/') ? path : `/${path}`}`;
-}
+type UtmParams = utm.UtmParams;
+const { CAMPAIGN_SOURCE_OPTIONS, UTM_PRESETS, buildUtmUrlWithReport, buildUtmUrl, logShareLinkAudit } = utm;
 
 interface CampLinkBuilderProps {
   campId: string;
@@ -390,21 +286,16 @@ export function CampLinkBuilder({
         </View>
       </CardContent>
 
-      {/* Inline preview modal (GAP: SharePreviewModal not yet ported). */}
-      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{campName || 'Camp registration'}</DialogTitle>
-            <DialogDescription>
-              {campDescription ||
-                'Open Graph preview of how your share link will appear on social and chat apps.'}
-            </DialogDescription>
-          </DialogHeader>
-          <View style={s.previewBox}>
-            <Text style={s.monoInput}>{trackedUrl}</Text>
-          </View>
-        </DialogContent>
-      </Dialog>
+      <SharePreviewModal
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        url={trackedUrl}
+        title={campName || 'Camp registration'}
+        description={
+          campDescription ||
+          'Open Graph preview of how your share link will appear on social and chat apps.'
+        }
+      />
     </Card>
   );
 }
@@ -462,9 +353,4 @@ const s = StyleSheet.create({
     backgroundColor: colors.muted,
   },
   linkLabel: { flex: 1, fontFamily: typography.fontFamily.body, fontSize: typography.size.sm, color: colors.foreground },
-  previewBox: {
-    padding: spacing.md,
-    borderRadius: radius.md,
-    backgroundColor: colors.muted,
-  },
 });
