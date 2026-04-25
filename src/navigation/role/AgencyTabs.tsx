@@ -4,10 +4,8 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
 
-import { makePlaceholder } from '@/navigation/PlaceholderScreen';
-
-const AgencyDashboard = makePlaceholder('Agency Dashboard', 'Arrives in Session 8', 'Agency role lands in Session 8 with staff manager + team view + letters.');
-const AgencyLettersScreen = makePlaceholder('Agency Letters', 'Arrives in Session 4', 'AI letter composer.');
+import AgencyDashboardScreen from '@/screens/agency/AgencyDashboardScreen';
+import LetterComposerScreen from '@/screens/shared/LetterComposerScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -28,8 +26,8 @@ export default function AgencyTabs() {
           letterSpacing: 0.5,
         },
       }}>
-      <Tab.Screen name="DashboardTab" component={AgencyDashboard} options={{ title: 'Home' }} />
-      <Tab.Screen name="LettersTab" component={AgencyLettersScreen} options={{ title: 'Letters' }} />
+      <Tab.Screen name="DashboardTab" component={AgencyDashboardScreen} options={{ title: 'Home' }} />
+      <Tab.Screen name="LettersTab" component={LetterComposerScreen} options={{ title: 'Letters' }} />
     </Tab.Navigator>
   );
 }
