@@ -8,7 +8,11 @@ import LandingScreen from '@/screens/auth/LandingScreen';
 import SportPickerScreen from '@/screens/shared/SportPickerScreen';
 import PodcastScreen from '@/screens/influencer/PodcastScreen';
 import SignInScreen from '@/screens/auth/SignInScreen';
-import { makePlaceholder } from '@/navigation/PlaceholderScreen';
+
+// PORT-PENDING: no Lovable source mapped to a dedicated public-only screen beyond the
+// four tabs above (Landing, Discover/SportPicker, Podcasts, Account/SignIn). If a future
+// public-only surface (e.g. a dedicated Discover hub distinct from the sport picker) gets
+// designed in Lovable, port it here and reintroduce a placeholder during the gap.
 
 const PublicDiscoverScreen = SportPickerScreen; // Session 2: sport picker acts as discover hub
 
