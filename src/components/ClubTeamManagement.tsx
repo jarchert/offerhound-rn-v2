@@ -15,16 +15,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
 import { TeamRosterAthleteCard } from "@/components/club/TeamRosterAthleteCard";
 import { useToast } from "@/hooks/use-toast";
+import { useLetterCenter } from "@/hooks/useLetterCenter";
 import {
   Users, UserPlus, Loader2, Shield, Edit, Copy, Archive, Mail, Upload,
   ChevronRight, ArrowLeft, Plus, CheckCircle2, Link2,
 } from "lucide-react-native";
 import { colors, typography, spacing } from "@/lib/theme";
-
-// ---- Local stub for hook not yet ported (Ch.13 follow-up) ----
-const useLetterCenter = () => ({
-  goToLetterForAthlete: (_athlete: any, _opts?: any) => {},
-});
 
 interface ClubTeamManagementProps {
   clubProfileId: string;
