@@ -522,7 +522,7 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
                       resendInviteVariables={resendInvite.variables as string | undefined}
                       onResendInvite={(id: string) => resendInvite.mutate(id)}
                       onToggleZortsDone={(id: string) => toggleZorts.mutate({ id, table: "team_rosters", completed: true })}
-                      onParentInvite={(id: string, currentEmail?: string) => {
+                      onParentInvite={(id: string, currentEmail: string | null) => {
                         setSelectedRosterId(id);
                         setParentInviteEmail(currentEmail || "");
                         setShowParentInviteDialog(true);
