@@ -1,5 +1,7 @@
 // HSCoachTabs — 2 tabs per Part 2 §2.1: Dashboard, Letters
 // Part 35 describes HS Coach endorsement composer + film/transcript verification.
+// HSCoachDashboardScreen is now the full RN port of the Lovable HSCoachDashboard page
+// (see screens/hs-coach/HSCoachDashboardScreen.tsx).
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
