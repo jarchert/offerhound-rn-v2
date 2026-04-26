@@ -65,8 +65,8 @@ jobs:
         continue-on-error: true
         env:
           EXPO_ASC_API_KEY_PATH: /tmp/expo-asc/key.p8
-          EXPO_ASC_API_KEY_ID: ${{ secrets.EXPO_ASC_API_KEY_ID }}
-          EXPO_ASC_API_ISSUER_ID: ${{ secrets.EXPO_ASC_API_ISSUER_ID }}
+          ASC_API_KEY_ID: ${{ secrets.EXPO_ASC_API_KEY_ID }}
+          ASC_API_KEY_ISSUER_ID: ${{ secrets.EXPO_ASC_API_ISSUER_ID }}
         run: eas build --platform ios --profile ${{ inputs.profile || 'preview' }} --non-interactive
 
       - name: Build Android
