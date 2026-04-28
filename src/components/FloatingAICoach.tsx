@@ -14,10 +14,7 @@ import {
   Easing,
 } from 'react-native';
 import { Sparkles } from 'lucide-react-native';
-import {
-  useNavigation,
-  useNavigationState,
-} from '@react-navigation/native';
+import { navigate, getCurrentRouteName } from '@/navigation/navigationRef';
 
 import { colors, spacing, shadows } from '@/lib/theme';
 
@@ -28,21 +25,11 @@ export interface FloatingAICoachProps {
   bottomOffset?: number;
 }
 
-/** Walk the navigation state tree and return the deepest active route name. */
-function getActiveRouteName(state: any): string | undefined {
-  if (!state) return undefined;
-  const route = state.routes?.[state.index ?? 0];
-  if (!route) return undefined;
-  if (route.state) return getActiveRouteName(route.state);
-  return route.name;
-}
-
 export function FloatingAICoach({
   hideOnRoute = 'AICoach',
   bottomOffset,
 }: FloatingAICoachProps = {}) {
-  const navigation = useNavigation<any>();
-  const activeRoute = useNavigationState(getActiveRouteName);
+  const [activeRoute, setActiveRoute] = React.useState<string | undefined>(getCurrentRouteName);
 
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   useEffect(() => {
@@ -84,9 +71,18 @@ export function FloatingAICoach({
   if (keyboardVisible) return null;
   if (activeRoute === hideOnRoute) return null;
 
+  // Sync active route on a polling interval — lightweight since this component
+  // only needs to know if it's on the AICoach screen to hide itself.
+  React.useEffect(() => {
+    const id = setInterval(() => {
+      setActiveRoute(getCurrentRouteName());
+    }, 300);
+    return () => clearInterval(id);
+  }, []);
+
   const handlePress = () => {
     try {
-      navigation.navigate(hideOnRoute as never);
+      navigate(hideOnRoute as any);
     } catch {
       // Swallow nav errors — overlay must never crash the host screen.
     }

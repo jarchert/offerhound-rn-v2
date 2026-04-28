@@ -29,6 +29,7 @@ import { CookiePreferencesProvider } from '@/contexts/CookiePreferencesContext';
 
 import RootNavigator from '@/navigation/RootNavigator';
 import { linking } from '@/navigation/linking';
+import { navigationRef } from '@/navigation/navigationRef';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import OfflineBanner from '@/components/OfflineBanner';
 import ImpersonationBanner from '@/components/ImpersonationBanner';
@@ -108,7 +109,7 @@ export default function App() {
                     <ImpersonationProvider>
                       <AthleteProfileProvider>
                         <PodcastPlayerProvider>
-                          <NavigationContainer linking={linking}>
+                          <NavigationContainer ref={navigationRef} linking={linking}>
                             <ImpersonationBanner />
                             <OfflineBanner />
                             <RootNavigator />
