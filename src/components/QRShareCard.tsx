@@ -9,7 +9,7 @@ import React, { useRef } from 'react';
 import { View, Text, StyleSheet, Share, Pressable } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
-import { Share2, Copy, ExternalLink, Linking as LinkIcon } from 'lucide-react-native';
+import { Share2, Copy, ExternalLink } from 'lucide-react-native';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/hooks/use-toast';
@@ -71,7 +71,7 @@ export function QRShareCard({ customUrl, athleteName }: QRShareCardProps) {
               />
             </View>
             <Pressable onPress={onCopy} style={s.linkBtn}>
-              <LinkIcon size={14} color={colors.primary} />
+              <ExternalLink size={14} color={colors.primary} />
               <Text style={s.linkText} numberOfLines={1}>
                 {link}
               </Text>
