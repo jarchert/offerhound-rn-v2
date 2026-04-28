@@ -73,7 +73,7 @@ export default function QuickStartAthleteScreen() {
         athleteName={athleteName}
         hasProfileImage={hasProfileImage}
         hasHighlightVideo={hasHighlightVideo}
-        onDismiss={() => nav.getParent()?.reset({ index: 0, routes: [{ name: 'AthleteTabs' as any }] })}
+        onDismiss={() => nav.navigate('QuickStartAthleteProfile')}
       />
     </SafeAreaView>
   );

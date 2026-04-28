@@ -1,545 +1,430 @@
-// QuickStartAthleteProfileScreen — RN port of the Lovable multi-step athlete profile wizard.
-// Source of truth: offerhound-repo/src/pages/QuickStart.tsx (terms→info→photo→publish) +
-// offerhound-repo/src/pages/Onboarding.tsx (basic info content).
-// Differences from web:
-//  - 4 steps: basic info (name/grad year/HS) → sport+position → photo → preview/publish.
-//  - Persists incrementally to player_profiles via usePlayerProfile.updateProfile().
-//  - Uses expo-image-picker for the photo upload (uploaded to Supabase Storage 'avatars').
-//  - On publish: marks is_published=true and resets to AthleteTabs.
-import React, { useState, useEffect, useMemo } from 'react';
+// QuickStartAthleteProfileScreen — RN port of Lovable src/pages/QuickStart.tsx (~108 LOC).
+// Multi-step athlete profile creation wizard:
+//   1. Terms acceptance
+//   2. Basic info (name, sport, custom URL, positions)
+//   3. Profile photo
+//   4. Preview + publish
+// Saves to player_profiles via usePlayerProfile().createProfile / updateProfile.
+import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator,
-  SafeAreaView, KeyboardAvoidingView, Platform, Image,
+  View, Text, ScrollView, StyleSheet, SafeAreaView, Pressable, Image, ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation, NavigationProp, CommonActions } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import Toast from 'react-native-toast-message';
 import {
-  ArrowLeft, ArrowRight, CheckCircle, User, Camera, Trophy, Share2, Loader as Loader2,
+  Zap, ArrowRight, ArrowLeft, CheckCircle, User, Camera, Share2, Link2, ExternalLink,
 } from 'lucide-react-native';
+import Toast from 'react-native-toast-message';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { supabase } from '@/integrations/supabase/client';
+import { SPORTS_LIST } from '@/lib/data/sports';
+import { getPositionsForSport } from '@/lib/data/sportPositions';
+
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Label } from '@/components/ui/Label';
 import { Badge } from '@/components/ui/Badge';
-import { colors, spacing, typography } from '@/lib/theme';
-import { SPORTS_LIST, SportType } from '@/lib/data/sports';
-import { getPositionsForSport, PositionOption } from '@/lib/data/sportPositions';
-import type { OnboardingStackParamList } from '@/navigation/stacks/OnboardingStack';
+import { Checkbox } from '@/components/ui/Checkbox';
+import { colors, typography, spacing } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 
-type Nav = NativeStackNavigationProp<OnboardingStackParamList & RootStackParamList>;
-
-const STEPS = [1, 2, 3, 4] as const;
-type Step = (typeof STEPS)[number];
-
-const groupByCategory = (positions: PositionOption[]): Record<string, PositionOption[]> =>
-  positions.reduce((acc, p) => {
-    if (!acc[p.category]) acc[p.category] = [];
-    acc[p.category].push(p);
-    return acc;
-  }, {} as Record<string, PositionOption[]>);
+type Step = 'terms' | 'info' | 'photo' | 'publish';
+const STEPS: Step[] = ['terms', 'info', 'photo', 'publish'];
+type Nav = NavigationProp<RootStackParamList>;
 
 export default function QuickStartAthleteProfileScreen() {
   const nav = useNavigation<Nav>();
   const { user } = useAuth();
-  const { profile, isLoading, createProfile, updateProfile, publishProfile } = usePlayerProfile();
+  const { profile, isLoading, createProfile, updateProfile } = usePlayerProfile();
 
-  const [step, setStep] = useState<Step>(1);
+  const [step, setStep] = useState<Step>('terms');
+  const [termsAgreed, setTermsAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [uploading, setUploading] = useState(false);
 
-  const [fullName, setFullName] = useState('');
-  const [graduationYear, setGraduationYear] = useState('');
-  const [highSchool, setHighSchool] = useState('');
-  const [sport, setSport] = useState<SportType>('football');
-  const [positions, setPositions] = useState<string[]>([]);
+  const [form, setForm] = useState({
+    sport: 'football',
+    custom_url: '',
+    full_name: '',
+    positions: [] as string[],
+  });
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
 
-  // Hydrate from existing profile if present.
   useEffect(() => {
-    if (!profile) return;
-    const p: any = profile;
-    if (p.full_name) setFullName(p.full_name);
-    if (p.graduation_year) setGraduationYear(String(p.graduation_year));
-    if (p.high_school_name) setHighSchool(p.high_school_name);
-    if (p.sport) setSport(p.sport);
-    if (Array.isArray(p.positions)) setPositions(p.positions);
-    else if (p.position) setPositions([p.position]);
-    if (p.profile_image_url) setProfileImageUrl(p.profile_image_url);
+    if (profile) {
+      setForm({
+        sport: (profile as any).sport || 'football',
+        custom_url: (profile as any).custom_url || '',
+        full_name: (profile as any).full_name || '',
+        positions: Array.isArray((profile as any).positions)
+          ? ((profile as any).positions as string[])
+          : (profile as any).position
+            ? [(profile as any).position]
+            : [],
+      });
+      setProfileImageUrl((profile as any).profile_image_url ?? null);
+    }
   }, [profile]);
 
-  const sportPositions = useMemo(() => getPositionsForSport(sport), [sport]);
-  const positionsByCategory = useMemo(() => groupByCategory(sportPositions), [sportPositions]);
+  const positions = getPositionsForSport(form.sport);
 
-  // ----- persistence helper -----
-  const persist = async (updates: Record<string, any>) => {
-    if (!profile) {
-      await createProfile(updates);
-    } else {
-      await updateProfile(updates);
-    }
-  };
+  const formatUrl = (s: string) =>
+    s.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 
-  // ----- handlers -----
   const togglePosition = (label: string) => {
-    setPositions((prev) =>
-      prev.includes(label)
-        ? prev.filter((x) => x !== label)
-        : prev.length < 3
-        ? [...prev, label]
-        : prev
-    );
+    setForm((p) => {
+      if (p.positions.includes(label)) return { ...p, positions: p.positions.filter((x) => x !== label) };
+      if (p.positions.length >= 3) return p;
+      return { ...p, positions: [...p.positions, label] };
+    });
   };
 
-  const handleStep1Next = async () => {
-    if (!fullName.trim()) {
-      Toast.show({ type: 'error', text1: 'Full name required' });
+  const handleAcceptTerms = () => {
+    if (!termsAgreed) return;
+    setStep('info');
+  };
+
+  const handleInfoNext = async () => {
+    const customUrl = formatUrl(form.custom_url);
+    if (!form.full_name.trim() || customUrl.length < 3 || form.positions.length === 0) {
+      Toast.show({ type: 'error', text1: 'Required fields', text2: 'Name, URL, and at least one position' });
       return;
     }
     setSubmitting(true);
     try {
-      const yearNum = graduationYear ? parseInt(graduationYear, 10) : null;
-      await persist({
-        full_name: fullName.trim(),
-        graduation_year: yearNum && !isNaN(yearNum) ? yearNum : null,
-        high_school_name: highSchool.trim() || null,
-      });
-      setStep(2);
+      const payload = {
+        full_name: form.full_name,
+        sport: form.sport,
+        custom_url: customUrl,
+        position: form.positions[0],
+        positions: form.positions,
+      };
+      if (profile) await updateProfile(payload);
+      else await createProfile(payload);
+      setStep('photo');
     } catch (e: any) {
-      Toast.show({ type: 'error', text1: 'Failed to save', text2: e?.message });
+      Toast.show({ type: 'error', text1: 'Save failed', text2: e?.message });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleStep2Next = async () => {
-    if (!positions.length) {
-      Toast.show({ type: 'error', text1: 'Select at least one position' });
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await persist({
-        sport,
-        position: positions[0],
-        positions,
-      });
-      setStep(3);
-    } catch (e: any) {
-      Toast.show({ type: 'error', text1: 'Failed to save', text2: e?.message });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handlePickImage = async () => {
+  const pickImage = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Toast.show({ type: 'error', text1: 'Permission required', text2: 'Photo access denied' });
+      Toast.show({ type: 'error', text1: 'Permission denied' });
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.85,
+      quality: 0.8,
     });
     if (result.canceled || !result.assets?.[0]) return;
     const asset = result.assets[0];
-    if (!user) return;
 
-    setUploading(true);
+    if (!user) return;
+    setSubmitting(true);
     try {
       const ext = asset.uri.split('.').pop()?.toLowerCase() || 'jpg';
       const path = `${user.id}/profile-${Date.now()}.${ext}`;
-      // RN-compatible upload: read file into binary via fetch+blob.
-      const res = await fetch(asset.uri);
-      const blob = await res.blob();
-      const { error: upErr } = await supabase.storage
-        .from('avatars')
-        .upload(path, blob, { contentType: `image/${ext}`, upsert: true });
+      const fileBlob = await (await fetch(asset.uri)).blob();
+      const { error: upErr } = await supabase.storage.from('avatars').upload(path, fileBlob, {
+        contentType: `image/${ext}`,
+        upsert: true,
+      });
       if (upErr) throw upErr;
       const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path);
       const url = pub.publicUrl;
+      await updateProfile({ profile_image_url: url });
       setProfileImageUrl(url);
-      await persist({ profile_image_url: url });
-      Toast.show({ type: 'success', text1: 'Photo uploaded' });
+      Toast.show({ type: 'success', text1: 'Photo updated' });
     } catch (e: any) {
       Toast.show({ type: 'error', text1: 'Upload failed', text2: e?.message });
     } finally {
-      setUploading(false);
+      setSubmitting(false);
     }
   };
 
   const handlePublish = async () => {
     setSubmitting(true);
     try {
-      await publishProfile();
-      Toast.show({ type: 'success', text1: 'Profile Published!', text2: 'You\'re live.' });
-      nav.getParent()?.reset({ index: 0, routes: [{ name: 'AthleteTabs' as any }] });
+      await updateProfile({ is_published: true });
+      Toast.show({ type: 'success', text1: 'Profile published!' });
+      nav.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'AthleteTabs' as any }] }));
     } catch (e: any) {
-      if (e?.code === 'SUBSCRIPTION_REQUIRED' || e?.message === 'SUBSCRIPTION_REQUIRED') {
-        Toast.show({
-          type: 'info',
-          text1: 'Subscription required',
-          text2: 'Upgrade to publish your profile.',
-        });
-      } else {
-        Toast.show({ type: 'error', text1: 'Publish failed', text2: e?.message });
-      }
+      Toast.show({ type: 'error', text1: 'Publish failed', text2: e?.message });
     } finally {
       setSubmitting(false);
     }
   };
 
-  // ----- progress dots -----
-  const ProgressBar = () => (
-    <View style={s.progress}>
-      {STEPS.map((n, i) => {
-        const done = step > n;
-        const active = step === n;
-        return (
-          <View key={n} style={s.progressItem}>
-            <View style={[s.dot, (active || done) && s.dotActive]}>
-              {done ? (
-                <CheckCircle size={14} color={colors.primaryForeground} />
-              ) : (
-                <Text style={[s.dotText, (active || done) && s.dotTextActive]}>{n}</Text>
-              )}
-            </View>
-            {i < STEPS.length - 1 && <View style={[s.line, done && s.lineActive]} />}
-          </View>
-        );
-      })}
-    </View>
-  );
-
-  // ----- loading -----
   if (isLoading) {
     return (
-      <View style={s.center}>
+      <SafeAreaView style={[s.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator color={colors.primary} size="large" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={s.safe}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={s.flex}>
-        <ScrollView
-          contentContainerStyle={s.scroll}
-          keyboardShouldPersistTaps="handled">
-          <View style={s.header}>
-            <Text style={s.heroTag}>Quick Start</Text>
-            <Text style={s.title}>Build Your Athlete Profile</Text>
+    <SafeAreaView style={s.container}>
+      <ScrollView contentContainerStyle={s.content}>
+        <View style={s.headerCenter}>
+          <View style={s.pill}>
+            <Zap size={14} color={colors.primary} />
+            <Text style={s.pillText}>Quick Start</Text>
           </View>
+          <Text style={s.h1}>Get Live in Minutes</Text>
+        </View>
 
-          <ProgressBar />
+        {/* Step indicator */}
+        <View style={s.stepRow}>
+          {STEPS.map((sName, i) => {
+            const idx = STEPS.indexOf(step);
+            const done = idx > i;
+            const active = step === sName;
+            return (
+              <React.Fragment key={sName}>
+                <View style={[s.stepBubble, (active || done) && s.stepBubbleActive]}>
+                  {done ? (
+                    <CheckCircle size={14} color={colors.primaryForeground} />
+                  ) : (
+                    <Text style={[s.stepNum, (active || done) && s.stepNumActive]}>{i + 1}</Text>
+                  )}
+                </View>
+                {i < STEPS.length - 1 && <View style={[s.stepLine, idx > i && s.stepLineActive]} />}
+              </React.Fragment>
+            );
+          })}
+        </View>
 
-          {/* ---------------- Step 1: Basic Info ---------------- */}
-          {step === 1 && (
-            <View style={s.card}>
-              <View style={s.cardHeader}>
-                <User size={20} color={colors.primary} />
-                <Text style={s.cardTitle}>Basic Info</Text>
+        {step === 'terms' && (
+          <Card>
+            <CardHeader><CardTitle>Quick Terms</CardTitle></CardHeader>
+            <CardContent style={{ gap: spacing.md }}>
+              <Pressable style={s.termsBox} onPress={() => setTermsAgreed(!termsAgreed)}>
+                <Checkbox checked={termsAgreed} onCheckedChange={setTermsAgreed} />
+                <Text style={s.termsText}>
+                  I agree to the Terms of Service and Privacy Policy.
+                </Text>
+              </Pressable>
+              <Button onPress={handleAcceptTerms} disabled={!termsAgreed} rightIcon={<ArrowRight size={14} color={colors.primaryForeground} />}>
+                Continue
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {step === 'info' && (
+          <Card>
+            <CardHeader>
+              <View style={s.row}>
+                <User size={18} color={colors.foreground} />
+                <CardTitle>Basic Info</CardTitle>
               </View>
-              <View style={s.cardBody}>
+            </CardHeader>
+            <CardContent style={{ gap: spacing.md }}>
+              <View style={{ gap: spacing.xs }}>
+                <Label>Sport *</Label>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={s.chipRow}>
+                    {SPORTS_LIST.slice(0, 12).map((sp: any) => {
+                      const active = form.sport === sp.id;
+                      return (
+                        <Pressable
+                          key={sp.id}
+                          onPress={() => setForm({ ...form, sport: sp.id, positions: [] })}
+                          style={[s.chip, active && s.chipActive]}>
+                          <Text style={[s.chipText, active && s.chipTextActive]}>{sp.name}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </ScrollView>
+              </View>
+
+              <View style={{ gap: spacing.xs }}>
+                <Label>Full name *</Label>
                 <Input
-                  label="Full Name *"
-                  value={fullName}
-                  onChangeText={setFullName}
+                  value={form.full_name}
+                  onChangeText={(v) => setForm({ ...form, full_name: v })}
                   placeholder="Enter your full name"
-                  autoCapitalize="words"
                 />
-                <Input
-                  label="Graduation Year"
-                  value={graduationYear}
-                  onChangeText={setGraduationYear}
-                  placeholder="e.g. 2026"
-                  keyboardType="number-pad"
-                  maxLength={4}
-                />
-                <Input
-                  label="High School"
-                  value={highSchool}
-                  onChangeText={setHighSchool}
-                  placeholder="Your high school name"
-                  autoCapitalize="words"
-                />
-                <Button
-                  onPress={handleStep1Next}
-                  loading={submitting}
-                  disabled={submitting}
-                  rightIcon={<ArrowRight size={16} color={colors.primaryForeground} />}>
-                  Next
-                </Button>
               </View>
-            </View>
-          )}
 
-          {/* ---------------- Step 2: Sport + Position ---------------- */}
-          {step === 2 && (
-            <View style={s.card}>
-              <View style={s.cardHeader}>
-                <Trophy size={20} color={colors.primary} />
-                <Text style={s.cardTitle}>Sport & Position</Text>
+              <View style={{ gap: spacing.xs }}>
+                <Label>Profile URL *</Label>
+                <Input
+                  value={form.custom_url}
+                  onChangeText={(v) => setForm({ ...form, custom_url: v })}
+                  onBlur={() => setForm((p) => ({ ...p, custom_url: formatUrl(p.custom_url) }))}
+                  placeholder="your-name"
+                  autoCapitalize="none"
+                />
+                {!!form.custom_url && (
+                  <Text style={s.muted}>offer-hound.com/p/{formatUrl(form.custom_url)}</Text>
+                )}
               </View>
-              <View style={s.cardBody}>
-                <Text style={s.label}>Sport *</Text>
-                <View style={s.sportGrid}>
-                  {SPORTS_LIST.map((sp) => {
-                    const selected = sport === sp.id;
+
+              <View style={{ gap: spacing.xs }}>
+                <View style={s.rowBetween}>
+                  <Label>Position(s) *</Label>
+                  <Text style={s.muted}>Up to 3</Text>
+                </View>
+                <View style={s.chipWrap}>
+                  {positions.slice(0, 30).map((p) => {
+                    const active = form.positions.includes(p.label);
                     return (
                       <Pressable
-                        key={sp.id}
-                        onPress={() => {
-                          setSport(sp.id);
-                          setPositions([]);
-                        }}
-                        style={[s.sportCard, selected && s.sportCardActive]}>
-                        <Text style={[s.sportName, selected && s.sportNameActive]}>
-                          {sp.name}
-                        </Text>
+                        key={p.label}
+                        onPress={() => togglePosition(p.label)}
+                        style={[s.chipSm, active && s.chipActive]}>
+                        <Text style={[s.chipText, active && s.chipTextActive]}>{p.label}</Text>
                       </Pressable>
                     );
                   })}
                 </View>
-
-                <View style={s.positionHeader}>
-                  <Text style={s.label}>Position(s) *</Text>
-                  <Text style={s.hint}>Up to 3</Text>
-                </View>
-                <View style={{ gap: spacing.md }}>
-                  {Object.entries(positionsByCategory).map(([cat, list]) => (
-                    <View key={cat}>
-                      <Text style={s.categoryLabel}>{cat.toUpperCase()}</Text>
-                      <View style={s.posWrap}>
-                        {list.map((p) => {
-                          const selected = positions.includes(p.label);
-                          return (
-                            <Pressable
-                              key={p.label}
-                              onPress={() => togglePosition(p.label)}
-                              style={[s.posChip, selected && s.posChipActive]}>
-                              <Text style={[s.posChipText, selected && s.posChipTextActive]}>
-                                {p.label}
-                              </Text>
-                            </Pressable>
-                          );
-                        })}
-                      </View>
-                    </View>
-                  ))}
-                </View>
-
-                <View style={s.row}>
-                  <Button
-                    variant="outline"
-                    onPress={() => setStep(1)}
-                    style={s.flex}
-                    leftIcon={<ArrowLeft size={16} color={colors.foreground} />}>
-                    Back
-                  </Button>
-                  <Button
-                    onPress={handleStep2Next}
-                    loading={submitting}
-                    disabled={submitting}
-                    style={s.flex}
-                    rightIcon={<ArrowRight size={16} color={colors.primaryForeground} />}>
-                    Next
-                  </Button>
-                </View>
-              </View>
-            </View>
-          )}
-
-          {/* ---------------- Step 3: Photo ---------------- */}
-          {step === 3 && (
-            <View style={s.card}>
-              <View style={s.cardHeader}>
-                <Camera size={20} color={colors.primary} />
-                <Text style={s.cardTitle}>Profile Photo</Text>
-              </View>
-              <View style={s.cardBody}>
-                <View style={s.photoBox}>
-                  {profileImageUrl ? (
-                    <Image source={{ uri: profileImageUrl }} style={s.photo} />
-                  ) : (
-                    <View style={[s.photo, s.photoEmpty]}>
-                      <User size={56} color={colors.mutedForeground} />
-                    </View>
-                  )}
-                </View>
-                <Button
-                  variant="outline"
-                  onPress={handlePickImage}
-                  loading={uploading}
-                  disabled={uploading}
-                  leftIcon={<Camera size={16} color={colors.foreground} />}>
-                  {profileImageUrl ? 'Change Photo' : 'Choose Photo'}
-                </Button>
-                <View style={s.row}>
-                  <Button
-                    variant="outline"
-                    onPress={() => setStep(2)}
-                    style={s.flex}
-                    leftIcon={<ArrowLeft size={16} color={colors.foreground} />}>
-                    Back
-                  </Button>
-                  <Button
-                    onPress={() => setStep(4)}
-                    style={s.flex}
-                    rightIcon={<ArrowRight size={16} color={colors.primaryForeground} />}>
-                    Next
-                  </Button>
-                </View>
-                <Pressable onPress={() => setStep(4)} style={s.skip}>
-                  <Text style={s.skipText}>Skip for now</Text>
-                </Pressable>
-              </View>
-            </View>
-          )}
-
-          {/* ---------------- Step 4: Preview + Publish ---------------- */}
-          {step === 4 && (
-            <View style={s.card}>
-              <View style={s.cardHeader}>
-                <Share2 size={20} color={colors.primary} />
-                <Text style={s.cardTitle}>Ready to Go Live!</Text>
-              </View>
-              <View style={s.cardBody}>
-                <View style={s.previewBox}>
-                  {profileImageUrl ? (
-                    <Image source={{ uri: profileImageUrl }} style={s.previewPhoto} />
-                  ) : (
-                    <View style={[s.previewPhoto, s.photoEmpty]}>
-                      <User size={40} color={colors.mutedForeground} />
-                    </View>
-                  )}
-                  <Text style={s.previewName}>{fullName || 'Your Name'}</Text>
-                  {graduationYear ? (
-                    <Text style={s.previewMeta}>Class of {graduationYear}</Text>
-                  ) : null}
-                  {highSchool ? <Text style={s.previewMeta}>{highSchool}</Text> : null}
-                  <View style={s.previewBadges}>
-                    {positions.map((p) => (
-                      <Badge key={p} variant="secondary">
-                        {p}
-                      </Badge>
+                {form.positions.length > 0 && (
+                  <View style={[s.chipWrap, { borderTopWidth: 1, borderColor: colors.border, paddingTop: spacing.xs }]}>
+                    {form.positions.map((p) => (
+                      <Badge key={p} variant="secondary">{p}</Badge>
                     ))}
                   </View>
-                </View>
+                )}
+              </View>
 
-                <View style={s.row}>
-                  <Button
-                    variant="outline"
-                    onPress={() => setStep(3)}
-                    style={s.flex}
-                    leftIcon={<ArrowLeft size={16} color={colors.foreground} />}>
-                    Back
-                  </Button>
-                  <Button
-                    onPress={handlePublish}
-                    loading={submitting}
-                    disabled={submitting}
-                    style={s.flex}>
-                    Publish
-                  </Button>
+              <View style={s.actionsRow}>
+                <Button variant="outline" style={{ flex: 1 }} onPress={() => setStep('terms')} leftIcon={<ArrowLeft size={14} color={colors.foreground} />}>
+                  Back
+                </Button>
+                <Button style={{ flex: 1 }} onPress={handleInfoNext} loading={submitting} rightIcon={<ArrowRight size={14} color={colors.primaryForeground} />}>
+                  Next
+                </Button>
+              </View>
+            </CardContent>
+          </Card>
+        )}
+
+        {step === 'photo' && (
+          <Card>
+            <CardHeader>
+              <View style={s.row}>
+                <Camera size={18} color={colors.foreground} />
+                <CardTitle>Profile Photo</CardTitle>
+              </View>
+            </CardHeader>
+            <CardContent style={{ gap: spacing.md }}>
+              <View style={s.photoBox}>
+                {profileImageUrl ? (
+                  <Image source={{ uri: profileImageUrl }} style={s.photo} />
+                ) : (
+                  <View style={[s.photo, s.photoPlaceholder]}>
+                    <User size={42} color={colors.mutedForeground} />
+                  </View>
+                )}
+              </View>
+              <Button onPress={pickImage} loading={submitting} variant="outline" leftIcon={<Camera size={14} color={colors.foreground} />}>
+                {profileImageUrl ? 'Change photo' : 'Upload photo'}
+              </Button>
+              <View style={s.actionsRow}>
+                <Button variant="outline" style={{ flex: 1 }} onPress={() => setStep('info')} leftIcon={<ArrowLeft size={14} color={colors.foreground} />}>
+                  Back
+                </Button>
+                <Button style={{ flex: 1 }} onPress={() => setStep('publish')} rightIcon={<ArrowRight size={14} color={colors.primaryForeground} />}>
+                  Next
+                </Button>
+              </View>
+              <Pressable onPress={() => setStep('publish')}>
+                <Text style={[s.muted, { textAlign: 'center' }]}>Skip for now</Text>
+              </Pressable>
+            </CardContent>
+          </Card>
+        )}
+
+        {step === 'publish' && (
+          <Card>
+            <CardHeader>
+              <View style={s.row}>
+                <Share2 size={18} color={colors.foreground} />
+                <CardTitle>Ready to Go Live!</CardTitle>
+              </View>
+            </CardHeader>
+            <CardContent style={{ gap: spacing.md }}>
+              <View style={s.previewCard}>
+                {profileImageUrl ? (
+                  <Image source={{ uri: profileImageUrl }} style={s.previewPhoto} />
+                ) : (
+                  <View style={[s.previewPhoto, s.photoPlaceholder]}>
+                    <User size={32} color={colors.mutedForeground} />
+                  </View>
+                )}
+                <Text style={s.previewName}>{form.full_name}</Text>
+                <View style={s.chipWrap}>
+                  {form.positions.map((p) => (
+                    <Badge key={p} variant="secondary">{p}</Badge>
+                  ))}
                 </View>
               </View>
-            </View>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
+              <View style={s.urlBox}>
+                <View style={s.row}>
+                  <Link2 size={14} color={colors.primary} />
+                  <Text style={s.muted}>Your URL:</Text>
+                </View>
+                <Text style={s.urlText}>offer-hound.com/p/{formatUrl(form.custom_url)}</Text>
+              </View>
+              <View style={s.actionsRow}>
+                <Button variant="outline" style={{ flex: 1 }} onPress={() => setStep('photo')} leftIcon={<ArrowLeft size={14} color={colors.foreground} />}>
+                  Back
+                </Button>
+                <Button style={{ flex: 1 }} onPress={handlePublish} loading={submitting} rightIcon={<ExternalLink size={14} color={colors.primaryForeground} />}>
+                  Publish
+                </Button>
+              </View>
+            </CardContent>
+          </Card>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  flex: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
-  scroll: { padding: spacing.md, paddingBottom: spacing.xxl, gap: spacing.lg },
-
-  header: { alignItems: 'center', marginTop: spacing.md },
-  heroTag: {
-    color: colors.primary, fontFamily: typography.fontFamily.bodySemiBold,
-    fontSize: typography.fontSize.sm, textTransform: 'uppercase', letterSpacing: 1,
-  },
-  title: {
-    color: colors.foreground, fontFamily: typography.fontFamily.bodySemiBold,
-    fontSize: typography.fontSize.xl, marginTop: spacing.xs, textAlign: 'center',
-  },
-
-  progress: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    marginVertical: spacing.md,
-  },
-  progressItem: { flexDirection: 'row', alignItems: 'center' },
-  dot: {
-    width: 32, height: 32, borderRadius: 16, backgroundColor: colors.muted,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  dotActive: { backgroundColor: colors.primary },
-  dotText: { color: colors.mutedForeground, fontFamily: typography.fontFamily.bodySemiBold, fontSize: 13 },
-  dotTextActive: { color: colors.primaryForeground },
-  line: { width: 32, height: 2, backgroundColor: colors.muted, marginHorizontal: 4 },
-  lineActive: { backgroundColor: colors.primary },
-
-  card: {
-    backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border,
-    overflow: 'hidden',
-  },
-  cardHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.sm,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  cardTitle: {
-    color: colors.foreground, fontFamily: typography.fontFamily.bodySemiBold,
-    fontSize: typography.fontSize.lg,
-  },
-  cardBody: { padding: spacing.md, gap: spacing.md },
-
-  label: {
-    color: colors.foreground, fontFamily: typography.fontFamily.bodySemiBold,
-    fontSize: typography.fontSize.sm,
-  },
-  hint: { color: colors.mutedForeground, fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.xs },
-
-  sportGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  sportCard: {
-    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
-    borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.muted,
-  },
-  sportCardActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  sportName: { color: colors.foreground, fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.sm },
-  sportNameActive: { color: colors.primaryForeground, fontFamily: typography.fontFamily.bodySemiBold },
-
-  positionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  categoryLabel: {
-    color: colors.mutedForeground, fontFamily: typography.fontFamily.bodySemiBold,
-    fontSize: typography.fontSize.xs, marginBottom: spacing.xs,
-  },
-  posWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  posChip: {
-    paddingVertical: 6, paddingHorizontal: spacing.sm + 2,
-    borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: 'transparent',
-  },
-  posChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  posChipText: { color: colors.foreground, fontSize: typography.fontSize.xs, fontFamily: typography.fontFamily.body },
-  posChipTextActive: { color: colors.primaryForeground, fontFamily: typography.fontFamily.bodySemiBold },
-
-  row: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
-
+  container: { flex: 1, backgroundColor: colors.background },
+  content: { padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xxl, maxWidth: 600, alignSelf: 'stretch' },
+  headerCenter: { alignItems: 'center', gap: spacing.sm, paddingTop: spacing.md },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: 999, backgroundColor: 'rgba(231,175,8,0.1)' },
+  pillText: { fontFamily: typography.fontFamily.bodySemiBold, fontSize: typography.fontSize.sm, color: colors.primary },
+  h1: { fontFamily: typography.fontFamily.heading, fontSize: typography.fontSize['3xl'], color: colors.foreground, letterSpacing: typography.letterSpacing.heading, textAlign: 'center' },
+  stepRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: spacing.sm },
+  stepBubble: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.muted },
+  stepBubbleActive: { backgroundColor: colors.primary },
+  stepNum: { fontFamily: typography.fontFamily.bodyBold, fontSize: typography.fontSize.sm, color: colors.mutedForeground },
+  stepNumActive: { color: colors.primaryForeground },
+  stepLine: { width: 32, height: 2, backgroundColor: colors.muted, marginHorizontal: 4 },
+  stepLineActive: { backgroundColor: colors.primary },
+  termsBox: { flexDirection: 'row', gap: spacing.sm, padding: spacing.md, backgroundColor: colors.muted, borderRadius: 12, alignItems: 'flex-start' },
+  termsText: { flex: 1, fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.sm, color: colors.foreground, lineHeight: 20 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  chipRow: { flexDirection: 'row', gap: spacing.xs, paddingVertical: spacing.xs },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  chip: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background },
+  chipSm: { paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { fontFamily: typography.fontFamily.bodySemiBold, fontSize: typography.fontSize.sm, color: colors.foreground },
+  chipTextActive: { color: colors.primaryForeground },
+  muted: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.xs, color: colors.mutedForeground },
+  actionsRow: { flexDirection: 'row', gap: spacing.sm },
   photoBox: { alignItems: 'center', paddingVertical: spacing.md },
-  photo: { width: 144, height: 144, borderRadius: 72, backgroundColor: colors.muted },
-  photoEmpty: {
-    alignItems: 'center', justifyContent: 'center',
-    borderW
+  photo: { width: 128, height: 128, borderRadius: 64 },
+  photoPlaceholder: { backgroundColor: colors.muted, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderStyle: 'dashed', borderColor: colors.border },
+  previewCard: { padding: spacing.lg, backgroundColor: colors.muted, borderRadius: 16, alignItems: 'center', gap: spacing.sm },
+  previewPhoto: { width: 96, height: 96, borderRadius: 48 },
+  previewName: { fontFamily: typography.fontFamily.bodyBold, fontSize: typography.fontSize.xl, color: colors.foreground },
+  urlBox: { padding: spacing.md, borderRadius: 12, backgroundColor: 'rgba(231,175,8,0.08)', gap: spacing.xs },
+  urlText: { fontFamily: typography.fontFamily.bodySemiBold, fontSize: typography.fontSize.sm, color: colors.primary },
+});
