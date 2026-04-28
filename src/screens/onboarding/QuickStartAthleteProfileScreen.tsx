@@ -1,9 +1,9 @@
 // QuickStartAthleteProfileScreen — RN port of Lovable src/pages/QuickStart.tsx (~108 LOC).
 // Multi-step athlete profile creation wizard:
 //   1. Terms acceptance
-//   2. Basic info (name, sport, custom URL, positions)
+//   2. Basic info (name, sport, custom URL, positions) + URL availability check
 //   3. Profile photo
-//   4. Preview + publish
+//   4. Preview + publish (gated by subscription via publishProfile -> PublishPaywallDialog)
 // Saves to player_profiles via usePlayerProfile().createProfile / updateProfile.
 import React, { useEffect, useState } from 'react';
 import {
@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Badge } from '@/components/ui/Badge';
 import { Checkbox } from '@/components/ui/Checkbox';
+import { PublishPaywallDialog } from '@/components/PublishPaywallDialog';
 import { colors, typography, spacing } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 
@@ -38,11 +39,12 @@ type Nav = NavigationProp<RootStackParamList>;
 export default function QuickStartAthleteProfileScreen() {
   const nav = useNavigation<Nav>();
   const { user } = useAuth();
-  const { profile, isLoading, createProfile, updateProfile } = usePlayerProfile();
+  const { profile, isLoading, createProfile, updateProfile, publishProfile, checkUrlAvailability } = usePlayerProfile();
 
   const [step, setStep] = useState<Step>('terms');
   const [termsAgreed, setTermsAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   const [form, setForm] = useState({
     sport: 'football',
@@ -51,6 +53,8 @@ export default function QuickStartAthleteProfileScreen() {
     positions: [] as string[],
   });
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [urlAvailable, setUrlAvailable] = useState<boolean | null>(null);
+  const [checkingUrl, setCheckingUrl] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -86,10 +90,33 @@ export default function QuickStartAthleteProfileScreen() {
     setStep('info');
   };
 
+  // URL availability check — fires onBlur for the custom URL field, mirroring Lovable.
+  const handleUrlBlur = async () => {
+    const u = formatUrl(form.custom_url);
+    setForm((p) => ({ ...p, custom_url: u }));
+    if (u.length >= 3) {
+      setCheckingUrl(true);
+      try {
+        const available = await checkUrlAvailability(u);
+        setUrlAvailable(available);
+      } catch {
+        setUrlAvailable(null);
+      } finally {
+        setCheckingUrl(false);
+      }
+    } else {
+      setUrlAvailable(null);
+    }
+  };
+
   const handleInfoNext = async () => {
     const customUrl = formatUrl(form.custom_url);
     if (!form.full_name.trim() || customUrl.length < 3 || form.positions.length === 0) {
       Toast.show({ type: 'error', text1: 'Required fields', text2: 'Name, URL, and at least one position' });
+      return;
+    }
+    if (urlAvailable === false) {
+      Toast.show({ type: 'error', text1: 'URL taken', text2: 'Please choose a different profile URL' });
       return;
     }
     setSubmitting(true);
@@ -152,11 +179,18 @@ export default function QuickStartAthleteProfileScreen() {
   const handlePublish = async () => {
     setSubmitting(true);
     try {
-      await updateProfile({ is_published: true });
+      // publishProfile() enforces subscription gating for athletes/parents and
+      // throws an Error with code === 'SUBSCRIPTION_REQUIRED' when the user is
+      // not subscribed. We surface that via the PublishPaywallDialog.
+      await publishProfile();
       Toast.show({ type: 'success', text1: 'Profile published!' });
       nav.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'AthleteTabs' as any }] }));
     } catch (e: any) {
-      Toast.show({ type: 'error', text1: 'Publish failed', text2: e?.message });
+      if (e?.code === 'SUBSCRIPTION_REQUIRED' || e?.message === 'SUBSCRIPTION_REQUIRED') {
+        setShowPaywall(true);
+      } else {
+        Toast.show({ type: 'error', text1: 'Publish failed', text2: e?.message });
+      }
     } finally {
       setSubmitting(false);
     }
@@ -260,13 +294,26 @@ export default function QuickStartAthleteProfileScreen() {
                 <Label>Profile URL *</Label>
                 <Input
                   value={form.custom_url}
-                  onChangeText={(v) => setForm({ ...form, custom_url: v })}
-                  onBlur={() => setForm((p) => ({ ...p, custom_url: formatUrl(p.custom_url) }))}
+                  onChangeText={(v) => {
+                    setForm({ ...form, custom_url: v });
+                    setUrlAvailable(null);
+                  }}
+                  onBlur={handleUrlBlur}
                   placeholder="your-name"
                   autoCapitalize="none"
                 />
                 {!!form.custom_url && (
                   <Text style={s.muted}>offer-hound.com/p/{formatUrl(form.custom_url)}</Text>
+                )}
+                {checkingUrl && <Text style={s.muted}>Checking availability…</Text>}
+                {!checkingUrl && urlAvailable === true && (
+                  <View style={s.row}>
+                    <CheckCircle size={12} color="#16a34a" />
+                    <Text style={[s.muted, { color: '#16a34a' }]}>Available!</Text>
+                  </View>
+                )}
+                {!checkingUrl && urlAvailable === false && (
+                  <Text style={[s.muted, { color: colors.destructive }]}>This URL is taken</Text>
                 )}
               </View>
 
@@ -388,6 +435,7 @@ export default function QuickStartAthleteProfileScreen() {
           </Card>
         )}
       </ScrollView>
+      <PublishPaywallDialog open={showPaywall} onOpenChange={setShowPaywall} />
     </SafeAreaView>
   );
 }

@@ -196,9 +196,21 @@ export default function AthleteSearchScreen() {
     );
   };
 
-  // PORT-PENDING: useLetterCenter() — handleSendLetter is a no-op stub.
-  // Once useLetterCenter ships in RN, route to the LetterComposer with
-  // { surface: 'athlete-search', athlete } seed.
+  // Route to the shared LetterComposer root screen with the athlete
+  // pre-filled. LetterComposer accepts a `seed` with `prefillAthleteId` +
+  // `prefillAthleteName` so the recipient is primed on mount.
+  const handleSendLetter = (athlete: any) => {
+    nav.navigate(
+      'LetterComposer' as any,
+      {
+        seed: {
+          prefillAthleteId: athlete.id,
+          prefillAthleteName: athlete.full_name,
+          recipientName: athlete.full_name,
+        },
+      } as any,
+    );
+  };
 
   return (
     <SafeAreaView style={s.root}>
@@ -295,6 +307,7 @@ export default function AthleteSearchScreen() {
                       ? () => nav.navigate('Messages' as any)
                       : undefined
                   }
+                  onContact={isRecruiter ? () => handleSendLetter(athlete) : undefined}
                 />
               );
             })}

@@ -29,11 +29,13 @@ import {
   ArrowLeft,
   CheckCircle2,
   Clock,
+  Loader2,
   QrCode,
   RefreshCw,
   UserCheck,
   Users,
   Wifi,
+  WifiOff,
 } from 'lucide-react-native';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -248,14 +250,25 @@ export default function CampMobileCheckinScreen() {
             <Text style={styles.subtitle}>Mobile check-in</Text>
           </View>
         </View>
-        <View style={styles.headerRight}>
-          <Badge variant="secondary" style={styles.statusBadge}>
-            <Wifi size={12} color={colors.foreground} />
-            <Text style={styles.statusBadgeText}> {isOnline ? 'Online' : 'Offline'}</Text>
-          </Badge>
+        <View style={styles.headerRight} testID="checkin-sync-indicator">
+          {isOnline ? (
+            <Badge variant="secondary" style={styles.statusBadge}>
+              <Wifi size={12} color={colors.foreground} />
+              <Text style={styles.statusBadgeText}> Online</Text>
+            </Badge>
+          ) : (
+            <Badge variant="destructive" style={styles.statusBadge}>
+              <WifiOff size={12} color={colors.destructiveForeground ?? colors.foreground} />
+              <Text style={[styles.statusBadgeText, { color: colors.destructiveForeground ?? colors.foreground }]}> Offline</Text>
+            </Badge>
+          )}
           {queueCount > 0 ? (
             <Badge variant="outline" style={styles.statusBadge}>
-              <RefreshCw size={12} color={colors.foreground} />
+              {isFlushing ? (
+                <Loader2 size={12} color={colors.foreground} />
+              ) : (
+                <RefreshCw size={12} color={colors.foreground} />
+              )}
               <Text style={styles.statusBadgeText}> {queueCount}</Text>
             </Badge>
           ) : null}
@@ -320,7 +333,12 @@ export default function CampMobileCheckinScreen() {
                 <CardTitle>Scan athlete QR</CardTitle>
               </CardHeader>
               <CardContent>
-                {/* PORT-PENDING: install expo-barcode-scanner and replace this stub. */}
+                {/* PORT-PENDING: when expo-camera/expo-barcode-scanner is added to package.json,
+                    replace this stub with a real <BarCodeScanner onBarCodeScanned={...} />.
+                    On mount, request permission via
+                      const { status } = await Camera.requestCameraPermissionsAsync();
+                    Handle "granted" / "denied" states with user-facing messaging and a
+                    Settings deep-link. Decoded string should be passed to handleScanned(). */}
                 <View style={styles.scanStub}>
                   <QrCode size={48} color={colors.mutedForeground} />
                   <Text style={[styles.muted, { textAlign: 'center', marginTop: 12 }]}>
@@ -429,12 +447,43 @@ export default function CampMobileCheckinScreen() {
                 variant="outline"
                 onPress={flushNow}
                 disabled={!isOnline || isFlushing}>
-                <RefreshCw size={14} color={colors.foreground} />
+                {isFlushing ? (
+                  <Loader2 size={14} color={colors.foreground} />
+                ) : (
+                  <RefreshCw size={14} color={colors.foreground} />
+                )}
                 <Text style={{ marginLeft: 4, color: colors.foreground }}>Sync now</Text>
               </Button>
             </CardContent>
           </Card>
-        ) : null}
+        ) : (
+          <Card>
+            <CardContent style={styles.queueCard}>
+              <View style={{ flexShrink: 1 }}>
+                <Text style={styles.queueTitle}>
+                  {isOnline ? 'All caught up' : 'Working offline'}
+                </Text>
+                <Text style={styles.muted}>
+                  {isOnline
+                    ? 'No pending sync. Check-ins are saving in real time.'
+                    : 'Check-ins are being queued locally and will sync when you reconnect.'}
+                </Text>
+              </View>
+              <Button
+                size="sm"
+                variant="outline"
+                onPress={flushNow}
+                disabled={!isOnline || isFlushing}>
+                {isFlushing ? (
+                  <Loader2 size={14} color={colors.foreground} />
+                ) : (
+                  <RefreshCw size={14} color={colors.foreground} />
+                )}
+                <Text style={{ marginLeft: 4, color: colors.foreground }}>Sync now</Text>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

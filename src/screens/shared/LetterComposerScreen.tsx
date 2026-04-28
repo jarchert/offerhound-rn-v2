@@ -48,10 +48,25 @@ export default function LetterComposerScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
 
-  const [draft, setDraft] = useState<LetterDraft>(() => ({
-    ...DEFAULT_DRAFT,
-    ...(route.params?.seed ?? {}),
-  }));
+  const [draft, setDraft] = useState<LetterDraft>(() => {
+    const seed = (route.params?.seed ?? {}) as Partial<LetterDraft> & {
+      prefillAthleteId?: string;
+      prefillAthleteName?: string;
+    };
+    const { prefillAthleteId: _pid, prefillAthleteName, ...seedRest } = seed;
+    // When navigated from AthleteSearch (or any recruiter surface) with an
+    // athlete seed, prefill the recipient. Explicit recipientName in the seed
+    // still wins (direct overrides take priority).
+    const recipientFromAthlete = prefillAthleteName ?? '';
+    return {
+      ...DEFAULT_DRAFT,
+      ...(recipientFromAthlete ? { recipientName: recipientFromAthlete } : {}),
+      ...seedRest,
+    };
+  });
+  // Keep the athlete id around for future wiring (e.g. attaching the letter to
+  // a specific athlete record on save). Read-only for now.
+  const prefillAthleteId: string | undefined = route.params?.seed?.prefillAthleteId;
   const [generated, setGenerated] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);

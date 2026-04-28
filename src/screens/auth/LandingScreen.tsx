@@ -32,7 +32,11 @@ import { ViewerTypeSelector, ViewerType } from '@/components/landing/ViewerTypeS
 import { FounderRibbon } from '@/components/landing/FounderRibbon';
 import { LandingHeroContent } from '@/components/landing/LandingHeroContent';
 import { LandingFeatures } from '@/components/landing/LandingFeatures';
+import { AthleteScreenshotsSection } from '@/components/landing/AthleteScreenshotsSection';
+import { CoachScreenshotsSection } from '@/components/landing/CoachScreenshotsSection';
+import { LandingPodcastSection } from '@/components/landing/LandingPodcastSection';
 import { AIUseCasesSection } from '@/components/AIUseCasesSection';
+import { FeaturedInfluencersStrip } from '@/components/influencer/FeaturedInfluencersStrip';
 
 const VIEWER_STORAGE_KEY = 'offerhound_viewer_type';
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -148,6 +152,9 @@ export default function LandingScreen() {
         {/* ── AI use cases ── */}
         <AIUseCasesSection showGetStartedCta={!isAuthenticated} />
 
+        {/* ── Screenshot/feature tiles — parity with Lovable ── */}
+        {viewerType === 'athlete' ? <AthleteScreenshotsSection /> : <CoachScreenshotsSection />}
+
         {/* ── How it works ── */}
         <HowItWorksSection
           viewerType={viewerType}
@@ -158,8 +165,11 @@ export default function LandingScreen() {
         {/* ── Why OfferHound ── */}
         <WhyOfferhoundSection viewerType={viewerType} />
 
-        {/* ── Podcast section (athlete only) ── */}
-        {viewerType === 'athlete' && <PodcastTeaser onPress={() => nav.navigate('PodcastLibrary')} />}
+        {/* ── Podcast section (athlete only) — parity with Lovable ── */}
+        {viewerType === 'athlete' && <LandingPodcastSection />}
+
+        {/* ── Featured influencers strip ── */}
+        <FeaturedInfluencersStrip />
 
         <View style={{ height: 40 }} />
       </Animated.ScrollView>
@@ -367,24 +377,6 @@ function WhyOfferhoundSection({ viewerType }: { viewerType: ViewerType }) {
           </View>
         ))}
       </View>
-    </View>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Podcast teaser — placeholder until full LandingPodcastSection is ported
-// ─────────────────────────────────────────────────────────────────────────────
-function PodcastTeaser({ onPress }: { onPress: () => void }) {
-  return (
-    <View style={s.section}>
-      <Text style={s.sectionLabel}>FEATURED PODCASTS</Text>
-      <Text style={s.sectionTitle}>Recruiting Insights</Text>
-      <Text style={s.sectionSubtitle}>
-        Listen to expert advice on college recruiting, NIL, and athlete development.
-      </Text>
-      <Pressable style={s.ctaBtn} onPress={onPress}>
-        <Text style={s.ctaBtnText}>Browse Podcasts</Text>
-      </Pressable>
     </View>
   );
 }
