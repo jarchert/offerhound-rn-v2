@@ -110,7 +110,7 @@ export default function QuickStartSelectScreen() {
 
         <Text style={s.signInText}>
           Already have an account?{' '}
-          <Text style={s.link} onPress={() => nav.getParent()?.navigate('Auth' as any)}>Sign in</Text>
+          <Text style={s.link} onPress={() => nav.getParent()?.reset({ index: 0, routes: [{ name: 'AuthStack' as any }] })}>Sign in</Text>
         </Text>
       </ScrollView>
     </SafeAreaView>

@@ -55,7 +55,7 @@ export default function AthleteDashboard() {
             title="Top Coach Matches"
             subtitle={matches.length > 0 ? `${matches.length} coaches matched` : 'Complete your profile to see matches'}
             actionLabel={matches.length > 0 ? 'See all' : undefined}
-            onAction={() => nav.navigate('AthleteTabs' as any)}
+            onAction={() => nav.navigate('AthleteTabs', { screen: 'MatchesTab' } as any)}
           />
           {topMatches.length === 0 ? (
             <View style={s.empty}>
@@ -72,7 +72,10 @@ export default function AthleteDashboard() {
                   key={m.id}
                   coach={m.coach as any}
                   matchScore={m.match_score}
-                  onPress={() => {/* navigate to coach detail */}}
+                  onPress={() => {
+                    const coachId = (m.coach as any)?.id;
+                    if (coachId) nav.navigate('Profile', { userId: coachId });
+                  }}
                 />
               ))}
             </View>

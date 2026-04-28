@@ -3,12 +3,13 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
+import { LayoutDashboard, Users, Tent, Mail, Search } from 'lucide-react-native';
 
 import CoachDashboard from '@/screens/coach/CoachDashboard';
 import CoachRosterScreen from '@/screens/coach/CoachRosterScreen';
 import CoachSearchAthletesScreen from '@/screens/coach/CoachSearchAthletesScreen';
 import CampsScreen from '@/screens/shared/CampsScreen';
-import LetterComposerScreen from '@/screens/shared/LetterComposerScreen';
+import CoachLettersScreen from '@/screens/coach/CoachLettersScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -29,11 +30,11 @@ export default function CoachTabs() {
           letterSpacing: 0.5,
         },
       }}>
-      <Tab.Screen name="DashboardTab" component={CoachDashboard} options={{ title: 'Home' }} />
-      <Tab.Screen name="PipelineTab" component={CoachRosterScreen} options={{ title: 'Pipeline' }} />
-      <Tab.Screen name="CampsTab" component={CampsScreen} options={{ title: 'Camps' }} />
-      <Tab.Screen name="LettersTab" component={LetterComposerScreen} options={{ title: 'Letters' }} />
-      <Tab.Screen name="DirectoryTab" component={CoachSearchAthletesScreen} options={{ title: 'Directory' }} />
+      <Tab.Screen name="DashboardTab" component={CoachDashboard} options={{ title: 'Home', tabBarIcon: ({ color, size }) => <LayoutDashboard size={size} color={color} /> }} />
+      <Tab.Screen name="PipelineTab" component={CoachRosterScreen} options={{ title: 'Pipeline', tabBarIcon: ({ color, size }) => <Users size={size} color={color} /> }} />
+      <Tab.Screen name="CampsTab" component={CampsScreen} options={{ title: 'Camps', tabBarIcon: ({ color, size }) => <Tent size={size} color={color} /> }} />
+      <Tab.Screen name="LettersTab" component={CoachLettersScreen} options={{ title: 'Letters', tabBarIcon: ({ color, size }) => <Mail size={size} color={color} /> }} />
+      <Tab.Screen name="DirectoryTab" component={CoachSearchAthletesScreen} options={{ title: 'Directory', tabBarIcon: ({ color, size }) => <Search size={size} color={color} /> }} />
     </Tab.Navigator>
   );
 }

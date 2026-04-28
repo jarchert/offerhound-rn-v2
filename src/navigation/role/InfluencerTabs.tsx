@@ -3,6 +3,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
+import { Home, Grid, Mic } from 'lucide-react-native';
 
 import InfluencerDashboard from '@/screens/influencer/InfluencerDashboard';
 import InfluencerBoardScreen from '@/screens/influencer/InfluencerBoardScreen';
@@ -27,9 +28,9 @@ export default function InfluencerTabs() {
           letterSpacing: 0.5,
         },
       }}>
-      <Tab.Screen name="DashboardTab" component={InfluencerDashboard} options={{ title: 'Home' }} />
-      <Tab.Screen name="BoardTab" component={InfluencerBoardScreen} options={{ title: 'Board' }} />
-      <Tab.Screen name="PodcastsTab" component={PodcastScreen} options={{ title: 'Podcasts' }} />
+      <Tab.Screen name="DashboardTab" component={InfluencerDashboard} options={{ title: 'Home', tabBarIcon: ({ color, size }) => <Home size={size} color={color} /> }} />
+      <Tab.Screen name="BoardTab" component={InfluencerBoardScreen} options={{ title: 'Board', tabBarIcon: ({ color, size }) => <Grid size={size} color={color} /> }} />
+      <Tab.Screen name="PodcastsTab" component={PodcastScreen} options={{ title: 'Podcasts', tabBarIcon: ({ color, size }) => <Mic size={size} color={color} /> }} />
     </Tab.Navigator>
   );
 }

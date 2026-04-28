@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, SafeAreaView, Image, Pressable, Alert } from 'react-native';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { useNavigation, NavigationProp, CommonActions } from '@react-navigation/native';
 import { Edit, Globe, Lock } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
@@ -79,7 +79,13 @@ export default function ProfileScreen() {
           </Button>
         </View>
 
-        <Pressable style={s.signOut} onPress={signOut}>
+        <Pressable style={s.signOut} onPress={async () => {
+          try {
+            await signOut();
+          } catch (e: any) {
+            Alert.alert('Sign out failed', e?.message ?? 'Please try again.');
+          }
+        }}>
           <Text style={s.signOutText}>Sign out</Text>
         </Pressable>
       </ScrollView>

@@ -3,6 +3,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
+import { BarChart2, Users, AlertTriangle, FileText, ClipboardList, Settings } from 'lucide-react-native';
 
 import AdminDashboard from '@/screens/admin/AdminDashboard';
 import AdminUsersScreen from '@/screens/admin/AdminUsersScreen';
@@ -30,12 +31,12 @@ export default function AdminTabs() {
           letterSpacing: 0.5,
         },
       }}>
-      <Tab.Screen name="OverviewTab" component={AdminDashboard} options={{ title: 'Overview' }} />
-      <Tab.Screen name="UsersTab" component={AdminUsersScreen} options={{ title: 'Users' }} />
-      <Tab.Screen name="ModerationTab" component={AdminModerationScreen} options={{ title: 'Moderate' }} />
-      <Tab.Screen name="ContentTab" component={AdminContentScreen} options={{ title: 'Content' }} />
-      <Tab.Screen name="AuditTab" component={AdminAuditScreen} options={{ title: 'Audit' }} />
-      <Tab.Screen name="SettingsTab" component={AdminSettingsScreen} options={{ title: 'Settings' }} />
+      <Tab.Screen name="OverviewTab" component={AdminDashboard} options={{ title: 'Overview', tabBarIcon: ({ color, size }) => <BarChart2 size={size} color={color} /> }} />
+      <Tab.Screen name="UsersTab" component={AdminUsersScreen} options={{ title: 'Users', tabBarIcon: ({ color, size }) => <Users size={size} color={color} /> }} />
+      <Tab.Screen name="ModerationTab" component={AdminModerationScreen} options={{ title: 'Moderate', tabBarIcon: ({ color, size }) => <AlertTriangle size={size} color={color} /> }} />
+      <Tab.Screen name="ContentTab" component={AdminContentScreen} options={{ title: 'Content', tabBarIcon: ({ color, size }) => <FileText size={size} color={color} /> }} />
+      <Tab.Screen name="AuditTab" component={AdminAuditScreen} options={{ title: 'Audit', tabBarIcon: ({ color, size }) => <ClipboardList size={size} color={color} /> }} />
+      <Tab.Screen name="SettingsTab" component={AdminSettingsScreen} options={{ title: 'Settings', tabBarIcon: ({ color, size }) => <Settings size={size} color={color} /> }} />
     </Tab.Navigator>
   );
 }

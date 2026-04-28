@@ -34,7 +34,7 @@ export default function QuickStartAthleteScreen() {
   // Auth gate: unauthenticated users go to Auth.
   useEffect(() => {
     if (!authLoading && !user) {
-      nav.navigate('Auth' as any);
+      nav.getParent()?.reset({ index: 0, routes: [{ name: 'AuthStack' as any }] });
     }
   }, [authLoading, user, nav]);
 
@@ -73,7 +73,7 @@ export default function QuickStartAthleteScreen() {
         athleteName={athleteName}
         hasProfileImage={hasProfileImage}
         hasHighlightVideo={hasHighlightVideo}
-        onDismiss={() => nav.navigate('AthleteTabs' as any)}
+        onDismiss={() => nav.getParent()?.reset({ index: 0, routes: [{ name: 'AthleteTabs' as any }] })}
       />
     </SafeAreaView>
   );

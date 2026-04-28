@@ -22,6 +22,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
+import CampHighlightReelManager from '@/components/CampHighlightReelManager';
+import CampNPSCapture from '@/components/CampNPSCapture';
+import CampRefundRequestCard from '@/components/CampRefundRequestCard';
+import CampReportExportButton from '@/components/CampReportExportButton';
 import { colors, typography, spacing } from '@/lib/theme';
 import type { CampStackParamList } from '@/navigation/stacks/CampStack';
 
@@ -162,50 +166,43 @@ export default function CampAthleteDeliverablesScreen() {
           <TabsContent value="report">
             <Card>
               <CardContent style={s.tabPaneCenter}>
-                <Text style={s.tabPaneHeading}>Recruiter-ready PDF report</Text>
+                <Text style={s.tabPaneHeading}>Recruiter-ready report</Text>
                 <Text style={[s.muted, { maxWidth: 420 }]}>
-                  Choose the one-pager for sharing with college coaches, or the detailed multi-page
-                  version with full breakdowns and evaluator notes.
+                  Share a summary of this camp with college coaches. Detailed PDF
+                  exports with evaluator breakdowns will arrive when the server-side
+                  pipeline ships.
                 </Text>
-                {/* PORT-PENDING: CampReportExportButton */}
-                <Button variant="default" disabled>
-                  Download report (port pending)
-                </Button>
+                <CampReportExportButton
+                  campName={camp.name}
+                  campId={camp.id}
+                  enrollmentId={data.enrollment.id}
+                />
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="reel">
-            <Card>
-              <CardContent style={s.tabPaneCenter}>
-                <Text style={s.tabPaneHeading}>Highlight reel</Text>
-                <Text style={s.muted}>
-                  PORT-PENDING: CampHighlightReelManager has not been ported to RN yet.
-                </Text>
-              </CardContent>
-            </Card>
+            <CampHighlightReelManager
+              campId={camp.id}
+              enrollmentId={data.enrollment.id}
+              athleteUserId={user?.id ?? null}
+            />
           </TabsContent>
 
           <TabsContent value="feedback">
-            <Card>
-              <CardContent style={s.tabPaneCenter}>
-                <Text style={s.tabPaneHeading}>Rate this camp</Text>
-                <Text style={s.muted}>
-                  PORT-PENDING: CampNPSCapture has not been ported to RN yet.
-                </Text>
-              </CardContent>
-            </Card>
+            <CampNPSCapture
+              campId={camp.id}
+              enrollmentId={data.enrollment.id}
+              athleteUserId={user?.id ?? null}
+            />
           </TabsContent>
 
           <TabsContent value="refund">
-            <Card>
-              <CardContent style={s.tabPaneCenter}>
-                <Text style={s.tabPaneHeading}>Refund request</Text>
-                <Text style={s.muted}>
-                  PORT-PENDING: CampRefundRequestCard has not been ported to RN yet.
-                </Text>
-              </CardContent>
-            </Card>
+            <CampRefundRequestCard
+              campId={camp.id}
+              enrollmentId={data.enrollment.id}
+              athleteUserId={user?.id ?? null}
+            />
           </TabsContent>
         </Tabs>
       </ScrollView>

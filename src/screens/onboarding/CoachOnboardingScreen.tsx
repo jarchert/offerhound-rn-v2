@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select';
 import { toast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { useCoachProfile, useCreateCoachProfile } from '@/hooks/useCoachProfile';
 import { useUpdateCoachProfile } from '@/hooks/useUpdateCoachProfile';
 import { supabase } from '@/integrations/supabase/client';
@@ -61,7 +61,8 @@ const cap = (s?: string) => (s || '').replace(/_/g, ' ');
 export default function CoachOnboardingScreen() {
   const nav = useNavigation<Nav>();
   const queryClient = useQueryClient();
-  const { user, loading: authLoading, isAuthenticated } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
+  const isAuthenticated = !!user;
   const { data: existingProfile, isLoading: profileLoading } = useCoachProfile() as any;
   const createProfile = useCreateCoachProfile() as any;
   const updateProfile = useUpdateCoachProfile() as any;
@@ -100,11 +101,16 @@ export default function CoachOnboardingScreen() {
   const STEPS = useMemo(() => (coachType ? getSteps(coachType) : ['Personal Info', 'Coach Type']), [coachType]);
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) nav.navigate('Auth' as any);
+    if (!authLoading && !isAuthenticated) {
+      // Auth lives in AuthStack; getParent() escapes the OnboardingStack.
+      nav.getParent()?.reset({ index: 0, routes: [{ name: 'AuthStack' as any }] });
+    }
   }, [authLoading, isAuthenticated, nav]);
 
   useEffect(() => {
-    if (!authLoading && !profileLoading && existingProfile) nav.navigate('CoachTabs' as any);
+    if (!authLoading && !profileLoading && existingProfile) {
+      nav.getParent()?.reset({ index: 0, routes: [{ name: 'CoachTabs' as any }] });
+    }
   }, [authLoading, profileLoading, existingProfile, nav]);
 
   useEffect(() => {
@@ -179,10 +185,10 @@ export default function CoachOnboardingScreen() {
             is_published: true,
           } as any);
         if (error) throw error;
-        await supabase.from('user_roles').insert({ user_id: user.id, role: 'high_school_coach' as any }).select();
+        await supabase.from('user_roles').upsert({ user_id: user.id, role: 'high_school_coach' as any }, { onConflict: 'user_id' }).select();
         await acceptReferralIfPresent();
         toast({ title: 'High School Coach profile created!' });
-        nav.navigate('HSCoachTabs' as any);
+        nav.getParent()?.reset({ index: 0, routes: [{ name: 'HSCoachTabs' as any }] });
       } else {
         const coachData =
           coachType === 'club'
@@ -237,14 +243,15 @@ export default function CoachOnboardingScreen() {
             console.error('Club profile error:', clubError);
             toast({ title: 'Saved', description: 'Coach profile created, but club details failed to save. You can update them in settings.', variant: 'destructive' });
           } else {
-            await supabase.from('user_roles').insert({ user_id: user.id, role: 'club_coach' as any }).select();
+            await supabase.from('user_roles').upsert({ user_id: user.id, role: 'club_coach' as any }, { onConflict: 'user_id' }).select();
             toast({ title: 'Club Coach profile activated!' });
           }
         }
 
         await queryClient.refetchQueries({ queryKey: ['coach-profile', user.id] });
         await acceptReferralIfPresent();
-        nav.navigate(coachType === 'club' ? ('ClubCoachTabs' as any) : ('CoachTabs' as any));
+        const target = coachType === 'club' ? 'ClubCoachTabs' : 'CoachTabs';
+        nav.getParent()?.reset({ index: 0, routes: [{ name: target as any }] });
       }
     } catch (e: any) {
       toast({ title: 'Error', description: e?.message || 'Failed to save profile', variant: 'destructive' });

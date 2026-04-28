@@ -10,6 +10,22 @@ import { colors, typography, spacing } from '@/lib/theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
+function roleToTabs(role: AppRole): keyof RootStackParamList {
+  switch (role as string) {
+    case 'athlete': return 'AthleteTabs';
+    case 'coach': return 'CoachTabs';
+    case 'scout': return 'ScoutTabs';
+    case 'parent': return 'ParentTabs';
+    case 'influencer': return 'InfluencerTabs';
+    case 'admin':
+    case 'moderator': return 'AdminTabs';
+    case 'high_school_coach': return 'HSCoachTabs';
+    case 'club_coach': return 'ClubCoachTabs';
+    case 'agency': return 'AgencyTabs';
+    default: return 'AthleteTabs';
+  }
+}
+
 const ROLES: { key: AppRole; label: string; emoji: string; desc: string }[] = [
   { key: 'athlete', label: 'Athlete', emoji: '🏆', desc: 'Looking to get recruited for college sports' },
   { key: 'coach', label: 'College Coach', emoji: '📋', desc: 'Recruiting athletes for your program' },
@@ -30,9 +46,15 @@ export default function OnboardingScreen() {
   const handleComplete = async () => {
     if (!selectedRole || !user) return;
     setLoading(true);
-    await supabase.from('user_roles').upsert({ user_id: user.id, role: selectedRole });
+    await supabase
+      .from('user_roles')
+      .upsert({ user_id: user.id, role: selectedRole }, { onConflict: 'user_id' });
     setLoading(false);
-    nav.navigate('AthleteTabs' as any);
+    // After role selection, jump to the matching role-specific tab navigator.
+    // OnboardingStack and the *Tabs screens are siblings on the root stack, so
+    // navigating up to the parent is the right escape path.
+    const target = roleToTabs(selectedRole);
+    nav.getParent()?.navigate(target as any);
   };
 
   return (

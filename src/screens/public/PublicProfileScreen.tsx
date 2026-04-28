@@ -24,6 +24,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCoachProfile } from '@/hooks/useCoachProfile';
 import { useScoutProfile } from '@/hooks/useScoutProfile';
 import { useHSCoachProfile } from '@/hooks/useHSCoachProfile';
+import { roleToInitialRoute } from '@/navigation/RootNavigator';
 
 import { HeroSection } from '@/components/HeroSection';
 import { AthleteProfile } from '@/components/AthleteProfile';
@@ -50,7 +51,8 @@ export default function PublicProfileScreen() {
   const { params } = useRoute<R>();
   const slug = params?.customUrl;
   const nav = useNavigation<any>();
-  const { user } = useAuth();
+  const { user, userRole } = useAuth() as any;
+  const homeTarget = (user ? roleToInitialRoute(userRole) : 'AuthStack') as string;
 
   const { data: coachProfile } = useCoachProfile();
   const { data: scoutProfile } = useScoutProfile();
@@ -131,7 +133,7 @@ export default function PublicProfileScreen() {
             </Text>
             <Button
               onPress={() =>
-                nav.dispatch(CommonActions.navigate({ name: 'Dashboard' as any }))
+                nav.dispatch(CommonActions.navigate({ name: homeTarget as any }))
               }
               leftIcon={<Home size={16} color={colors.primaryForeground} />}>
               Go Home

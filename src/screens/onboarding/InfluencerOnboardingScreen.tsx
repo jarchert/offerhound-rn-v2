@@ -69,7 +69,7 @@ export default function InfluencerOnboardingScreen() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) { nav.navigate('Auth' as any); return; }
+    if (!user) { nav.getParent()?.reset({ index: 0, routes: [{ name: 'AuthStack' as any }] }); return; }
     let cancelled = false;
     (async () => {
       const { data } = await supabase
@@ -78,7 +78,7 @@ export default function InfluencerOnboardingScreen() {
         .eq('user_id', user.id)
         .maybeSingle();
       if (cancelled) return;
-      if (data) nav.navigate('InfluencerTabs' as any);
+      if (data) nav.getParent()?.reset({ index: 0, routes: [{ name: 'InfluencerTabs' as any }] });
       else setChecking(false);
     })();
     return () => { cancelled = true; };
@@ -147,7 +147,7 @@ export default function InfluencerOnboardingScreen() {
         if (links.length) await supabase.from('influencer_social_links' as any).insert(links);
       }
       toast({ title: 'Creator profile created — welcome!' });
-      nav.navigate('InfluencerTabs' as any);
+      nav.getParent()?.reset({ index: 0, routes: [{ name: 'InfluencerTabs' as any }] });
     } catch (e: any) {
       toast({ title: 'Error', description: e?.message || 'Failed to create profile', variant: 'destructive' });
     } finally {

@@ -5,9 +5,10 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
+import { Building2, Mail } from 'lucide-react-native';
 
 import AgencyDashboardScreen from '@/screens/agency/AgencyDashboardScreen';
-import LetterComposerScreen from '@/screens/shared/LetterComposerScreen';
+import CoachLettersScreen from '@/screens/coach/CoachLettersScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -28,8 +29,8 @@ export default function AgencyTabs() {
           letterSpacing: 0.5,
         },
       }}>
-      <Tab.Screen name="DashboardTab" component={AgencyDashboardScreen} options={{ title: 'Home' }} />
-      <Tab.Screen name="LettersTab" component={LetterComposerScreen} options={{ title: 'Letters' }} />
+      <Tab.Screen name="DashboardTab" component={AgencyDashboardScreen} options={{ title: 'Home', tabBarIcon: ({ color, size }) => <Building2 size={size} color={color} /> }} />
+      <Tab.Screen name="LettersTab" component={CoachLettersScreen} options={{ title: 'Letters', tabBarIcon: ({ color, size }) => <Mail size={size} color={color} /> }} />
     </Tab.Navigator>
   );
 }

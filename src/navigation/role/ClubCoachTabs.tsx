@@ -5,10 +5,11 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
+import { LayoutDashboard, Tent, Mail } from 'lucide-react-native';
 
 import CampsScreen from '@/screens/shared/CampsScreen';
 import ClubCoachDashboardScreen from '@/screens/club/ClubCoachDashboardScreen';
-import LetterComposerScreen from '@/screens/shared/LetterComposerScreen';
+import ClubCoachLettersScreen from '@/screens/club/ClubCoachLettersScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -29,9 +30,9 @@ export default function ClubCoachTabs() {
           letterSpacing: 0.5,
         },
       }}>
-      <Tab.Screen name="DashboardTab" component={ClubCoachDashboardScreen} options={{ title: 'Home' }} />
-      <Tab.Screen name="CampsTab" component={CampsScreen} options={{ title: 'Camps' }} />
-      <Tab.Screen name="LettersTab" component={LetterComposerScreen} options={{ title: 'Letters' }} />
+      <Tab.Screen name="DashboardTab" component={ClubCoachDashboardScreen} options={{ title: 'Home', tabBarIcon: ({ color, size }) => <LayoutDashboard size={size} color={color} /> }} />
+      <Tab.Screen name="CampsTab" component={CampsScreen} options={{ title: 'Camps', tabBarIcon: ({ color, size }) => <Tent size={size} color={color} /> }} />
+      <Tab.Screen name="LettersTab" component={ClubCoachLettersScreen} options={{ title: 'Letters', tabBarIcon: ({ color, size }) => <Mail size={size} color={color} /> }} />
     </Tab.Navigator>
   );
 }

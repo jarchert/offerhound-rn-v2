@@ -41,6 +41,7 @@ import PricingScreen from '@/screens/shared/PricingScreen';
 import SubscriptionSuccessScreen from '@/screens/shared/SubscriptionSuccessScreen';
 import NILIntelligenceScreen from '@/screens/shared/NILIntelligenceScreen';
 import SupportScreen from '@/screens/shared/SupportScreen';
+import NotFoundScreen from '@/screens/shared/NotFoundScreen';
 import CoachCampaignsScreen from '@/screens/coach/CoachCampaignsScreen';
 import CoachCommunicationRulesScreen from '@/screens/coach/CoachCommunicationRulesScreen';
 
@@ -79,6 +80,7 @@ export type RootStackParamList = {
   Support: undefined;
   CoachCampaigns: undefined;
   CoachCommunicationRules: undefined;
+  NotFound: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -87,7 +89,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
  * Map the resolved user role to the initial role-specific tab navigator name.
  * Default = athlete (the largest role). Unknown roles fall back to PublicTabs.
  */
-function roleToInitialRoute(role: UserRole | null | undefined): keyof RootStackParamList {
+export function roleToInitialRoute(role: UserRole | null | undefined): keyof RootStackParamList {
   switch (role) {
     case 'athlete': return 'AthleteTabs';
     case 'coach': return 'CoachTabs';
@@ -108,9 +110,12 @@ export default function RootNavigator() {
 
   if (isLoading) return null;
 
-  const initialRouteName = user
-    ? roleToInitialRoute(userRole as UserRole | null | undefined)
-    : ('PublicTabs' as keyof RootStackParamList);
+  // Signed-in but role not yet selected → force the role-picker onboarding.
+  const initialRouteName = !user
+    ? ('PublicTabs' as keyof RootStackParamList)
+    : !userRole
+      ? ('OnboardingStack' as keyof RootStackParamList)
+      : roleToInitialRoute(userRole as UserRole | null | undefined);
 
   return (
     <>
@@ -132,6 +137,7 @@ export default function RootNavigator() {
           <Stack.Screen name="Pricing" component={PricingScreen} />
           <Stack.Screen name="Support" component={SupportScreen} />
           <Stack.Screen name="CoachCommunicationRules" component={CoachCommunicationRulesScreen} />
+          <Stack.Screen name="NotFound" component={NotFoundScreen} />
         </>
       ) : (
         <>
@@ -177,6 +183,7 @@ export default function RootNavigator() {
           <Stack.Screen name="Support" component={SupportScreen} />
           <Stack.Screen name="CoachCampaigns" component={CoachCampaignsScreen} />
           <Stack.Screen name="CoachCommunicationRules" component={CoachCommunicationRulesScreen} />
+          <Stack.Screen name="NotFound" component={NotFoundScreen} />
         </>
       )}
     </Stack.Navigator>

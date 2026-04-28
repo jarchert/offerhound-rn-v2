@@ -12,7 +12,7 @@ export function useUnifiedLetterHistory(senderRole: string) {
   const queryClient = useQueryClient();
   const queryKey = ["unified-letter-history", senderRole, user?.id];
 
-  const { data: history = [], isLoading } = useQuery({
+  const { data: history = [], isLoading, refetch } = useQuery({
      queryKey,
      queryFn: async () => {
         if (!user) return [];
@@ -24,7 +24,7 @@ export function useUnifiedLetterHistory(senderRole: string) {
         return (data as any[]) || [];
      },
      enabled: !!user,
-  });
+  }) as any;
 
   const addToHistory = async (entry: any) => {
      if (!user) return;
@@ -48,5 +48,5 @@ export function useUnifiedLetterHistory(senderRole: string) {
      Toast.show({ type: "success", text1: "Letter deleted" });
   };
 
-  return { history, isLoading, addToHistory, deleteFromHistory };
+  return { history: (history as any[]) ?? [], isLoading, addToHistory, deleteFromHistory, refetch };
 }

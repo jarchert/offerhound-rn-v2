@@ -78,7 +78,7 @@ export default function QuickStartScoutScreen() {
 
     setIsSubmitting(true);
     try {
-      if (!user) { nav.navigate('Auth' as any); setIsSubmitting(false); return; }
+      if (!user) { nav.getParent()?.reset({ index: 0, routes: [{ name: 'AuthStack' as any }] }); setIsSubmitting(false); return; }
       const { error } = await supabase.from('scout_profiles').insert({
         user_id: user.id, name: formData.name, email: formData.email, title: 'Scout',
         specialization: formData.specialization || 'General', regions_covered: [formData.coverage_region],

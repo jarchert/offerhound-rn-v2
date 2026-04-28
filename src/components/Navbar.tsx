@@ -5,18 +5,23 @@ import { Home, MessageSquare, Bell, Search, User, Menu } from 'lucide-react-nati
 import { useAuth } from '@/contexts/AuthContext';
 import { ImpersonationBanner } from '@/components/ImpersonationBanner';
 import { colors, typography, spacing } from '@/lib/theme';
+import { roleToInitialRoute } from '@/navigation/RootNavigator';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
+import type { UserRole } from '@/lib/constants';
 
 // Top navbar: brand + quick-nav icons. Tab bar handles primary nav per role.
 export function Navbar() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
-  const { user } = useAuth();
+  const { user, userRole } = useAuth() as any;
+  const home = user
+    ? roleToInitialRoute(userRole as UserRole | null | undefined)
+    : 'PublicTabs';
 
   return (
     <View>
       <ImpersonationBanner />
       <View style={s.bar}>
-        <Pressable onPress={() => nav.navigate('AthleteTabs' as any)} style={s.brand} hitSlop={8}>
+        <Pressable onPress={() => nav.navigate(home as any)} style={s.brand} hitSlop={8}>
           <Text style={s.brandText}>OFFERHOUND</Text>
         </Pressable>
         <View style={s.actions}>

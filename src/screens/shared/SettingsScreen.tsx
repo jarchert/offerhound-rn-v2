@@ -43,8 +43,8 @@ export default function SettingsScreen() {
         </SettingsGroup>
 
         <SettingsGroup title="Account">
-          <SettingsRow icon={Trash2} label="Delete account" onPress={() => nav.navigate('DeleteAccount' as any)} destructive />
-          <SettingsRow icon={LogOut} label="Sign out" onPress={signOut} destructive />
+          <SettingsRow icon={Trash2} label="Delete account" onPress={() => nav.navigate('SettingsStack' as any, { screen: 'DeleteAccount' })} destructive />
+          <SettingsRow icon={LogOut} label="Sign out" onPress={async () => { try { await signOut(); } catch {} }} destructive />
         </SettingsGroup>
 
         <Pressable style={s.smokeTest} onPress={() => nav.navigate('SmokeTest' as any)}>

@@ -27,22 +27,36 @@ export default function MessagesScreen() {
   const { data: conversations = [], isLoading, refetch } = useQuery({
     queryKey: ['conversations', user?.id],
     queryFn: async () => {
-      if (!user) return [];
-      const { data } = await supabase
+      if (!user) return [] as Conversation[];
+      // The conversations table uses participant_1 / participant_2 as the FK columns.
+      const { data: rows } = await supabase
         .from('conversations')
         .select('*')
-        .or(`user_a_id.eq.${user.id},user_b_id.eq.${user.id}`)
+        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
         .order('last_message_at', { ascending: false });
-      // Shape into Conversation[]
-      return (data || []).map((c: any): Conversation => {
-        const mine = c.user_a_id === user.id;
+      const list = (rows as any[]) || [];
+      // Collect the other-user ids and fetch profile metadata in one round trip.
+      const otherIds = Array.from(new Set(
+        list.map((c: any) => (c.participant_1 === user.id ? c.participant_2 : c.participant_1)).filter(Boolean),
+      ));
+      const profileById: Record<string, { full_name?: string; profile_image_url?: string }> = {};
+      if (otherIds.length) {
+        const { data: profs } = await supabase
+          .from('profiles' as any)
+          .select('id,full_name,profile_image_url')
+          .in('id', otherIds);
+        for (const p of (profs as any[]) || []) profileById[p.id] = p;
+      }
+      return list.map((c: any): Conversation => {
+        const otherId = c.participant_1 === user.id ? c.participant_2 : c.participant_1;
+        const prof = (otherId && profileById[otherId]) || ({} as any);
         return {
           id: c.id,
-          other_user_id: mine ? c.user_b_id : c.user_a_id,
-          other_user_name: mine ? (c.user_b_name ?? 'User') : (c.user_a_name ?? 'User'),
-          other_user_image: mine ? c.user_b_image : c.user_a_image,
-          last_message: c.last_message,
-          last_message_at: c.last_message_at,
+          other_user_id: otherId,
+          other_user_name: prof.full_name ?? 'User',
+          other_user_image: prof.profile_image_url ?? null,
+          last_message: c.last_message ?? null,
+          last_message_at: c.last_message_at ?? null,
           unread_count: c.unread_count ?? 0,
         };
       });
@@ -52,12 +66,18 @@ export default function MessagesScreen() {
 
   if (activeId) {
     const conv = conversations.find(c => c.id === activeId);
+    if (!conv) {
+      // Race: activeId set but conversation list no longer contains it.
+      // Reset to inbox view rather than rendering an empty thread.
+      setActiveId(null);
+      return null;
+    }
     return (
       <SafeAreaView style={s.container}>
         <Navbar />
         <View style={s.threadHeader}>
           <BackButton onPress={() => setActiveId(null)} />
-          <Text style={s.threadTitle} numberOfLines={1}>{conv?.other_user_name ?? 'Conversation'}</Text>
+          <Text style={s.threadTitle} numberOfLines={1}>{conv.other_user_name ?? 'Conversation'}</Text>
         </View>
         <MessageThread conversationId={activeId} />
         <MessageComposer conversationId={activeId} />

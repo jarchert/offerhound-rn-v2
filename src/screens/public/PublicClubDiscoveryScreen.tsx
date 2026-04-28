@@ -162,7 +162,7 @@ export default function PublicClubDiscoveryScreen() {
 
   const goAuth = () =>
     nav.dispatch(
-      CommonActions.navigate({ name: 'Auth' as any, params: { redirect: '/onboarding' } }),
+      CommonActions.navigate({ name: 'AuthStack' as any, params: { redirect: '/onboarding' } }),
     );
 
   return (
@@ -308,7 +308,7 @@ export default function PublicClubDiscoveryScreen() {
                     size="lg"
                     variant="outline"
                     onPress={() =>
-                      nav.dispatch(CommonActions.navigate({ name: 'Landing' as any }))
+                      nav.dispatch(CommonActions.navigate({ name: 'PublicTabs' as any }))
                     }>
                     Learn More
                   </Button>

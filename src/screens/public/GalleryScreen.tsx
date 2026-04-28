@@ -40,6 +40,7 @@ import {
 
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { useAuth } from '@/hooks/useAuth';
+import { roleToInitialRoute } from '@/navigation/RootNavigator';
 import { supabase } from '@/integrations/supabase/client';
 import { BackButton } from '@/components/BackButton';
 import { Footer } from '@/components/Footer';
@@ -74,8 +75,9 @@ export default function GalleryScreen() {
   const [isTogglingVisibility, setIsTogglingVisibility] = useState(false);
 
   const { profile, isLoading, fetchProfile } = usePlayerProfile();
-  const { user, loading: authLoading } = useAuth();
+  const { user, userRole, loading: authLoading } = useAuth() as any;
   const isAuthenticated = !!user;
+  const homeTarget = (user ? roleToInitialRoute(userRole) : 'AuthStack') as string;
   const nav = useNavigation<any>();
 
   useEffect(() => {
@@ -164,7 +166,7 @@ export default function GalleryScreen() {
   };
 
   if (!authLoading && !isAuthenticated) {
-    nav.dispatch(CommonActions.navigate({ name: 'Landing' as any }));
+    nav.dispatch(CommonActions.navigate({ name: 'PublicTabs' as any }));
     return null;
   }
   if (isLoading || authLoading) {
@@ -175,7 +177,7 @@ export default function GalleryScreen() {
     );
   }
   if (!profile) {
-    nav.dispatch(CommonActions.navigate({ name: 'Onboarding' as any }));
+    nav.dispatch(CommonActions.navigate({ name: 'OnboardingStack' as any }));
     return null;
   }
 
@@ -352,7 +354,7 @@ export default function GalleryScreen() {
             {isOwnerView && galleryItems.length === 0 && (
               <Button
                 onPress={() =>
-                  nav.dispatch(CommonActions.navigate({ name: 'Dashboard' as any }))
+                  nav.dispatch(CommonActions.navigate({ name: homeTarget as any }))
                 }
                 leftIcon={<Upload size={16} color={colors.primaryForeground} />}>
                 Upload Photos

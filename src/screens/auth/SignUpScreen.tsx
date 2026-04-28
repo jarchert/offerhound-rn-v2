@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { colors, typography, spacing } from '@/lib/theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -22,8 +23,16 @@ export default function SignUpScreen() {
     setLoading(true);
     const { error } = await signUpWithEmail(email, password);
     setLoading(false);
-    if (error) Alert.alert('Sign Up Failed', error.message);
-    else { Alert.alert('Account Created', 'Please check your email to confirm your account.'); nav.navigate('SignIn' as any); }
+    if (error) { Alert.alert('Sign Up Failed', error.message); return; }
+    // If email confirmation is OFF, Supabase returns an active session immediately.
+    // RootNavigator will swap to authed stacks; OnboardingStack is the right landing.
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      nav.getParent()?.navigate('OnboardingStack' as any);
+    } else {
+      Alert.alert('Account Created', 'Please check your email to confirm your account.');
+      nav.navigate('SignIn' as any);
+    }
   };
 
   return (

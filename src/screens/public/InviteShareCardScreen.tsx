@@ -37,6 +37,7 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { roleToInitialRoute } from '@/navigation/RootNavigator';
 import SEO from '@/components/SEO';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -84,8 +85,9 @@ type R = RouteProp<{ InviteShareCard: { token?: string; from?: string; role?: st
 export default function InviteShareCardScreen() {
   const { params } = useRoute<R>();
   const nav = useNavigation<any>();
-  const { user, isLoading: loading } = useAuth();
+  const { user, userRole, isLoading: loading } = useAuth() as any;
   const isAuthenticated = !!user;
+  const homeTarget = (user ? roleToInitialRoute(userRole) : 'AuthStack') as string;
 
   const token = params?.token || '';
   const fallbackSenderName = (params?.from || 'An OfferHound user').slice(0, 80);
@@ -188,11 +190,11 @@ export default function InviteShareCardScreen() {
     await recordAcceptClick();
     await AsyncStorage.setItem('post_auth_redirect', '/').catch(() => {});
     // PORT-PENDING: web routes to /auth?mode=signup. Map to RN Auth screen.
-    nav.navigate('Auth' as any, { mode: 'signup' });
+    nav.navigate('AuthStack' as any, { mode: 'signup' });
   };
 
   const handleSkip = () => {
-    nav.navigate('Dashboard' as any);
+    nav.navigate(homeTarget as any);
   };
 
   const valueProps = useMemo(
@@ -292,7 +294,7 @@ export default function InviteShareCardScreen() {
                     {cardUrl ? "Here's the card they sent you." : 'Head to your home to keep going.'}
                   </Text>
                   <Button
-                    onPress={() => nav.navigate('Dashboard' as any)}
+                    onPress={() => nav.navigate(homeTarget as any)}
                     size="lg"
                     rightIcon={<ArrowRight size={16} color={colors.primaryForeground} />}>
                     Go to My Home
@@ -310,7 +312,7 @@ export default function InviteShareCardScreen() {
                     Continue without account
                   </Button>
                   <Pressable
-                    onPress={() => nav.navigate('Auth' as any, { mode: 'signin' })}
+                    onPress={() => nav.navigate('AuthStack' as any, { mode: 'signin' })}
                     style={s.signInLine}>
                     <Text style={s.muted}>Already a member? </Text>
                     <Text style={s.signInLink}>Sign in</Text>

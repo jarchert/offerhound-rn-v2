@@ -3,6 +3,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
+import { Home, Shield } from 'lucide-react-native';
 
 import ParentDashboard from '@/screens/parent/ParentDashboard';
 import ParentTrustSafetyScreen from '@/screens/parent/ParentTrustSafetyScreen';
@@ -26,8 +27,8 @@ export default function ParentTabs() {
           letterSpacing: 0.5,
         },
       }}>
-      <Tab.Screen name="DashboardTab" component={ParentDashboard} options={{ title: 'Home' }} />
-      <Tab.Screen name="TrustSafetyTab" component={ParentTrustSafetyScreen} options={{ title: 'Safety' }} />
+      <Tab.Screen name="DashboardTab" component={ParentDashboard} options={{ title: 'Home', tabBarIcon: ({ color, size }) => <Home size={size} color={color} /> }} />
+      <Tab.Screen name="TrustSafetyTab" component={ParentTrustSafetyScreen} options={{ title: 'Safety', tabBarIcon: ({ color, size }) => <Shield size={size} color={color} /> }} />
     </Tab.Navigator>
   );
 }

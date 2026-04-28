@@ -82,7 +82,7 @@ export default function QuickStartCoachScreen() {
 
     setIsSubmitting(true);
     try {
-      if (!user) { nav.navigate('Auth' as any); setIsSubmitting(false); return; }
+      if (!user) { nav.getParent()?.reset({ index: 0, routes: [{ name: 'AuthStack' as any }] }); setIsSubmitting(false); return; }
       const { error } = await supabase.from('coach_profiles').insert({
         user_id: user.id, name: formData.name, email: formData.email, school: formData.school,
         title: formData.title, division: formData.division,

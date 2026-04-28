@@ -127,7 +127,7 @@ export default function AgencyDashboardScreen() {
             <Button
               variant="outline" size="sm"
               leftIcon={<Search size={14} color={colors.primary} />}
-              onPress={() => {/* PORT-PENDING: navigate to /athletes search route */}}
+              onPress={() => (nav.getParent() as any)?.navigate('CoachTabs', { screen: 'DirectoryTab' })}
             >
               Search Athletes
             </Button>
@@ -141,7 +141,7 @@ export default function AgencyDashboardScreen() {
             <Button
               variant="outline" size="sm"
               leftIcon={<TrendingUp size={14} color={colors.primary} />}
-              onPress={() => {/* PORT-PENDING: navigate to /scout/trends */}}
+              onPress={() => (nav.getParent() as any)?.navigate('ScoutTabs', { screen: 'TrendsTab' })}
             >
               Trends
             </Button>
