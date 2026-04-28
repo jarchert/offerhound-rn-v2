@@ -1023,6 +1023,14 @@ export default function DashboardScreen() {
                 <View style={{ gap: spacing.xs, marginTop: spacing.md }}>
                   <Button
                     onPress={() => {
+                      nav.navigate('AthleteProfileEdit' as never);
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Edit Full Profile
+                  </Button>
+                  <Button
+                    onPress={() => {
                       nav.navigate('AthleteMatchesScreen' as never);
                       setMobileMenuOpen(false);
                     }}

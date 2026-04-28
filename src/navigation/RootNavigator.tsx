@@ -44,6 +44,7 @@ import SupportScreen from '@/screens/shared/SupportScreen';
 import NotFoundScreen from '@/screens/shared/NotFoundScreen';
 import CoachCampaignsScreen from '@/screens/coach/CoachCampaignsScreen';
 import CoachCommunicationRulesScreen from '@/screens/coach/CoachCommunicationRulesScreen';
+import AthleteProfileEditScreen from '@/screens/athlete/AthleteProfileEditScreen';
 
 // Persistent post-auth overlay
 import FloatingAICoach from '@/components/FloatingAICoach';
@@ -80,6 +81,7 @@ export type RootStackParamList = {
   Support: undefined;
   CoachCampaigns: undefined;
   CoachCommunicationRules: undefined;
+  AthleteProfileEdit: undefined;
   NotFound: undefined;
 };
 
@@ -183,6 +185,7 @@ export default function RootNavigator() {
           <Stack.Screen name="Support" component={SupportScreen} />
           <Stack.Screen name="CoachCampaigns" component={CoachCampaignsScreen} />
           <Stack.Screen name="CoachCommunicationRules" component={CoachCommunicationRulesScreen} />
+          <Stack.Screen name="AthleteProfileEdit" component={AthleteProfileEditScreen} />
           <Stack.Screen name="NotFound" component={NotFoundScreen} />
         </>
       )}

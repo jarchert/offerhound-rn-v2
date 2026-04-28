@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, RefreshControl, SafeAreaView } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-import { Users, Trophy, Mail, Calendar } from 'lucide-react-native';
+import { Users, Trophy, Mail, Calendar, Edit3 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { useAthleteMatches } from '@/hooks/useAthleteMatches';
@@ -11,6 +11,7 @@ import { StatTile } from '@/components/StatTile';
 import { SectionHeader } from '@/components/SectionHeader';
 import { CoachCard } from '@/components/CoachCard';
 import { PushNotificationPrompt } from '@/components/PushNotificationPrompt';
+import { Button } from '@/components/ui/Button';
 import { colors, typography, spacing } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 
@@ -40,6 +41,14 @@ export default function AthleteDashboard() {
         </View>
 
         <PushNotificationPrompt />
+
+        <Button
+          variant="outline"
+          onPress={() => nav.navigate('AthleteProfileEdit' as any)}
+          leftIcon={<Edit3 size={14} color={colors.foreground} />}
+        >
+          Edit Full Profile
+        </Button>
 
         <View style={s.statsRow}>
           <StatTile label="Matches" value={matches.length} icon={Trophy} />
