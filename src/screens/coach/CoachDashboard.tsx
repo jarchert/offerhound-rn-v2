@@ -40,8 +40,23 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/Dialog';
 import { colors, typography, spacing } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
+
+// Heavy parity components — already ported to RN
+import { CoachMatchSuggestionFeed } from '@/components/CoachMatchSuggestionFeed';
+import { PositionNeedsBoard } from '@/components/PositionNeedsBoard';
+import { RecruitingAnalyticsDashboard } from '@/components/RecruitingAnalyticsDashboard';
+import { BulkMessageComposer } from '@/components/BulkMessageComposer';
+import { CampManagerPaywall } from '@/components/CampManagerPaywall';
+import { CampDiscovery } from '@/components/CampDiscovery';
+import { StaffManager } from '@/components/StaffManager';
+import { StaffMessaging } from '@/components/StaffMessaging';
+import { TransferPortalFeed } from '@/components/TransferPortalFeed';
+import { SocialLinksManager } from '@/components/SocialLinksManager';
+import { SocialSyndicationCenter } from '@/components/SocialSyndicationCenter';
+import { useSubscription } from '@/hooks/useSubscription';
 
 type InnerTab = 'overview' | 'athletes' | 'pipeline' | 'camps' | 'profile';
 
@@ -66,6 +81,9 @@ export default function CoachDashboard() {
   const [activeTab, setActiveTab] = useState<InnerTab>('overview');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [quickStartDismissed, setQuickStartDismissed] = useState(false);
+  const [bulkComposerOpen, setBulkComposerOpen] = useState(false);
+  const { tier, isActive: subActive } = useSubscription();
+  const hasCampManagerEntitlement = subActive && (tier === 'camp-manager-annual' || tier === 'camp-manager-event' || tier === 'club-coach');
 
   const [editForm, setEditForm] = useState({
     name: '',
@@ -259,11 +277,30 @@ export default function CoachDashboard() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Daily match suggestions feed */}
+            <CoachMatchSuggestionFeed variant="compact" maxItems={5} />
+
+            {/* Position needs board */}
+            <PositionNeedsBoard sport={(profile as any)?.sport || 'football'} />
+
+            {/* Recruiting analytics summary */}
+            <RecruitingAnalyticsDashboard />
           </View>
         )}
 
         {activeTab === 'athletes' && (
-          <Card>
+          <View style={{ gap: spacing.md }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+              <Button
+                size="sm"
+                onPress={() => setBulkComposerOpen(true)}
+                leftIcon={<Send size={14} color={colors.primaryForeground} />}
+              >
+                Bulk Message
+              </Button>
+            </View>
+            <Card>
             <CardHeader>
               <CardTitle>Saved Athletes</CardTitle>
               <CardDescription>Your recruiting board</CardDescription>
@@ -327,6 +364,7 @@ export default function CoachDashboard() {
               )}
             </CardContent>
           </Card>
+          </View>
         )}
 
         {activeTab === 'pipeline' && (
@@ -347,23 +385,37 @@ export default function CoachDashboard() {
         )}
 
         {activeTab === 'camps' && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Camps</CardTitle>
-              <CardDescription>Manage your camps and discover events</CardDescription>
-            </CardHeader>
-            <CardContent style={{ paddingBottom: spacing.md }}>
-              <Button
-                onPress={goCamps}
-                leftIcon={<Tent size={14} color={colors.primaryForeground} />}
-              >
-                Camp Manager
-              </Button>
-            </CardContent>
-          </Card>
+          <View style={{ gap: spacing.md }}>
+            {/* Camp Discovery — always free */}
+            <CampDiscovery
+              coachSport={(profile as any)?.sport}
+              coachState={(profile as any)?.state}
+            />
+
+            {/* Camp Manager: gated by subscription */}
+            {hasCampManagerEntitlement ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Camp Manager</CardTitle>
+                  <CardDescription>Manage your camps and rosters</CardDescription>
+                </CardHeader>
+                <CardContent style={{ paddingBottom: spacing.md }}>
+                  <Button
+                    onPress={goCamps}
+                    leftIcon={<Tent size={14} color={colors.primaryForeground} />}
+                  >
+                    Open Camp Manager
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <CampManagerPaywall />
+            )}
+          </View>
         )}
 
         {activeTab === 'profile' && (
+          <View style={{ gap: spacing.md }}>
           <Card>
             <CardHeader>
               <CardTitle>My Profile</CardTitle>
@@ -465,7 +517,37 @@ export default function CoachDashboard() {
               )}
             </CardContent>
           </Card>
+
+            {/* Staff management */}
+            <StaffManager onMessageStaff={() => goMessages()} />
+            <StaffMessaging />
+
+            {/* Social presence */}
+            <SocialLinksManager
+              role="coach"
+              profileName={(profile as any)?.name || undefined}
+              profileImageUrl={(profile as any)?.image_url}
+              initialLinks={(profile as any)?.social_links || {}}
+            />
+            <SocialSyndicationCenter
+              entityName={(profile as any)?.name || undefined}
+            />
+
+            {/* Transfer portal feed */}
+            <TransferPortalFeed sport={(profile as any)?.sport} />
+          </View>
         )}
+
+        {/* Bulk message composer modal */}
+        <Dialog open={bulkComposerOpen} onOpenChange={setBulkComposerOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Bulk Message</DialogTitle>
+              <DialogDescription>Send a letter to multiple athletes at once</DialogDescription>
+            </DialogHeader>
+            <BulkMessageComposer />
+          </DialogContent>
+        </Dialog>
       </ScrollView>
     </SafeAreaView>
   );
