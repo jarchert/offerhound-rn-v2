@@ -33,6 +33,7 @@ import { navigationRef } from '@/navigation/navigationRef';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import OfflineBanner from '@/components/OfflineBanner';
 import ImpersonationBanner from '@/components/ImpersonationBanner';
+import { FirstLaunchConsentModal, useCookieConsent } from '@/components/FirstLaunchConsentModal';
 import { initIAP, teardownIAP } from '@/lib/iap';
 import { colors } from '@/lib/theme';
 
@@ -69,6 +70,9 @@ export default function App() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+
+  // First-launch cookie consent modal — shown once on fresh install.
+  const { visible: consentVisible, handleAcceptAll, handleAcceptEssential, handleCustomize } = useCookieConsent();
 
   // Hide splash once fonts are ready.
   const onLayoutRootView = useCallback(async () => {
@@ -113,6 +117,12 @@ export default function App() {
                             <ImpersonationBanner />
                             <OfflineBanner />
                             <RootNavigator />
+                            <FirstLaunchConsentModal
+                              visible={consentVisible}
+                              onAcceptAll={handleAcceptAll}
+                              onAcceptEssential={handleAcceptEssential}
+                              onCustomize={handleCustomize}
+                            />
                           </NavigationContainer>
                           <Toast />
                           <StatusBar style="light" />

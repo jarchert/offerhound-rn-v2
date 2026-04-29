@@ -37,6 +37,7 @@ import { CoachScreenshotsSection } from '@/components/landing/CoachScreenshotsSe
 import { LandingPodcastSection } from '@/components/landing/LandingPodcastSection';
 import { AIUseCasesSection } from '@/components/AIUseCasesSection';
 import { FeaturedInfluencersStrip } from '@/components/influencer/FeaturedInfluencersStrip';
+import PublicFooter from '@/components/PublicFooter';
 
 const VIEWER_STORAGE_KEY = 'offerhound_viewer_type';
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -172,6 +173,25 @@ export default function LandingScreen() {
         <FeaturedInfluencersStrip />
 
         <View style={{ height: 40 }} />
+
+        {/* ── Legal footer (App Store compliance) ── */}
+        <PublicFooter
+          variant="landing"
+          onInstall={() => nav.navigate('Install')}
+          onNILIntelligence={() => nav.navigate('NILIntelligence')}
+          onTerms={() => nav.navigate('TermsOfUse')}
+          onPrivacy={() => nav.navigate('PrivacyPolicy')}
+          onCommunityGuidelines={() => nav.navigate('CommunityGuidelines')}
+          onCoachRules={() => nav.navigate('CoachCommunicationRules')}
+          onParentTrust={() => nav.navigate('ParentTrustSafety')}
+          onAccessibility={() => nav.navigate('Accessibility')}
+          onCookies={() => nav.navigate('CookiesPolicy')}
+          onCCPA={() => nav.navigate('CCPARights')}
+          onDeleteAccount={() => nav.navigate('DeleteAccount')}
+          onScouts={() => nav.navigate('PublicSportStack')}
+          onSupport={() => nav.navigate('Support')}
+          onGetStarted={() => nav.navigate('AuthStack')}
+        />
       </Animated.ScrollView>
     </SafeAreaView>
   );
