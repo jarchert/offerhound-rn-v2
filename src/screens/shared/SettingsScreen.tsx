@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, SafeAreaView, Pressable, Switch } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-import { Bell, Moon, Shield, FileText, Trash2, LogOut, ChevronRight, Users, Cookie, Eye } from 'lucide-react-native';
+import { Bell, Moon, Shield, FileText, Trash2, LogOut, ChevronRight, Users, Cookie, Eye, CreditCard, Lock, User } from 'lucide-react-native';
+import { Alert, TextInput, Modal } from 'react-native';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Navbar } from '@/components/Navbar';
@@ -12,6 +14,26 @@ export default function SettingsScreen() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
   const { signOut, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const [changingPw, setChangingPw] = React.useState(false);
+  const [newPw, setNewPw] = React.useState('');
+  const [pwLoading, setPwLoading] = React.useState(false);
+
+  const handleChangePassword = async () => {
+    if (newPw.length < 8) {
+      Alert.alert('Password too short', 'Enter at least 8 characters.');
+      return;
+    }
+    setPwLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: newPw });
+    setPwLoading(false);
+    if (error) {
+      Alert.alert('Error', error.message);
+    } else {
+      Alert.alert('Password updated', 'Your password has been changed.');
+      setChangingPw(false);
+      setNewPw('');
+    }
+  };
 
   return (
     <SafeAreaView style={s.container}>
@@ -19,6 +41,18 @@ export default function SettingsScreen() {
       <ScrollView contentContainerStyle={s.content}>
         <Text style={s.title}>Settings</Text>
         <Text style={s.email}>{user?.email}</Text>
+
+        <SettingsGroup title="Subscription">
+          <SettingsRow icon={CreditCard} label="Manage Subscription" onPress={() => nav.navigate('Paywall' as any)} />
+        </SettingsGroup>
+
+        <SettingsGroup title="Account Information">
+          <SettingsRow icon={User} label={user?.email ?? 'Email'} onPress={() => {}} />
+        </SettingsGroup>
+
+        <SettingsGroup title="Security">
+          <SettingsRow icon={Lock} label="Change Password" onPress={() => setChangingPw(true)} />
+        </SettingsGroup>
 
         <SettingsGroup title="Preferences">
           <SettingsRow
@@ -51,8 +85,32 @@ export default function SettingsScreen() {
           <Text style={s.smokeTestText}>Run Smoke Test →</Text>
         </Pressable>
 
-        <Text style={s.version}>OfferHound v1.0.0 (Build 1)</Text>
+        <Text style={s.version}>OfferHound v1.0.0 (Build 35)</Text>
       </ScrollView>
+
+      {/* Change Password Modal */}
+      <Modal visible={changingPw} transparent animationType="slide" onRequestClose={() => setChangingPw(false)}>
+        <Pressable style={s.modalBackdrop} onPress={() => setChangingPw(false)}>
+          <View style={s.modalSheet}>
+            <Text style={s.modalTitle}>Change Password</Text>
+            <TextInput
+              style={s.input}
+              placeholder="New password (min 8 chars)"
+              placeholderTextColor={colors.mutedForeground}
+              secureTextEntry
+              value={newPw}
+              onChangeText={setNewPw}
+            />
+            <Pressable
+              style={[s.pwBtn, pwLoading && s.pwBtnDisabled]}
+              onPress={handleChangePassword}
+              disabled={pwLoading}
+            >
+              <Text style={s.pwBtnText}>{pwLoading ? 'Saving...' : 'Update Password'}</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -90,4 +148,11 @@ const s = StyleSheet.create({
   version: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.xs, color: colors.mutedForeground, textAlign: 'center', marginTop: spacing.md },
   smokeTest: { alignItems: 'center', padding: spacing.sm, marginTop: spacing.sm },
   smokeTestText: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.xs, color: colors.mutedForeground },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalSheet: { backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: spacing.xl, gap: spacing.md },
+  modalTitle: { fontFamily: typography.fontFamily.heading, fontSize: typography.fontSize.xl, color: colors.foreground, marginBottom: spacing.sm },
+  input: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: spacing.md, fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.base, color: colors.foreground, backgroundColor: colors.background },
+  pwBtn: { backgroundColor: colors.primary, borderRadius: 10, padding: spacing.md, alignItems: 'center' },
+  pwBtnDisabled: { opacity: 0.6 },
+  pwBtnText: { fontFamily: typography.fontFamily.bodySemiBold, fontSize: typography.fontSize.base, color: '#fff' },
 });
