@@ -4,6 +4,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
+import { roleTabScreenOptions } from '@/navigation/role/roleTabScreenOptions';
 import { Home, Shield, MessageSquare, Inbox } from 'lucide-react-native';
 
 import ParentDashboard from '@/screens/parent/ParentDashboard';
@@ -16,17 +17,7 @@ const Tab = createBottomTabNavigator();
 export default function ParentTabs() {
   return (
     <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: { backgroundColor: colors.background, borderTopColor: colors.border },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.foregroundSubtle,
-        tabBarLabelStyle: {
-          fontFamily: typography.fontFamily.bodyMedium,
-          fontSize: 11,
-          letterSpacing: 0.5,
-        },
-      }}>
+      screenOptions={roleTabScreenOptions}>
       <Tab.Screen name="DashboardTab" component={ParentDashboard} options={{ title: 'Home', tabBarIcon: ({ color, size }) => <Home size={size} color={color} /> }} />
       <Tab.Screen name="MessagesTab" component={MessagesScreen} options={{ title: 'Messages', tabBarIcon: ({ color, size }) => <MessageSquare size={size} color={color} /> }} />
       <Tab.Screen name="InboxTab" component={InboxScreen} options={{ title: 'Inbox', tabBarIcon: ({ color, size }) => <Inbox size={size} color={color} /> }} />

@@ -9,6 +9,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
+import { roleTabScreenOptions } from '@/navigation/role/roleTabScreenOptions';
 import { LayoutDashboard, Users, Tent, Mail, Inbox } from 'lucide-react-native';
 
 import CoachDashboard from '@/screens/coach/CoachDashboard';
@@ -22,17 +23,7 @@ const Tab = createBottomTabNavigator();
 export default function CoachTabs() {
   return (
     <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: { backgroundColor: colors.background, borderTopColor: colors.border },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.foregroundSubtle,
-        tabBarLabelStyle: {
-          fontFamily: typography.fontFamily.bodyMedium,
-          fontSize: 11,
-          letterSpacing: 0.5,
-        },
-      }}>
+      screenOptions={roleTabScreenOptions}>
       <Tab.Screen name="DashboardTab" component={CoachDashboard} options={{ title: 'Home', tabBarIcon: ({ color, size }) => <LayoutDashboard size={size} color={color} /> }} />
       <Tab.Screen name="PipelineTab" component={CoachRosterScreen} options={{ title: 'Pipeline', tabBarIcon: ({ color, size }) => <Users size={size} color={color} /> }} />
       <Tab.Screen name="CampsTab" component={CoachCampsScreen} options={{ title: 'Camps', tabBarIcon: ({ color, size }) => <Tent size={size} color={color} /> }} />
