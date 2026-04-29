@@ -351,10 +351,16 @@ export default function HSCoachDashboardScreen() {
                   <CardContent>
                     <View style={s.quickGrid}>
                       <QuickAction icon={Users} label="Manage Roster" onPress={() => setActiveTab('roster')} />
-                      <QuickAction icon={Search} label="Find Athletes" onPress={() => {/* PORT-PENDING: navigate to /athletes */}} />
+                      {/* TODO: 'AthleteSearch' and 'CoachDirectory' screens exist
+                          (src/screens/shared/AthleteSearchScreen.tsx,
+                           src/screens/shared/CoachDirectoryScreen.tsx) but are not
+                          registered as top-level Stack.Screen entries in
+                          src/navigation/RootNavigator.tsx. Register them there to
+                          activate these QuickActions. */}
+                      <QuickAction icon={Search} label="Find Athletes" onPress={() => nav.navigate('AthleteSearch' as never)} />
                       <QuickAction icon={FileCheck} label="AI Letters" onPress={() => nav.navigate('LetterComposer' as never)} />
                       <QuickAction icon={Mail} label="Messages" onPress={() => nav.navigate('Messages' as never)} />
-                      <QuickAction icon={GraduationCap} label="College Coaches" onPress={() => {/* PORT-PENDING: /coaches route */}} />
+                      <QuickAction icon={GraduationCap} label="College Coaches" onPress={() => nav.navigate('CoachDirectory' as never)} />
                     </View>
                   </CardContent>
                 </Card>

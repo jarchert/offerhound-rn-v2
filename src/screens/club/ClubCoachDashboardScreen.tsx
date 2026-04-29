@@ -509,7 +509,17 @@ export default function ClubCoachDashboardScreen() {
                               <Badge variant={saved.priority === 'high' ? 'default' : 'secondary'}>{String(saved.priority || 'normal')}</Badge>
                             </View>
                           </View>
-                          <Button variant="outline" size="sm" style={s.fullW} onPress={() => {/* PORT-PENDING: deep link to public profile */}}>View Profile</Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            style={s.fullW}
+                            onPress={() =>
+                              nav.navigate('PublicProfileStack' as any, {
+                                screen: 'PublicProfile',
+                                params: { userId: saved.athlete_user_id || saved.athlete?.id },
+                              })
+                            }
+                          >View Profile</Button>
                         </View>
                       ))}
                     </View>

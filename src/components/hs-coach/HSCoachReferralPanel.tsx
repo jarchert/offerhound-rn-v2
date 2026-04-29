@@ -63,11 +63,33 @@ export function HSCoachReferralPanel() {
   const { user } = useAuth();
 
   const navigateToLink = (target: LovableRoute) => {
-    // GAP_IN_LOVABLE: dedicated RN screens for these routes don't exist yet.
-    // Fall back to HSCoachTabs and log so the next session can wire them up.
-    // eslint-disable-next-line no-console
-    console.log('[HSCoachReferralPanel] TODO nav target', target);
-    navigation.navigate('HSCoachTabs' as never);
+    const nav = navigation as any;
+    switch (target.kind) {
+      case 'letters':
+        nav.navigate('LetterComposer', {
+          seed: {
+            athleteName: target.athlete,
+            athleteId: target.athlete_id,
+            letterType: 'recruiting',
+          },
+        });
+        return;
+      case 'athletes':
+        // TODO: 'AthleteSearch' is not yet a top-level Stack.Screen in
+        // src/navigation/RootNavigator.tsx — register AthleteSearchScreen there.
+        nav.navigate('AthleteSearch');
+        return;
+      case 'profile':
+        nav.navigate('PublicProfileStack', {
+          screen: 'PublicProfile',
+          params: { customUrl: target.custom_url },
+        });
+        return;
+      default:
+        // eslint-disable-next-line no-console
+        console.warn('[HSCoachReferralPanel] unknown nav target', target);
+        nav.navigate('HSCoachTabs');
+    }
   };
 
   const { data: rosterAthletes, isLoading } = useQuery({

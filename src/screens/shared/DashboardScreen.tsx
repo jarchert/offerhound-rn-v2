@@ -1,7 +1,7 @@
 // DashboardScreen — RN port of Lovable web src/pages/Dashboard.tsx (athlete/parent landing).
 // Phase 1-2 parity port. The source page also redirected admin/coach/scout to their dashboards;
 // in RN those role splits live in role tab navigators, so this screen targets the athlete/parent role.
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -169,6 +169,10 @@ export default function DashboardScreen() {
   }, [route.params?.tab]);
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareCardDialogOpen, setShareCardDialogOpen] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const [scrollToTopVisible, setScrollToTopVisible] = useState(false);
   const [editingCoachId, setEditingCoachId] = useState<string | null>(null);
   const [coachNotes, setCoachNotes] = useState('');
   const [coachPriority, setCoachPriority] = useState<Priority>('medium');
@@ -937,9 +941,15 @@ export default function DashboardScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <ScrollView
+        ref={scrollRef}
         style={{ flex: 1 }}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={16}
+        onScroll={(e) => {
+          const y = e.nativeEvent.contentOffset.y;
+          setScrollToTopVisible(y > 400);
+        }}
       >
         <OfflineBanner isOfflineData={isOfflineData} />
         <TermsAcceptanceBanner />
@@ -984,9 +994,12 @@ export default function DashboardScreen() {
                   </Text>
                 )}
               </View>
-              <SharePlayerCardDialog>
-                <Button onPress={() => {}}>Share</Button>
-              </SharePlayerCardDialog>
+              <Button onPress={() => setShareDialogOpen(true)}>Share</Button>
+              <SharePlayerCardDialog
+                open={shareDialogOpen}
+                onOpenChange={setShareDialogOpen}
+                hideTrigger
+              />
             </View>
           </View>
         )}
@@ -1055,11 +1068,14 @@ export default function DashboardScreen() {
                   >
                     Leave Review
                   </Button>
-                  <SharePlayerCardDialog>
-                    <Button variant="outline" onPress={() => {}}>
-                      Share Card
-                    </Button>
-                  </SharePlayerCardDialog>
+                  <Button variant="outline" onPress={() => setShareCardDialogOpen(true)}>
+                    Share Card
+                  </Button>
+                  <SharePlayerCardDialog
+                    open={shareCardDialogOpen}
+                    onOpenChange={setShareCardDialogOpen}
+                    hideTrigger
+                  />
                 </View>
               </SheetContent>
             </Sheet>
@@ -1085,7 +1101,10 @@ export default function DashboardScreen() {
         <Footer />
       </ScrollView>
 
-      <ScrollToTop visible={false} onPress={() => {}} />
+      <ScrollToTop
+        visible={scrollToTopVisible}
+        onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
+      />
       {isOwnerView && <OwnerNav />}
       <ViewToggle isOwnerView={isOwnerView} onToggle={setIsOwnerView} />
 

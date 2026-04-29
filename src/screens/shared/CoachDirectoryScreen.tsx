@@ -374,7 +374,11 @@ export default function CoachDirectoryScreen() {
               <Button
                 variant="outline"
                 size="sm"
-                onPress={() => {/* PORT-PENDING: SavedCoaches route */}}
+                onPress={() => nav.navigate('SavedCoaches' as never)}
+                // TODO: 'SavedCoaches' screen exists at src/screens/shared/SavedCoachesScreen.tsx
+                // but is not registered in any navigator (RootNavigator/SettingsStack/etc).
+                // Other call sites (DashboardCoachDirectory, ClubCoachDirectoryTab) already
+                // navigate to it; see src/navigation/RootNavigator.tsx for registration.
                 leftIcon={<Bookmark size={14} color={colors.foreground} />}
               >
                 {`Saved (${savedCoaches.length})`}
