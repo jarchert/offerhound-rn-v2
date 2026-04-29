@@ -29,7 +29,7 @@ import { useNavigation } from '@react-navigation/native';
 import { supabase } from '@/integrations/supabase/client';
 import { colors, spacing, radius, typography } from '@/lib/theme';
 
-const coachAvatar = require('../../assets/lovable/coach-avatar.png');
+const coachAvatar = require('../../assets/lovable/coach-avatar.webp');
 
 interface Recommendation {
   coachId: string;

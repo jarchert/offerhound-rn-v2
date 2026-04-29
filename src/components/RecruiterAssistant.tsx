@@ -24,12 +24,14 @@ import { ScrollArea } from '@/components/ui/ScrollArea';
 import { PatentPendingBadge } from '@/components/ui/PatentPendingBadge';
 import { toast } from '@/components/ui/toast';
 import { colors, typography, spacing, radius } from '@/lib/theme';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, SUPABASE_FUNCTIONS_URL, SUPABASE_ANON_KEY } from '@/integrations/supabase/client';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { useContactEvents } from '@/hooks/useContactEvents';
 import { useSubscription } from '@/hooks/useSubscription';
 
-const COACH_AVATAR = require('../../assets/lovable/coach-avatar.png');
+// Lovable parity: coach-avatar.webp is the canonical asset used by both
+// src/pages/Letters.tsx and src/components/GlobalAICoachIcon.tsx on web.
+const COACH_AVATAR = require('../../assets/lovable/coach-avatar.webp');
 
 interface Message {
   role: 'user' | 'assistant';
@@ -96,16 +98,22 @@ export function RecruiterAssistant() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      const supabaseUrl = (supabase as any).supabaseUrl as string;
 
-      const response = await fetch(`${supabaseUrl}/functions/v1/recruiter-assistant`, {
+      // Lovable parity: web calls /functions/v1/support-chat with Authorization bearer
+      // of the anon publishable key (streaming chat). We forward the user session when
+      // available so the edge function can personalize.
+      const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/support-chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session?.access_token ?? ''}`,
+          Authorization: `Bearer ${session?.access_token ?? SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
           messages: [...messages, userMessage],
+          // Lovable support-chat expects `userType` + `isAuthenticated`. Defaults below
+          // match web behavior for a logged-in athlete context.
+          userType: 'athlete',
+          isAuthenticated: !!session?.access_token,
           athleteProfile: athleteProfileData,
           contactHistory: contactEvents || [],
           isSubscribed,

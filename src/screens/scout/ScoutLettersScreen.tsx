@@ -14,7 +14,7 @@ import { useScoutProfile } from '@/hooks/useScoutProfile';
 import { useScoutOrganization } from '@/hooks/useScoutOrganization';
 import { useScoutLetterHistory } from '@/hooks/useScoutLetterHistory';
 import { useScoutSavedAthletes } from '@/hooks/useScoutSavedAthletes';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, SUPABASE_FUNCTIONS_URL } from '@/integrations/supabase/client';
 import { LetterDashboard } from '@/components/letters/LetterDashboard';
 import { SCOUT_LETTER_TEMPLATES } from '@/components/letters/letterTemplates';
 import {
@@ -53,9 +53,9 @@ export default function ScoutLettersScreen() {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session?.access_token) throw new Error('You must be logged in to send letters');
-      const supaUrl = (supabase as any).supabaseUrl || (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '');
+      // Lovable parity: central SUPABASE_FUNCTIONS_URL replaces fragile (supabase as any).supabaseUrl.
       const p = profile as any;
-      const response = await fetch(`${supaUrl}/functions/v1/send-letter`, {
+      const response = await fetch(SUPABASE_FUNCTIONS_URL + "/send-letter", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

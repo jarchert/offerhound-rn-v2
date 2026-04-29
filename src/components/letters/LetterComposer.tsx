@@ -16,6 +16,7 @@ import { FileText, Sparkles, Loader2, Send, Copy, Check, User, Users, Graduation
 import { toast } from '@/components/ui/toast';
 import * as Clipboard from 'expo-clipboard';
 import { colors, typography, spacing, radius } from '@/lib/theme';
+import { SUPABASE_FUNCTIONS_URL, SUPABASE_ANON_KEY, supabase } from '@/integrations/supabase/client';
 
 export type RecipientType = 'athlete' | 'parent' | 'coach';
 export type RecipientCategory = 'athlete' | 'parent' | 'college-coach' | 'club-coach' | 'scout' | 'hs-coach' | 'influencer';
@@ -163,11 +164,10 @@ export function LetterComposer({
         };
         body.athleteInfo = body.recipientInfo;
       }
-      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-      const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-      const response = await fetch(`${supabaseUrl}/functions/v1/generate-coach-scout-letter`, {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/generate-coach-scout-letter`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${supabaseKey}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? SUPABASE_ANON_KEY}` },
         body: JSON.stringify(body),
       });
       if (!response.ok) {

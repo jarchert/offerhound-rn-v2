@@ -7,7 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Loader2 } from 'lucide-react-native';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, SUPABASE_FUNCTIONS_URL } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoachProfile } from '@/hooks/useCoachProfile';
 import { useHSCoachProfile } from '@/hooks/useHSCoachProfile';
@@ -48,8 +48,8 @@ export default function CoachLettersScreen() {
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session?.access_token) throw new Error('You must be logged in to send letters');
       // PORT-PENDING: VITE_SUPABASE_URL → resolved via supabase client URL in app build config.
-      const supaUrl = (supabase as any).supabaseUrl || (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '');
-      const response = await fetch(`${supaUrl}/functions/v1/send-letter`, {
+      // Lovable parity: central SUPABASE_FUNCTIONS_URL replaces fragile (supabase as any).supabaseUrl.
+      const response = await fetch(SUPABASE_FUNCTIONS_URL + "/send-letter", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

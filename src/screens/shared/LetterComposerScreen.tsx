@@ -15,8 +15,9 @@ import {
   Share,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, SUPABASE_FUNCTIONS_URL, SUPABASE_ANON_KEY } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { Navbar } from '@/components/Navbar';
 import { BackButton } from '@/components/BackButton';
 import { Card } from '@/components/ui/Card';
@@ -47,10 +48,21 @@ export default function LetterComposerScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { user } = useAuth();
+  // Lovable parity: web Letters.tsx pulls the athlete profile from usePlayerProfile()
+  // and packs it into the edge-function payload + bootstraps the recipient form
+  // when nav state contains a coach (location.state.coach / ?coachName=...).
+  const { profile } = usePlayerProfile();
+  const seed = route.params?.seed ?? {};
+  const seededFromCoach = {
+    recipientName: seed.recipientName || route.params?.coachName || '',
+    recipientRole: seed.recipientRole || route.params?.coachRole || '',
+    schoolName: seed.schoolName || route.params?.coachSchool || route.params?.schoolName || '',
+  };
 
   const [draft, setDraft] = useState<LetterDraft>(() => ({
     ...DEFAULT_DRAFT,
-    ...(route.params?.seed ?? {}),
+    ...seededFromCoach,
+    ...seed,
   }));
   const [generated, setGenerated] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -69,14 +81,42 @@ export default function LetterComposerScreen() {
     try {
       // Invoke streaming edge function via fetch (Supabase client wraps non-streaming).
       const { data: { session } } = await supabase.auth.getSession();
-      const url = `${(supabase as any).supabaseUrl}/functions/v1/generate-letter`;
+      const url = `${SUPABASE_FUNCTIONS_URL}/generate-letter`;
+      // Lovable parity: pack athlete profile into the edge-function payload so the
+      // generated letter is personalized (name, position, height, weight, GPA,
+      // graduation_year, school, city/state, etc.).
+      const athleteProfile = profile
+        ? {
+            name: (profile as any).full_name,
+            position: (profile as any).position,
+            height: (profile as any).height,
+            weight: (profile as any).weight,
+            classYear: (profile as any).graduation_year,
+            gpa: (profile as any).gpa,
+            highSchool: (profile as any).school,
+            city: (profile as any).city,
+            state: (profile as any).state,
+            fortyYard: (profile as any).forty_yard,
+            vertical: (profile as any).vertical,
+            email: (profile as any).email,
+            phone: (profile as any).phone,
+            highlights: (profile as any).highlights || [],
+          }
+        : null;
       const resp = await fetch(url, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${session?.access_token}`,
+          Authorization: `Bearer ${session?.access_token ?? SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(draft),
+        body: JSON.stringify({
+          ...draft,
+          // Edge function expects letterType key (Lovable Letters.tsx)
+          letterType: draft.letterType,
+          coachName: draft.recipientName,
+          schoolName: draft.schoolName,
+          athleteProfile,
+        }),
       });
       if (!resp.ok) throw new Error(`Edge function returned ${resp.status}`);
 
@@ -99,7 +139,7 @@ export default function LetterComposerScreen() {
     } finally {
       setIsGenerating(false);
     }
-  }, [draft]);
+  }, [draft, profile]);
 
   const handleSave = useCallback(async () => {
     if (!generated.trim() || !user) return;

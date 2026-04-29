@@ -14,7 +14,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { FlashList, FlashListRef } from '@shopify/flash-list';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, SUPABASE_FUNCTIONS_URL, SUPABASE_ANON_KEY } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navbar } from '@/components/Navbar';
 import { BackButton } from '@/components/BackButton';
@@ -82,7 +82,9 @@ export default function AICoachScreen() {
 
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        const url = `${(supabase as any).supabaseUrl}/functions/v1/ai-coach`;
+        // Lovable parity: ai-coach was never deployed; the web uses support-chat
+        // (src/components/GlobalAICoachIcon.tsx). Same streaming SSE contract.
+        const url = `${SUPABASE_FUNCTIONS_URL}/support-chat`;
         const history = [...turns, userTurn].map((t) => ({
           role: t.role,
           content: t.content,
@@ -91,10 +93,14 @@ export default function AICoachScreen() {
         const resp = await fetch(url, {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${session?.access_token}`,
+            Authorization: `Bearer ${session?.access_token ?? SUPABASE_ANON_KEY}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ messages: history, userId: user?.id }),
+          body: JSON.stringify({
+            messages: history,
+            userType: 'athlete',
+            isAuthenticated: !!session?.access_token,
+          }),
         });
 
         if (!resp.ok) {
