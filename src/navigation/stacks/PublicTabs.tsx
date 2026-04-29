@@ -6,6 +6,7 @@ import { colors, typography } from '@/lib/theme';
 
 import LandingScreen from '@/screens/auth/LandingScreen';
 import SportPickerScreen from '@/screens/shared/SportPickerScreen';
+import PublicDiscoverScreen from '@/screens/shared/PublicDiscoverScreen';
 import PodcastScreen from '@/screens/influencer/PodcastScreen';
 import SignInScreen from '@/screens/auth/SignInScreen';
 
@@ -13,8 +14,6 @@ import SignInScreen from '@/screens/auth/SignInScreen';
 // four tabs above (Landing, Discover/SportPicker, Podcasts, Account/SignIn). If a future
 // public-only surface (e.g. a dedicated Discover hub distinct from the sport picker) gets
 // designed in Lovable, port it here and reintroduce a placeholder during the gap.
-
-const PublicDiscoverScreen = SportPickerScreen; // Session 2: sport picker acts as discover hub
 
 const Tab = createBottomTabNavigator();
 

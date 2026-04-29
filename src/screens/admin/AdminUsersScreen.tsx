@@ -18,6 +18,9 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { colors, typography, spacing, radius } from '@/lib/theme';
+import { useImpersonation } from '@/contexts/ImpersonationContext';
+import { UserCog } from 'lucide-react-native';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UserRow {
   id: string;
@@ -30,6 +33,9 @@ interface UserRow {
 
 export default function AdminUsersScreen() {
   const [search, setSearch] = useState('');
+  const { startImpersonation } = useImpersonation();
+  const { user } = useAuth();
+  const adminEmail = user?.email || 'admin';
 
   const { data: users = [], isLoading, refetch } = useQuery({
     queryKey: ['admin-users'],
@@ -85,6 +91,20 @@ export default function AdminUsersScreen() {
                 <Text style={s.email} numberOfLines={1}>{item.email}</Text>
               </View>
               {item.role ? <Badge variant="outline">{item.role}</Badge> : null}
+              <Pressable
+                onPress={() =>
+                  startImpersonation({
+                    adminEmail: adminEmail || 'admin',
+                    targetUserId: item.id,
+                    targetUserEmail: item.email,
+                  })
+                }
+                style={s.impBtn}
+                accessibilityLabel={`Impersonate ${item.email}`}
+              >
+                <UserCog size={14} color={colors.primaryForeground} />
+                <Text style={s.impBtnText}>Impersonate</Text>
+              </Pressable>
             </View>
           </Card>
         )}
@@ -129,5 +149,19 @@ const s = StyleSheet.create({
     fontFamily: typography.fontFamily.body,
     fontSize: typography.size.sm,
     color: colors.foregroundSubtle,
+  },
+  impBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+  },
+  impBtnText: {
+    fontFamily: typography.fontFamily.bodySemiBold,
+    fontSize: typography.size.xs,
+    color: colors.primaryForeground,
   },
 });
