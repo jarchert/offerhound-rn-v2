@@ -18,7 +18,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.emergentmindlab.offerhoundv2",
-      "buildNumber": "7",
+      "buildNumber": "8",
       "infoPlist": {
         "NSCameraUsageDescription": "OfferHound needs camera access to upload profile photos and highlight videos.",
         "NSPhotoLibraryUsageDescription": "OfferHound needs photo library access to upload profile photos and highlight videos.",
@@ -39,7 +39,7 @@
     },
     "android": {
       "package": "com.emergentmindlab.offerhoundv2",
-      "versionCode": 7,
+      "versionCode": 8,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#101318"
