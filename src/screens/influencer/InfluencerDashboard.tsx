@@ -12,7 +12,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-import { Mic, Users, Eye, Calendar } from 'lucide-react-native';
+import { Mic, Users, Eye, Calendar, Plus } from 'lucide-react-native';
 import { useMyInfluencerProfile } from '@/hooks/useInfluencer';
 import { Navbar } from '@/components/Navbar';
 import { StatTile } from '@/components/StatTile';
@@ -51,8 +51,17 @@ export default function InfluencerDashboard() {
         }
       >
         <View style={s.header}>
-          <Text style={s.title}>{profile?.display_name || 'Influencer'}</Text>
-          <Text style={s.subtitle}>@{profile?.handle || 'handle'}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={s.title}>{profile?.display_name || 'Influencer'}</Text>
+            <Text style={s.subtitle}>@{profile?.handle || 'handle'}</Text>
+          </View>
+          <Pressable
+            style={s.newPostBtn}
+            onPress={() => nav.navigate('InfluencerBlogComposer', undefined as any)}
+          >
+            <Plus size={16} color={colors.primaryForeground} />
+            <Text style={s.newPostText}>New Post</Text>
+          </Pressable>
         </View>
 
         {/* Stat tiles */}
@@ -149,7 +158,26 @@ export default function InfluencerDashboard() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xxl },
-  header: { marginBottom: spacing.xs },
+  header: {
+    marginBottom: spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  newPostBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.primary,
+    borderRadius: 999,
+  },
+  newPostText: {
+    fontFamily: typography.fontFamily.bodySemiBold,
+    fontSize: typography.fontSize.sm,
+    color: colors.primaryForeground,
+  },
   title: {
     fontFamily: typography.fontFamily.heading,
     fontSize: typography.fontSize['2xl'],

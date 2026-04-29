@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
 import { Home, Trophy, MessageCircle, Mail, User } from 'lucide-react-native';
 import { roleTabScreenOptions } from '@/navigation/role/roleTabScreenOptions';
+import { ParentAthleteSwitcher } from '@/components/ParentAthleteSwitcher';
 
 import DashboardScreen from '@/screens/shared/DashboardScreen';
 import AthleteMatchesScreen from '@/screens/athlete/AthleteMatchesScreen';
@@ -17,7 +18,12 @@ const Tab = createBottomTabNavigator();
 export default function AthleteTabs() {
   return (
     <Tab.Navigator
-      screenOptions={roleTabScreenOptions}>
+      screenOptions={{
+        ...roleTabScreenOptions,
+        // Athlete tabs: add ParentAthleteSwitcher in header left when user
+        // has a parent role linked — shows dropdown to switch child view.
+        headerLeft: () => <ParentAthleteSwitcher />,
+      }}>
       <Tab.Screen name="HomeTab" component={DashboardScreen} options={{ title: 'Home', tabBarIcon: ({ color, size }) => <Home size={size} color={color} /> }} />
       <Tab.Screen name="MatchesTab" component={AthleteMatchesScreen} options={{ title: 'Matches', tabBarIcon: ({ color, size }) => <Trophy size={size} color={color} /> }} />
       <Tab.Screen name="MessagesTab" component={MessagesScreen} options={{ title: 'Messages', tabBarIcon: ({ color, size }) => <MessageCircle size={size} color={color} /> }} />

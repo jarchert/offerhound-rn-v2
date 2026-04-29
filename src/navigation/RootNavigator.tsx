@@ -46,6 +46,7 @@ import NotFoundScreen from '@/screens/shared/NotFoundScreen';
 import CoachCampaignsScreen from '@/screens/coach/CoachCampaignsScreen';
 import CoachCommunicationRulesScreen from '@/screens/coach/CoachCommunicationRulesScreen';
 import AthleteProfileEditScreen from '@/screens/athlete/AthleteProfileEditScreen';
+import InfluencerBlogComposerScreen from '@/screens/influencer/InfluencerBlogComposerScreen';
 
 // Persistent post-auth overlay
 import FloatingAICoach from '@/components/FloatingAICoach';
@@ -83,6 +84,7 @@ export type RootStackParamList = {
   CoachCampaigns: undefined;
   CoachCommunicationRules: undefined;
   AthleteProfileEdit: undefined;
+  InfluencerBlogComposer: { postId?: string } | undefined;
   NotFound: undefined;
 };
 
@@ -196,6 +198,11 @@ export default function RootNavigator() {
           <Stack.Screen name="CoachCampaigns" component={CoachCampaignsScreen} />
           <Stack.Screen name="CoachCommunicationRules" component={CoachCommunicationRulesScreen} />
           <Stack.Screen name="AthleteProfileEdit" component={AthleteProfileEditScreen} />
+          <Stack.Screen
+            name="InfluencerBlogComposer"
+            component={InfluencerBlogComposerScreen}
+            options={{ presentation: 'modal' }}
+          />
           <Stack.Screen name="NotFound" component={NotFoundScreen} />
         </>
       )}
