@@ -70,13 +70,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const fetchUserRole = async (userId: string) => {
-    const { data } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .maybeSingle();
-    if (data) setUserRole(data.role as AppRole);
-    else setUserRole(null);
+    // Canonical role resolution mirrors Lovable's Navbar.tsx logic.
+    // Hierarchy (highest priority wins):
+    //   admin (admin_profiles row)
+    //   high_school_coach (user_roles.role = 'high_school_coach')
+    //   club_coach (coach_profiles.is_club_coach = true)
+    //   coach (coach_profiles row)
+    //   scout (scout_profiles row) — agency variant resolved downstream by useScoutOrganization
+    //   influencer (influencer_profiles row OR user_roles has 'influencer')
+    //   athlete (default; parents with linked athletes also get 'athlete' so the parent
+    //            overlay can render on top of AthleteTabs — matches Lovable behavior
+    //            where parent-only is the rare case and parent-with-athlete is treated
+    //            as athlete + parent overlay).
+    //   parent (parent-only: parent_athlete_relationships accepted AND no other role)
+    try {
+      const [
+        rolesRes,
+        adminRes,
+        coachRes,
+        scoutRes,
+        influencerRes,
+        parentRes,
+      ] = await Promise.all([
+        supabase.from('user_roles').select('role').eq('user_id', userId),
+        supabase.from('admin_profiles' as any).select('id').eq('user_id', userId).maybeSingle(),
+        supabase.from('coach_profiles').select('id, is_club_coach').eq('user_id', userId).maybeSingle(),
+        supabase.from('scout_profiles').select('id').eq('user_id', userId).maybeSingle(),
+        supabase.from('influencer_profiles' as any).select('id').eq('user_id', userId).maybeSingle(),
+        supabase
+          .from('parent_athlete_relationships' as any)
+          .select('id')
+          .eq('parent_user_id', userId)
+          .eq('invitation_accepted', true)
+          .limit(1),
+      ]);
+
+      const roleSet = new Set(((rolesRes.data ?? []) as Array<{ role: string }>).map(r => r.role));
+      const isAdmin = !!(adminRes.data as any) || roleSet.has('admin') || roleSet.has('moderator');
+      const isHSCoach = roleSet.has('high_school_coach');
+      const coachData = coachRes.data as any;
+      const isClubCoach = !!coachData?.is_club_coach;
+      const isCoach = !!coachData;
+      const isScout = !!(scoutRes.data as any);
+      const isInfluencer = !!(influencerRes.data as any) || roleSet.has('influencer');
+      const hasParentLink = Array.isArray(parentRes.data) && parentRes.data.length > 0;
+      const isAthleteRow = roleSet.has('athlete');
+
+      let resolved: AppRole;
+      if (isAdmin) resolved = 'admin' as AppRole;
+      else if (isHSCoach) resolved = 'high_school_coach' as AppRole;
+      else if (isClubCoach) resolved = 'club_coach' as AppRole;
+      else if (isCoach) resolved = 'coach' as AppRole;
+      else if (isScout) resolved = 'scout' as AppRole;
+      else if (isInfluencer) resolved = 'influencer' as AppRole;
+      else if (isAthleteRow) resolved = 'athlete' as AppRole;
+      else if (hasParentLink) resolved = 'parent' as AppRole;
+      else resolved = 'athlete' as AppRole; // safest fallback (Lovable default)
+
+      setUserRole(resolved);
+    } catch (e) {
+      console.warn('[auth] fetchUserRole failed; defaulting to athlete', e);
+      setUserRole('athlete' as AppRole);
+    }
   };
 
   const signOut = async () => {

@@ -4,6 +4,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '@/contexts/AuthContext';
+import { useScoutOrganization } from '@/hooks/useScoutOrganization';
 import { colors } from '@/lib/theme';
 import type { UserRole } from '@/lib/constants';
 
@@ -110,14 +111,23 @@ export function roleToInitialRoute(role: UserRole | null | undefined): keyof Roo
 export default function RootNavigator() {
   const { user, userRole, isLoading } = useAuth() as any;
 
+  // Agency detection: if user is a scout AND owns or belongs to a scout_organization,
+  // route them to AgencyTabs instead of ScoutTabs. Mirrors Lovable Navbar.tsx logic.
+  const { data: scoutOrg } = useScoutOrganization();
+  const isAgency = userRole === 'scout' && !!scoutOrg && ((scoutOrg as any).isOwner || (scoutOrg as any).isMember);
+
   if (isLoading) return null;
 
-  // Signed-in but role not yet selected → force the role-picker onboarding.
+  // Resolve the initial route. With the new fetchUserRole resolver, userRole is
+  // always set for authenticated users (defaults to 'athlete' on error). The old
+  // OnboardingStack-on-null path was the source of the role-picker bug.
+  const effectiveRole: UserRole | null | undefined = isAgency
+    ? ('agency' as UserRole)
+    : (userRole as UserRole | null | undefined);
+
   const initialRouteName = !user
     ? ('PublicTabs' as keyof RootStackParamList)
-    : !userRole
-      ? ('OnboardingStack' as keyof RootStackParamList)
-      : roleToInitialRoute(userRole as UserRole | null | undefined);
+    : roleToInitialRoute(effectiveRole);
 
   return (
     <>

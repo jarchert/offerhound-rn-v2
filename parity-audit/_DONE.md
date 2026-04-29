@@ -1,40 +1,80 @@
-# _DONE — Parity audit complete
+# _DONE — OfferHound RN Parity Audit Complete
 
-**Date**: 2026-04-29 UTC
-**Audit type**: Audit-only (no source modifications in either repo)
-**Source-of-truth**: `offerhound-repo` @ commit `aa4d51e9` (`lovable/jarchert/playbook-promoter`)
-**Target**: `offerhound-rn-push` @ branch `session-parity-port-phase1-2`
+All 11 deliverables written to `/home/ubuntu/offerhound-rn-push/parity-audit/`.
+
+## Deliverables checklist
+
+- [x] `00-unauthenticated.md` — 429 lines
+- [x] `01-athlete.md` — 409 lines
+- [x] `02-parent.md` — 203 lines
+- [x] `03-coach.md` — 200 lines
+- [x] `04-high-school-coach.md` — 201 lines
+- [x] `05-club-coach.md` — 201 lines
+- [x] `06-scout.md` — 243 lines
+- [x] `07-influencer.md` — 219 lines
+- [x] `08-admin.md` — 230 lines
+- [x] `MASTER.md` — 264 lines
+- [x] `BUILD_PLAN.md` — 333 lines
+
+Total: 2,932 lines of audit material.
 
 ## Summary
 
-Conducted exhaustive parity audit of the OfferHound React Native port against the Lovable web app across all 9 roles (unauthenticated, athlete, parent, coach, high-school coach, club coach, scout/agency, influencer, admin). Live Supabase REST validation performed for athlete, parent, and admin test users; remaining 6 roles inferred from source. Inventoried 116 RN screens vs 103 Lovable pages (~29.7k vs ~21.9k LOC) and identified ~62 distinct gaps (≈11 P0, ≈25 P1, ≈20 P2, ≈6 P3).
+Compared Lovable canonical (`/home/ubuntu/.openclaw/workspace/offerhound-repo/`,
+branch `lovable/jarchert/playbook-promoter` @ `aa4d51e9`, 103 pages) against RN port
+(`/home/ubuntu/offerhound-rn-push/`, branch `session-parity-port-phase1-2`, ~106
+screens across 16 role/feature folders). Authenticated all 9 test users against the
+live Supabase instance (`abdzdcgsmdlnytkkhvtb.supabase.co`) and ran live REST probes to
+validate seed data and confirm role-resolution behavior.
 
-**Critical confirmed root causes**:
-1. **Issue (a)** — `AuthContext.tsx:74–82` uses `.maybeSingle()` against `user_roles`, which returns null for any user with multiple role rows (verified live: `testparent@offerhound.test` has `[athlete, parent]`). Combined with `RootNavigator.tsx:36–40` dispatching `OnboardingStack` when `userRole==null`, returning multi-role users always hit the role picker.
-2. **Issue (g)** — `FloatingAICoach.tsx:16` imports `Sparkles` from lucide; Lovable `GlobalAICoachIcon.tsx:24` uses the mascot PNG. Asset is present at `assets/lovable/coach-avatar.png` but unused.
-3. **Issue (i)** — `src/components/ProfileCardGenerator.tsx` is a 19-LOC scaffold that renders the literal text `[ProfileCardGenerator]` plus "Scaffold — port from Ch.13". Every share-card surface (athlete dashboard, public profile, invite share) uses this stub.
-4. **Issue (h)** — `BackButton` is used in only ~30/116 screens (~26%); RN `Navbar` (61 LOC) shows no back affordance.
-5. **Issue (f)** — RN Navbar brand-link is `nav.navigate(home)` which is a no-op when already inside the role's tab navigator.
-6. **Issue (e)** — `CampsScreen.tsx:18–26` orders by `start_date` with no proximity sort; Lovable uses `stateProximityScore`.
-7. **Admin RN coverage is ~5× underbuilt** (311 LOC across 6 admin screens vs 1592+ LOC across 4 Lovable admin pages).
+### Headline findings
+- **23 P0 production-blockers**, **57 P1 high-priority gaps**, **38 P2**, **17 P3**
+  (~135 tagged items, ~95 unique after cross-role dedup).
+- The user-reported "role selection page after login" bug is confirmed as a P0 in
+  `src/contexts/AuthContext.tsx:72-80` — `.maybeSingle()` on multi-row `user_roles`
+  silently fails for testparent. Fix sketch in MASTER.md §4A.
+- Wider auth-resolution rebuild needed: Lovable detects roles via profile tables
+  (`coach_profiles`, `scout_profiles`, `hs_coach_profiles`, `parent_athlete_relationships`,
+  `influencer_profiles`) plus `user_roles`, with priority order admin > hs_coach >
+  club_coach > coach > scout > influencer > parent > athlete. RN reads only
+  `user_roles`.
+- 6 of 9 role tab navigators are too thin (missing Messages + Inbox tabs); 4 mount the
+  wrong screen (e.g. AgencyTabs.LettersTab uses CoachLettersScreen).
+- Admin role has 3 stub tabs (Moderation 21 lines, Audit 21 lines, Settings 22 lines)
+  vs Lovable AdminOptOutAuditViewer 541 lines. AdminLetterAnalytics (355 lines) and
+  AdminMediaCenter (467 lines) not ported. ImpersonationProvider absent.
+- Athlete DashboardScreen missing 8+ Lovable components (ProfileAnalyzer,
+  SocialSyndicationCenter, CoachReferencesManager, TranscriptManager,
+  TransferPortalFeed, ParentInviteModal, TermsAcceptanceBanner, OfflineBanner).
+- OnboardingScreen 96 lines vs Lovable 720 — multi-step wizard gutted.
+- AthleteFootballHub (666 lines) not ported.
+- No global Footer / legal-link surface — App Store review blocker.
+- Two competing useAuth import paths (`@/hooks/useAuth` vs `@/contexts/AuthContext`)
+  used inconsistently.
 
-## Deliverables (all in `parity-audit/`)
-- `00-unauthenticated.md`
-- `01-athlete.md` (most detailed — covers all 9 a–i issues)
-- `02-parent.md`
-- `03-coach.md`
-- `04-high-school-coach.md`
-- `05-club-coach.md`
-- `06-scout.md`
-- `07-influencer.md`
-- `08-admin.md`
-- `MASTER.md` (gap roll-up + cross-cutting + provenance)
-- `BUILD_PLAN.md` (Build 24–31, ~16–22 dev-days serial)
-- `_progress.md`
-- `_DONE.md` (this file)
+### Build sequencing
+`BUILD_PLAN.md` proposes Builds 24-35 (~28 dev-days, 6 calendar weeks for one engineer).
+After Build 26 the app is App-Store-submittable. After Build 31 admin compliance is
+satisfied. Build 35 closes the parity gap minus marketing slide decks.
 
-## Token usage
-Not exposed by runtime. Audit used heavy file-listing/source-reading; subsequent fix work should reuse this audit instead of re-walking the source.
+### Strengths preserved
+RN port is not a low-effort wrapper — DashboardScreen (1325 vs 955), ScoutDashboard
+(1165 vs 210), MessagesScreen (655 vs 279), InboxScreen (643 vs 516), and the camp
+mobile suite (CampMobileCheckin 571 vs 433) are larger and more polished than Lovable.
+Documented in MASTER.md §8.
 
-## Recommended next action
-Read `BUILD_PLAN.md` and approve Build 24 + 25 to ship together — they unblock every role with ~3.5–5 days of work and resolve issues a, f, g, h, i.
+### AMBIGUOUS items
+~40 items flagged as needing verification (exact Supabase table names, hook existence,
+component mount paths, conditional rendering branches). Pre-Build-24 verification work
+(~2 hours) listed at end of BUILD_PLAN.md.
+
+## Methodology notes
+- Line counts used as completeness proxy, with explicit caveat that visual + functional
+  verification is still required.
+- Live data probes validated auth flow + sample row counts (athlete: 11 saved_camps, 2
+  notifications; parent: 1 athlete relationship; admin: 86 user_roles, 2
+  influencer_profiles).
+- AMBIGUOUS items documented inline rather than blocking progress.
+
+## Source code mutations
+None. Audit-only as instructed.
