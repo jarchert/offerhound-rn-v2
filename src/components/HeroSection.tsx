@@ -179,9 +179,11 @@ export function HeroSection({ isOwnerView = true, profile }: HeroSectionProps) {
           />
         </View>
 
-        {/* Decorative blurred orbs (top-left primary/10, bottom-right primary/5). */}
-        <View style={s.orbTopLeft} pointerEvents="none" />
-        <View style={s.orbBottomRight} pointerEvents="none" />
+        {/* Decorative blurred orbs (top-left primary/10, bottom-right primary/5).
+            Lovable web uses `blur-3xl` which makes these nearly invisible soft glows.
+            RN has no blur-3xl equivalent on plain Views, so rendering them as solid
+            circles at even ~5–10% opacity produces a harsh "two yellow circles" artifact.
+            Removed on mobile: the dark gradient bg already provides sufficient depth. */}
 
         {/* Container */}
         <View style={s.container}>

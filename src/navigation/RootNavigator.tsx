@@ -43,6 +43,10 @@ import NILIntelligenceScreen from '@/screens/shared/NILIntelligenceScreen';
 import SupportScreen from '@/screens/shared/SupportScreen';
 import CoachCampaignsScreen from '@/screens/coach/CoachCampaignsScreen';
 import CoachCommunicationRulesScreen from '@/screens/coach/CoachCommunicationRulesScreen';
+import SavedCoachesScreen from '@/screens/shared/SavedCoachesScreen';
+import AthleteSearchScreen from '@/screens/shared/AthleteSearchScreen';
+import CoachDirectoryScreen from '@/screens/shared/CoachDirectoryScreen';
+import ScoutTrendsScreen from '@/screens/scout/ScoutTrendsScreen';
 
 // Persistent post-auth overlay
 import FloatingAICoach from '@/components/FloatingAICoach';
@@ -79,6 +83,10 @@ export type RootStackParamList = {
   Support: undefined;
   CoachCampaigns: undefined;
   CoachCommunicationRules: undefined;
+  SavedCoaches: undefined;
+  AthleteSearch: { q?: string; sport?: string; state?: string; position?: string } | undefined;
+  CoachDirectory: undefined;
+  ScoutTrends: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -177,6 +185,10 @@ export default function RootNavigator() {
           <Stack.Screen name="Support" component={SupportScreen} />
           <Stack.Screen name="CoachCampaigns" component={CoachCampaignsScreen} />
           <Stack.Screen name="CoachCommunicationRules" component={CoachCommunicationRulesScreen} />
+          <Stack.Screen name="SavedCoaches" component={SavedCoachesScreen} />
+          <Stack.Screen name="AthleteSearch" component={AthleteSearchScreen} />
+          <Stack.Screen name="CoachDirectory" component={CoachDirectoryScreen} />
+          <Stack.Screen name="ScoutTrends" component={ScoutTrendsScreen} />
         </>
       )}
     </Stack.Navigator>

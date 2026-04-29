@@ -104,9 +104,9 @@ export default function LandingScreen() {
         {/* ── Hero section ── */}
         <ImageBackground source={heroBg} style={s.hero} imageStyle={s.heroImage}>
           <View style={s.heroOverlay} />
-          {/* Decorative blobs */}
-          <View style={[s.blob, s.blobTL]} />
-          <View style={[s.blob, s.blobBR]} />
+          {/* Decorative blobs — Lovable uses `blur-3xl` for soft glows; RN has no
+              blur-3xl equivalent on plain Views so these render as harsh solid
+              yellow circles ("two yellow circles" artifact). Removed on mobile. */}
           {/* Grid pattern overlay */}
           <View style={s.gridOverlay} />
 
