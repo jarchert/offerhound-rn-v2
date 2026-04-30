@@ -1,7 +1,9 @@
-// AICoachScreen — chat-style AI recruiting coach powered by the `ai-coach`
+// AICoachScreen — chat-style AI recruiting coach powered by the `support-chat`
 // Supabase edge function. Streams the response token-by-token.
-// Part 5 of the conversion guide details this screen.
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+// Lovable parity: userType is derived from the user's profile (matches
+// GlobalAICoachIcon.tsx). Assistant bubbles render the coach-avatar; user
+// bubbles render a simple user glyph.
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,13 +14,22 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { FlashList, FlashListRef } from '@shopify/flash-list';
+import { User as UserIcon } from 'lucide-react-native';
 import { supabase, SUPABASE_FUNCTIONS_URL, SUPABASE_ANON_KEY } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
+import { usePlayerProfile } from '@/hooks/usePlayerProfile';
+import { useCoachProfile } from '@/hooks/useCoachProfile';
+import { useScoutProfile } from '@/hooks/useScoutProfile';
+import { useParentProfileAccess } from '@/hooks/useParentProfileAccess';
+import { COACH_AVATAR } from '@/lib/assets';
 import { Navbar } from '@/components/Navbar';
 import { BackButton } from '@/components/BackButton';
 import { colors, typography, spacing, radius } from '@/lib/theme';
+
+type UserType = 'athlete' | 'coach' | 'scout' | 'parent' | 'organization' | 'guest';
 
 interface ChatTurn {
   id: string;
@@ -27,26 +38,81 @@ interface ChatTurn {
   streaming?: boolean;
 }
 
-const WELCOME: ChatTurn = {
-  id: 'welcome',
-  role: 'assistant',
-  content:
-    "Hey — I'm your AI recruiting coach. Ask me about building your profile, writing letters, navigating the transfer portal, NIL questions, or anything else recruiting-related.",
-};
+// Lovable parity: per-role welcome message (GlobalAICoachIcon.getInitialMessage).
+function getInitialMessage(userType: UserType, isAuthenticated: boolean): string {
+  if (!isAuthenticated) {
+    return "Hey! I'm OfferHound Coach™ — your AI recruiting assistant. I can answer questions about college recruiting, the platform, and best practices. Sign in for personalized guidance!";
+  }
+  switch (userType) {
+    case 'athlete':
+      return "Hey! I'm your OfferHound Coach™. I can help you find schools, contact coaches, prepare for camps, and navigate your recruiting journey. What can I help with?";
+    case 'parent':
+      return "Hello! I'm OfferHound Coach™, your AI recruiting advisor. I'm here to help you support your athlete through the recruiting process. How can I assist?";
+    case 'coach':
+      return "Welcome, Coach! I'm OfferHound Coach™. I can help you discover prospects, manage your pipeline, and streamline outreach. What do you need?";
+    case 'scout':
+      return "Hey! I'm OfferHound Coach™, your AI scouting assistant. I can help evaluate talent, analyze prospects, and track trends. What are you looking for?";
+    case 'organization':
+      return "Welcome! I'm OfferHound Coach™ for scouting organizations. I can help with talent evaluation, prospect tracking, and analytics. How can I help?";
+    default:
+      return "Hey! I'm OfferHound Coach™. I can help with recruiting, finding coaches, or anything about the platform. What can I help with?";
+  }
+}
 
-const QUICK_PROMPTS = [
-  'How do I get D1 coaches to notice me?',
-  'Review my highlight reel strategy',
-  'Help me write a recruiting letter',
-  'Explain NIL deals for a high school athlete',
-];
+// Lovable parity: per-role suggested questions.
+function getSuggestedQuestions(userType: UserType, isAuthenticated: boolean): string[] {
+  if (!isAuthenticated) return ['What is OfferHound?', 'How does recruiting work?', 'What NCAA divisions exist?'];
+  switch (userType) {
+    case 'athlete': return ['What schools should I target?', 'How do I contact coaches?', 'Prepare for a campus visit?'];
+    case 'parent': return ['How can I support my athlete?', 'What questions should I ask coaches?', 'Understanding scholarship offers?'];
+    case 'coach': return ['Find prospects in my area', 'Best outreach strategies?', 'Managing a recruiting pipeline?'];
+    case 'scout': return ['Evaluating talent metrics', 'Top prospects in the 2026 class?', 'Writing scouting reports?'];
+    case 'organization': return ['Team evaluation workflows', 'Tracking multiple prospects?', 'Analytics for recruiting?'];
+    default: return ['What is OfferHound?', 'How do I get started?', 'What features are available?'];
+  }
+}
 
 export default function AICoachScreen() {
-  const { user } = useAuth();
-  const [turns, setTurns] = useState<ChatTurn[]>([WELCOME]);
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { profile: athleteProfile } = usePlayerProfile();
+  const { data: coachProfile } = useCoachProfile();
+  const { data: scoutProfile } = useScoutProfile();
+  const { linkedAthletes } = useParentProfileAccess();
+
+  // Lovable parity: profile-driven userType routing for system context.
+  const userType: UserType = useMemo(() => {
+    if (!isAuthenticated || authLoading) return 'guest';
+    if (athleteProfile) return 'athlete';
+    if ((linkedAthletes?.length ?? 0) > 0 && !athleteProfile) return 'parent';
+    if (coachProfile) return 'coach';
+    if (scoutProfile) return 'scout';
+    return 'guest';
+  }, [isAuthenticated, authLoading, athleteProfile, coachProfile, scoutProfile, linkedAthletes]);
+
+  const welcomeTurn: ChatTurn = useMemo(() => ({
+    id: 'welcome',
+    role: 'assistant',
+    content: getInitialMessage(userType, !!isAuthenticated),
+  }), [userType, isAuthenticated]);
+
+  const [turns, setTurns] = useState<ChatTurn[]>([welcomeTurn]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const listRef = useRef<FlashListRef<ChatTurn> | null>(null);
+
+  // Keep welcome turn in sync when userType changes (e.g. auth resolves).
+  useEffect(() => {
+    setTurns((prev) => {
+      if (prev.length <= 1) return [welcomeTurn];
+      const [, ...rest] = prev;
+      return [welcomeTurn, ...rest];
+    });
+  }, [welcomeTurn]);
+
+  const quickPrompts = useMemo(
+    () => getSuggestedQuestions(userType, !!isAuthenticated),
+    [userType, isAuthenticated],
+  );
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
@@ -85,10 +151,11 @@ export default function AICoachScreen() {
         // Lovable parity: ai-coach was never deployed; the web uses support-chat
         // (src/components/GlobalAICoachIcon.tsx). Same streaming SSE contract.
         const url = `${SUPABASE_FUNCTIONS_URL}/support-chat`;
-        const history = [...turns, userTurn].map((t) => ({
-          role: t.role,
-          content: t.content,
-        }));
+        // Lovable parity: filter the welcome turn out of the history sent to the model.
+        const welcomeContent = welcomeTurn.content;
+        const history = [...turns, userTurn]
+          .filter((t) => t.content !== welcomeContent)
+          .map((t) => ({ role: t.role, content: t.content }));
 
         const resp = await fetch(url, {
           method: 'POST',
@@ -98,13 +165,21 @@ export default function AICoachScreen() {
           },
           body: JSON.stringify({
             messages: history,
-            userType: 'athlete',
+            userType,
             isAuthenticated: !!session?.access_token,
           }),
         });
 
         if (!resp.ok) {
-          throw new Error(`AI coach returned ${resp.status}`);
+          // Lovable parity: paywall / rate-limit surfaces from support-chat.
+          if (resp.status === 429) {
+            throw new Error('Too many requests. Please wait and try again.');
+          }
+          if (resp.status === 402) {
+            throw new Error('AI coach is temporarily unavailable (billing). Please try again later.');
+          }
+          const errPayload = await resp.json().catch(() => ({}));
+          throw new Error(errPayload?.error || `AI coach returned ${resp.status}`);
         }
 
         const reader = (resp.body as any)?.getReader?.();
@@ -147,7 +222,7 @@ export default function AICoachScreen() {
         setIsStreaming(false);
       }
     },
-    [input, isStreaming, turns, user],
+    [input, isStreaming, turns, user, userType, welcomeTurn.content],
   );
 
   return (
@@ -173,12 +248,20 @@ export default function AICoachScreen() {
             const isUser = item.role === 'user';
             return (
               <View style={[s.row, isUser && s.rowMine]}>
+                {!isUser && (
+                  <Image source={COACH_AVATAR} style={s.avatar} />
+                )}
                 <View style={[s.bubble, isUser ? s.bubbleMine : s.bubbleAsst]}>
                   <Text style={[s.text, isUser ? s.textMine : s.textAsst]}>
                     {item.content}
                     {item.streaming ? '▍' : ''}
                   </Text>
                 </View>
+                {isUser && (
+                  <View style={s.userAvatar}>
+                    <UserIcon size={16} color={colors.primaryForeground} />
+                  </View>
+                )}
               </View>
             );
           }}
@@ -186,7 +269,7 @@ export default function AICoachScreen() {
 
         {turns.length <= 1 ? (
           <View style={s.prompts}>
-            {QUICK_PROMPTS.map((p) => (
+            {quickPrompts.map((p) => (
               <Pressable key={p} style={s.prompt} onPress={() => send(p)}>
                 <Text style={s.promptText}>{p}</Text>
               </Pressable>
@@ -245,8 +328,25 @@ const s = StyleSheet.create({
   },
   chat: { flex: 1 },
   list: { padding: spacing.md, paddingBottom: spacing.xxl },
-  row: { alignItems: 'flex-start', marginVertical: 4 },
-  rowMine: { alignItems: 'flex-end' },
+  row: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.xs, marginVertical: 4 },
+  rowMine: { flexDirection: 'row-reverse' },
+  avatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    marginBottom: 2,
+  },
+  userAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
   bubble: {
     maxWidth: '88%',
     paddingHorizontal: spacing.md,
