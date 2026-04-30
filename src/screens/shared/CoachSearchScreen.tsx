@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react-native';
 import { supabase } from '@/integrations/supabase/client';
 import { Navbar } from '@/components/Navbar';
-import { CoachCard } from '@/components/CoachCard';
+import { CoachMatchCard } from '@/components/coach/CoachMatchCard';
 import { colors, typography, spacing } from '@/lib/theme';
 
 export default function CoachSearchScreen() {
@@ -51,7 +51,21 @@ export default function CoachSearchScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <CoachCard coach={item} onPress={() => {/* navigate to detail */}} />
+          <CoachMatchCard
+            coach={{
+              id: item.id,
+              name: item.name,
+              title: item.title,
+              school: item.school,
+              division: item.division,
+              conference: item.conference,
+              position_coached: item.position_coached,
+              email: item.email,
+              image_url: item.image_url,
+            }}
+            variant="compact"
+            viewerRole="athlete"
+          />
         )}
       />
     </SafeAreaView>

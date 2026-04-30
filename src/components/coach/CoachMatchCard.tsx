@@ -139,29 +139,17 @@ export function CoachMatchCard({
       return;
     }
 
-    if (viewerRole !== 'athlete') {
-      const params = {
-        recipientCategory: coachAudience,
-        recipientType: 'coach',
+    // All roles navigate to the root-level LetterComposer modal with a seed.
+    // The old code tried to navigate to 'Letters', 'ScoutLetters', etc. which
+    // don't exist as root stack screens — they're nested tab screens.
+    navigation.navigate('LetterComposer', {
+      seed: {
         recipientName: coach.name || '',
-        recipientEmail: coach.email || '',
-        organizationName: coach.school || '',
-        recipientTitle: coach.title || '',
-      };
-      const letterCenter =
-        viewerRole === 'scout'      ? 'ScoutLetters' :
-        viewerRole === 'club-coach' ? 'ClubLetters' :
-        viewerRole === 'hs-coach'   ? 'HsCoachLetters' :
-                                      'CoachLetters';
-      navigation.navigate(letterCenter, params);
-      return;
-    }
-
-    navigation.navigate('Letters', {
-      coachName:   coach.name || '',
-      coachEmail:  coach.email || '',
-      coachSchool: coach.school || '',
-      coachTitle:  coach.title || '',
+        recipientRole: coach.title || 'Coach',
+        schoolName: coach.school || '',
+        letterType: 'recruiting' as const,
+        tone: 'professional' as const,
+      },
     });
   };
 

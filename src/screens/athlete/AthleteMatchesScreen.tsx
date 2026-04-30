@@ -1,11 +1,9 @@
 import React from 'react';
-import { View, Text, FlatList, StyleSheet, SafeAreaView, RefreshControl, Pressable } from 'react-native';
+import { View, Text, FlatList, StyleSheet, SafeAreaView, RefreshControl } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-import { X } from 'lucide-react-native';
 import { useAthleteMatches, useDismissAthleteMatch } from '@/hooks/useAthleteMatches';
 import { Navbar } from '@/components/Navbar';
-import { CoachCard } from '@/components/CoachCard';
-import { MessageButton } from '@/components/MessageButton';
+import { CoachMatchCard } from '@/components/coach/CoachMatchCard';
 import { colors, typography, spacing } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 
@@ -33,26 +31,30 @@ export default function AthleteMatchesScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <View style={s.item}>
-            <CoachCard
-              coach={item.coach as any}
-              matchScore={item.match_score}
-              onPress={() => {/* navigate to coach detail */}}
-              rightSlot={
-                <Pressable onPress={() => dismiss.mutate(item.id)} hitSlop={8} style={s.dismiss}>
-                  <X size={16} color={colors.mutedForeground} />
-                </Pressable>
-              }
-            />
-            {item.match_reason && (
-              <Text style={s.reason} numberOfLines={2}>{item.match_reason}</Text>
-            )}
-            {item.coach && (
-              <View style={s.actions}>
-                <MessageButton recipientId={item.coach.id} recipientName={item.coach.name} />
-              </View>
-            )}
-          </View>
+          <CoachMatchCard
+            coach={{
+              id: (item.coach as any)?.id ?? item.id,
+              name: (item.coach as any)?.name,
+              title: (item.coach as any)?.title,
+              school: (item.coach as any)?.school,
+              division: (item.coach as any)?.division,
+              conference: (item.coach as any)?.conference,
+              position_coached: (item.coach as any)?.position_coached,
+              email: (item.coach as any)?.email,
+              image_url: (item.coach as any)?.image_url,
+            }}
+            scores={{
+              match_score: item.match_score,
+              athletic_fit_score: (item as any).athletic_fit_score,
+              program_fit_score: (item as any).program_fit_score,
+              geographic_fit_score: (item as any).geographic_fit_score,
+              match_reason: (item as any).match_reason,
+              priority: (item as any).priority,
+            }}
+            variant="full"
+            viewerRole="athlete"
+            onDismiss={() => dismiss.mutate(item.id)}
+          />
         )}
       />
     </SafeAreaView>
@@ -65,10 +67,6 @@ const s = StyleSheet.create({
   title: { fontFamily: typography.fontFamily.heading, fontSize: typography.fontSize['2xl'], color: colors.foreground, letterSpacing: typography.letterSpacing.heading },
   subtitle: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.sm, color: colors.mutedForeground, marginTop: 2 },
   list: { padding: spacing.md, gap: spacing.md, paddingTop: 0 },
-  item: { gap: spacing.xs },
-  reason: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.xs, color: colors.mutedForeground, fontStyle: 'italic', paddingHorizontal: spacing.sm },
-  actions: { flexDirection: 'row', paddingHorizontal: spacing.sm },
-  dismiss: { padding: 4 },
   empty: { padding: spacing.xl, alignItems: 'center', gap: spacing.xs },
   emptyTitle: { fontFamily: typography.fontFamily.heading, fontSize: typography.fontSize.lg, color: colors.foreground, letterSpacing: typography.letterSpacing.heading },
   emptyText: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.sm, color: colors.mutedForeground, textAlign: 'center' },

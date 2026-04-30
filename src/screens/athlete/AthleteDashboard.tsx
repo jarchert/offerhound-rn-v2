@@ -9,7 +9,7 @@ import { useActivityStats } from '@/hooks/useActivityStats';
 import { Navbar } from '@/components/Navbar';
 import { StatTile } from '@/components/StatTile';
 import { SectionHeader } from '@/components/SectionHeader';
-import { CoachCard } from '@/components/CoachCard';
+import { CoachMatchCard } from '@/components/coach/CoachMatchCard';
 import { PushNotificationPrompt } from '@/components/PushNotificationPrompt';
 import { Button } from '@/components/ui/Button';
 import { colors, typography, spacing } from '@/lib/theme';
@@ -77,14 +77,29 @@ export default function AthleteDashboard() {
           ) : (
             <View style={s.list}>
               {topMatches.map(m => (
-                <CoachCard
+                <CoachMatchCard
                   key={m.id}
-                  coach={m.coach as any}
-                  matchScore={m.match_score}
-                  onPress={() => {
-                    const coachId = (m.coach as any)?.id;
-                    if (coachId) nav.navigate('Profile', { userId: coachId });
+                  coach={{
+                    id: (m.coach as any)?.id ?? m.id,
+                    name: (m.coach as any)?.name,
+                    title: (m.coach as any)?.title,
+                    school: (m.coach as any)?.school,
+                    division: (m.coach as any)?.division,
+                    conference: (m.coach as any)?.conference,
+                    position_coached: (m.coach as any)?.position_coached,
+                    email: (m.coach as any)?.email,
+                    image_url: (m.coach as any)?.image_url,
                   }}
+                  scores={{
+                    match_score: m.match_score,
+                    athletic_fit_score: (m as any).athletic_fit_score,
+                    program_fit_score: (m as any).program_fit_score,
+                    geographic_fit_score: (m as any).geographic_fit_score,
+                    match_reason: (m as any).match_reason,
+                    priority: (m as any).priority,
+                  }}
+                  variant="compact"
+                  viewerRole="athlete"
                 />
               ))}
             </View>
