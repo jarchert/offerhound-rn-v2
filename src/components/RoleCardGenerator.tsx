@@ -1,306 +1,218 @@
-// Ported verbatim (RN-adapted) from Lovable web src/components/RoleCardGenerator.tsx.
-// Web→RN translations applied:
-//   - Tailwind className           → StyleSheet + theme tokens (visual parity)
-//   - lucide-react                 → lucide-react-native
-//   - shadcn ui (avatar/badge/button) → @/components/ui/* (PascalCase)
-//   - react-icons FA brand icons   → @expo/vector-icons FontAwesome5/6
-//   - qrcode.react QRCodeSVG       → placeholder View (GAP: react-native-qrcode-svg not installed,
-//                                    same convention as AdminInvitationCards)
-//   - window.location.origin       → Constants.expoConfig?.extra?.webBaseUrl ?? 'https://offer-hound.com'
-//   - HTMLDivElement ref           → react-native-view-shot ref (passed to CardShareActions)
-//   - useToast()                   → @/hooks/use-toast (RN shim)
-import { useRef } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
-import Constants from 'expo-constants';
-import ViewShot from 'react-native-view-shot';
+// RoleCardGenerator — RN port of Lovable src/components/RoleCardGenerator.tsx.
+// Generates shareable profile cards for: coach, club_coach, scout, hs_coach.
+// Full visual parity: gradient card, avatar, detail rows, social links, QR.
+// Web→RN: div+className → View+StyleSheet; QRCodeSVG → QRCode (react-native-qrcode-svg).
+import React, { useRef } from 'react';
+import {
+  View, Text, Image, StyleSheet, ScrollView, Pressable,
+} from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
+import * as Clipboard from 'expo-clipboard';
+import {
+  Copy, Mail, Phone, MapPin, Building, Shield, Link as LinkIcon
+} from 'lucide-react-native';
 import { useCoachProfile } from '@/hooks/useCoachProfile';
 import { useScoutProfile } from '@/hooks/useScoutProfile';
 import { useScoutOrganization } from '@/hooks/useScoutOrganization';
 import { useHSCoachProfile } from '@/hooks/useHSCoachProfile';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
-import { Avatar } from '@/components/ui/Avatar';
-import { useToast } from '@/hooks/use-toast';
-import { Copy, Mail, Phone, MapPin, Building, Shield } from 'lucide-react-native';
-import { FontAwesome5, FontAwesome6 } from '@expo/vector-icons';
-import { copyToClipboard } from '@/lib/utils';
 import { CardShareActions } from '@/components/CardShareActions';
+import { Badge } from '@/components/ui/Badge';
+import { toast } from '@/components/ui/toast';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
-interface RoleCardGeneratorProps {
-  role: 'coach' | 'club_coach' | 'scout' | 'hs_coach';
-}
+type Role = 'coach' | 'club_coach' | 'scout' | 'hs_coach';
 
-type IconRender = (size: number, color: string) => React.ReactNode;
-const socialIcons: Record<string, IconRender> = {
-  instagram: (size, color) => <FontAwesome5 name="instagram" size={size} color={color} />,
-  facebook: (size, color) => <FontAwesome5 name="facebook" size={size} color={color} />,
-  x: (size, color) => <FontAwesome6 name="x-twitter" size={size} color={color} />,
-  twitter: (size, color) => <FontAwesome6 name="x-twitter" size={size} color={color} />,
-  tiktok: (size, color) => <FontAwesome5 name="tiktok" size={size} color={color} />,
-  youtube: (size, color) => <FontAwesome5 name="youtube" size={size} color={color} />,
+const BASE_URL = 'https://offer-hound.com';
+
+const SOCIAL_ICONS: Record<string, React.ElementType> = {
+  instagram: Instagram, facebook: Facebook, x: Twitter, twitter: Twitter,
+  tiktok: LinkIcon, youtube: Youtube, linkedin: LinkIcon,
 };
 
-// GAP: RN has no window.location.origin. Use stable web baseUrl from app config.
-const WEB_ORIGIN: string =
-  (Constants.expoConfig?.extra as any)?.webBaseUrl || 'https://offer-hound.com';
+const ROLE_LABELS: Record<Role, string> = {
+  coach: 'Coach', club_coach: 'Club Coach', scout: 'Scout', hs_coach: 'HS Coach',
+};
 
-export const RoleCardGenerator = ({ role }: RoleCardGeneratorProps) => {
-  const { user } = useAuth();
-  const { data: coachProfile, isLoading: coachLoading } = useCoachProfile();
-  const { data: scoutProfile, isLoading: scoutLoading } = useScoutProfile();
-  const { data: orgData } = useScoutOrganization();
-  const { data: hsProfile, isLoading: hsLoading } = useHSCoachProfile();
-  const { toast } = useToast();
-  const cardRef = useRef<ViewShot>(null);
+interface CardData {
+  name: string;
+  title: string;
+  organization: string;
+  email: string;
+  phone: string;
+  imageUrl: string;
+  sport: string;
+  location: string;
+  isVerified: boolean;
+  socialLinks: Record<string, string>;
+  badges: string[];
+}
 
-  const isLoadingForRole =
-    role === 'coach' || role === 'club_coach'
-      ? coachLoading
-      : role === 'scout'
-      ? scoutLoading
-      : role === 'hs_coach'
-      ? hsLoading
-      : false;
-
-  const { data: clubProfile } = useQuery({
-    queryKey: ['club-coach-profile-card', user?.id],
+function useClubCoachProfile(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['club-coach-profile-card', userId],
     queryFn: async () => {
-      if (!user) return null;
-      const { data } = await supabase
-        .from('club_coach_profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      if (!userId) return null;
+      const { data } = await supabase.from('club_coach_profiles').select('*').eq('user_id', userId).maybeSingle();
       return data;
     },
-    enabled: !!user && role === 'club_coach',
+    enabled: !!userId,
   });
+}
 
-  // Build profile data based on role
-  const getProfileData = () => {
-    if (role === 'hs_coach' && hsProfile) {
-      const p = hsProfile as any;
+export function RoleCardGenerator({ role }: { role: Role }) {
+  const { user } = useAuth();
+  const { data: coachProfile } = useCoachProfile();
+  const { data: scoutProfile } = useScoutProfile();
+  const { data: orgData } = useScoutOrganization();
+  const { data: hsProfile } = useHSCoachProfile();
+  const { data: clubProfile } = useClubCoachProfile(user?.id);
+  const captureRef = useRef<View>(null);
+
+  const isLoadingForRole =
+    role === 'coach' || role === 'club_coach' ? (coachProfile === undefined)
+    : role === 'scout' ? (scoutProfile === undefined)
+    : role === 'hs_coach' ? (hsProfile === undefined)
+    : false;
+
+  const getProfileData = (): CardData | null => {
+    const p = coachProfile as any;
+    const sp = scoutProfile as any;
+    const hp = hsProfile as any;
+    const cp = clubProfile as any;
+
+    if (role === 'hs_coach' && hp) {
       return {
-        name: p.name || 'Coach',
-        title: p.title || p.position_coached || 'HS Coach',
-        organization: p.school_name || '',
-        email: p.email || '',
-        phone: p.phone || '',
-        imageUrl: p.image_url || '',
-        sport: p.sport || '',
-        location: [p.school_city, p.school_state].filter(Boolean).join(', '),
-        isVerified: p.is_verified || false,
-        socialLinks: p.social_links || {},
-        twitter: p.twitter || '',
-        badges: [p.sport, p.school_classification, p.conference_name, 'High School'].filter(Boolean),
+        name: hp.name || 'Coach',
+        title: hp.title || hp.position_coached || 'HS Coach',
+        organization: hp.school_name || '',
+        email: hp.email || '',
+        phone: hp.phone || '',
+        imageUrl: hp.image_url || '',
+        sport: hp.sport || '',
+        location: [hp.school_city, hp.school_state].filter(Boolean).join(', '),
+        isVerified: hp.is_verified || false,
+        socialLinks: (hp as any).social_links || {},
+        badges: [hp.sport, hp.school_classification, hp.conference_name, 'High School'].filter(Boolean),
       };
     }
 
-    if (role === 'scout' && scoutProfile) {
-      const p = scoutProfile as any;
+    if (role === 'scout' && sp) {
       return {
-        name: p.name || 'Scout',
-        title: p.title || p.specialization || 'Scout',
-        organization: p.company || (orgData as any)?.organization?.name || '',
-        email: p.email || '',
-        phone: p.phone || '',
-        imageUrl: p.image_url || '',
-        sport: p.sports?.[0] || '',
-        location: p.regions_covered?.join(', ') || '',
-        isVerified: p.is_verified || false,
-        socialLinks: p.social_links || {},
-        twitter: p.twitter || '',
-        badges: [
-          p.specialization && p.specialization,
-          p.is_independent ? 'Independent' : 'Agency',
-        ].filter(Boolean),
+        name: sp.name || 'Scout',
+        title: sp.title || sp.specialization || 'Scout',
+        organization: sp.company || (orgData as any)?.organization?.name || '',
+        email: sp.email || '',
+        phone: sp.phone || '',
+        imageUrl: sp.image_url || '',
+        sport: sp.sports?.[0] || '',
+        location: sp.regions_covered?.join(', ') || '',
+        isVerified: sp.is_verified || false,
+        socialLinks: (sp as any).social_links || {},
+        badges: [sp.specialization, sp.is_independent ? 'Independent' : 'Agency'].filter(Boolean),
       };
     }
 
-    if ((role === 'coach' || role === 'club_coach') && coachProfile) {
-      const p = coachProfile as any;
-      const club = clubProfile as any;
+    if ((role === 'coach' || role === 'club_coach') && p) {
       return {
         name: p.name || 'Coach',
         title: p.title || 'Coach',
-        organization: role === 'club_coach' && club ? club.club_name : p.school || '',
+        organization: role === 'club_coach' && cp ? cp.club_name : p.school || '',
         email: p.email || '',
         phone: p.phone || '',
-        imageUrl:
-          role === 'club_coach' && club?.club_logo_url ? club.club_logo_url : p.image_url || '',
+        imageUrl: role === 'club_coach' && cp?.club_logo_url ? cp.club_logo_url : p.image_url || '',
         sport: p.sport || '',
         location: [p.city, p.state].filter(Boolean).join(', '),
         isVerified: p.is_verified || false,
-        socialLinks: p.social_links || {},
-        twitter: p.twitter || '',
-        badges: [
-          p.sport,
-          p.division,
-          p.conference,
-          role === 'club_coach' && 'Club Coach',
-        ].filter(Boolean),
+        socialLinks: (p as any).social_links || {},
+        badges: [p.sport, p.division, p.conference, role === 'club_coach' && 'Club Coach'].filter(Boolean),
       };
     }
 
     return null;
   };
 
-  const data = getProfileData();
   if (isLoadingForRole) {
-    return (
-      <View style={s.stateWrap}>
-        <Text style={s.stateText}>Loading your card…</Text>
-      </View>
-    );
+    return <View style={s.loading}><Text style={s.loadingText}>Loading your card…</Text></View>;
   }
-  if (!data) {
+
+  const profileData = getProfileData();
+  if (!profileData) {
     return (
-      <View style={s.stateWrap}>
-        <Text style={s.stateText}>
-          We couldn't find your{' '}
-          {role === 'club_coach' ? 'club coach' : role === 'hs_coach' ? 'HS coach' : role} profile.
-        </Text>
-        <Text style={[s.stateText, s.stateHint]}>
-          Complete your profile in Settings to enable card sharing.
-        </Text>
+      <View style={s.loading}>
+        <Text style={s.loadingText}>We couldn't find your {ROLE_LABELS[role]} profile.</Text>
+        <Text style={s.hint}>Complete your profile in Settings to enable card sharing.</Text>
       </View>
     );
   }
 
-  const initials = data.name
-    .split(' ')
-    .map((n: string) => n[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
+  const sp = scoutProfile as any;
+  const data = profileData;
 
-  // Public web URL for this role (used as the visible "Copy link" target).
-  // Only Scouts currently have an individual public profile page.
+  const initials = data.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
+
+  // Public URL logic from Lovable
   const publicWebUrl =
-    role === 'scout' && (scoutProfile as any)?.id
-      ? `${WEB_ORIGIN}/scouts/${(scoutProfile as any).id}`
-      : role === 'club_coach'
-      ? `${WEB_ORIGIN}/discover/clubs`
-      : role === 'hs_coach' || role === 'coach'
-      ? `${WEB_ORIGIN}/coaches`
-      : `${WEB_ORIGIN}/`;
+    role === 'scout' && sp?.id ? `${BASE_URL}/scouts/${(scoutProfile as any).id}`
+    : role === 'club_coach' ? `${BASE_URL}/discover/clubs`
+    : `${BASE_URL}/coaches`;
 
-  // QR payload: encode a MECARD so any phone scanner can save the contact directly.
-  const escapeMecard = (s2: string) => (s2 || '').replace(/([\\;,:])/g, '\\$1');
-  const mecardParts = [
-    `N:${escapeMecard(data.name)}`,
-    data.phone ? `TEL:${escapeMecard(data.phone)}` : '',
-    data.email ? `EMAIL:${escapeMecard(data.email)}` : '',
-    data.organization ? `ORG:${escapeMecard(data.organization)}` : '',
-    data.title ? `TITLE:${escapeMecard(data.title)}` : '',
-    data.location ? `ADR:${escapeMecard(data.location)}` : '',
-    `URL:${escapeMecard(publicWebUrl)}`,
-  ].filter(Boolean);
-  const mecard = `MECARD:${mecardParts.join(';')};;`;
-
-  const qrPayload = role === 'scout' ? publicWebUrl : mecard;
-  const cardUrl = publicWebUrl;
+  const qrPayload = publicWebUrl;
 
   const handleCopyLink = async () => {
-    const ok = await copyToClipboard(cardUrl);
-    toast({ title: ok ? 'Profile link copied!' : 'Failed to copy link' });
+    await Clipboard.setStringAsync(publicWebUrl);
+    toast({ title: 'Profile link copied!' });
   };
 
-  // Collect social links
   const socials: { platform: string; url: string }[] = [];
   if (data.socialLinks && typeof data.socialLinks === 'object') {
     Object.entries(data.socialLinks as Record<string, string>).forEach(([key, val]) => {
       if (val) socials.push({ platform: key.toLowerCase(), url: val });
     });
   }
-  if (data.twitter && !socials.find((sx) => sx.platform === 'twitter' || sx.platform === 'x')) {
-    const handle = data.twitter.replace(/^@/, '');
-    socials.push({ platform: 'x', url: `https://x.com/${handle}` });
-  }
 
-  const roleLabel =
-    role === 'club_coach'
-      ? 'Club Coach'
-      : role === 'scout'
-      ? 'Scout'
-      : role === 'hs_coach'
-      ? 'HS Coach'
-      : 'Coach';
+  const detailRows: { key: string; label: string; value: string; Icon: React.ElementType }[] = [
+    data.organization ? { key: 'org', label: role === 'scout' ? 'Organization' : 'Program', value: data.organization, Icon: Building } : null,
+    data.location ? { key: 'loc', label: 'Location', value: data.location, Icon: MapPin } : null,
+    data.email ? { key: 'email', label: 'Email', value: data.email, Icon: Mail } : null,
+    data.phone ? { key: 'phone', label: 'Phone', value: data.phone, Icon: Phone } : null,
+  ].filter(Boolean) as { key: string; label: string; value: string; Icon: React.ElementType }[];
 
-  type DetailRow = {
-    key: string;
-    label: string;
-    value: string;
-    icon: (size: number, color: string) => React.ReactNode;
-  };
-  const detailRows: DetailRow[] = [
-    data.organization && {
-      key: 'organization',
-      label: role === 'scout' ? 'Organization' : 'Program',
-      value: data.organization,
-      icon: (size: number, color: string) => <Building size={size} color={color} />,
-    },
-    data.location && {
-      key: 'location',
-      label: 'Location',
-      value: data.location,
-      icon: (size: number, color: string) => <MapPin size={size} color={color} />,
-    },
-    data.email && {
-      key: 'email',
-      label: 'Email',
-      value: data.email,
-      icon: (size: number, color: string) => <Mail size={size} color={color} />,
-    },
-    data.phone && {
-      key: 'phone',
-      label: 'Phone',
-      value: data.phone,
-      icon: (size: number, color: string) => <Phone size={size} color={color} />,
-    },
-  ].filter(Boolean) as DetailRow[];
+  const safe = data.name.replace(/[^a-z0-9-_]/gi, '-').toLowerCase();
 
   return (
-    <View style={s.root}>
-      <ViewShot ref={cardRef} options={{ format: 'png', quality: 1 }} style={s.captureWrap}>
-        {/* Card body */}
+    <ScrollView style={s.root} contentContainerStyle={s.scroll}>
+      {/* Capture region */}
+      <View ref={captureRef} style={s.capture}>
+
+        {/* Main card */}
         <View style={s.card}>
-          {/* Top accent bar (gradient stand-in) */}
           <View style={s.accentBar} />
-
           <View style={s.cardBody}>
-            {/* Header row: avatar + name */}
-            <View style={s.headerRow}>
-              <Avatar
-                source={data.imageUrl ? { uri: data.imageUrl } : null}
-                fallback={initials}
-                size={72}
-                style={s.avatar}
-              />
 
-              <View style={s.headerText}>
-                <View style={s.nameRow}>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={s.name}>{data.name}</Text>
-                    <Text style={s.title}>{data.title}</Text>
-                  </View>
-                  {data.isVerified && (
-                    <Shield size={16} color={colors.primary} style={{ marginTop: 2 }} />
-                  )}
+            {/* Identity row */}
+            <View style={s.identityRow}>
+              {data.imageUrl ? (
+                <Image source={{ uri: data.imageUrl }} style={s.avatar} />
+              ) : (
+                <View style={s.avatarFallback}>
+                  <Text style={s.avatarInitials}>{initials}</Text>
                 </View>
-
+              )}
+              <View style={s.identityInfo}>
+                <View style={s.nameRow}>
+                  <View style={s.nameCol}>
+                    <Text style={s.name} numberOfLines={1}>{data.name}</Text>
+                    <Text style={s.title} numberOfLines={1}>{data.title}</Text>
+                  </View>
+                  {data.isVerified && <Shield size={16} color={colors.primary} style={s.verifiedBadge} />}
+                </View>
                 <View style={s.badgeRow}>
-                  <Badge variant="outline">{roleLabel}</Badge>
+                  <Badge variant="outline" style={s.roleBadge}>{ROLE_LABELS[role]}</Badge>
                   {data.sport ? <Badge variant="secondary">{data.sport}</Badge> : null}
-                  {data.badges.map((badge: string, index: number) => (
-                    <Badge key={`${badge}-${index}`} variant="secondary">
-                      {badge}
-                    </Badge>
-                  ))}
+                  {data.badges.map((b, i) => <Badge key={i} variant="secondary" style={s.extraBadge}>{b}</Badge>)}
                 </View>
               </View>
             </View>
@@ -308,31 +220,32 @@ export const RoleCardGenerator = ({ role }: RoleCardGeneratorProps) => {
             {/* Detail rows */}
             {detailRows.length > 0 && (
               <View style={s.detailGrid}>
-                {detailRows.map((item) => (
-                  <View key={item.key} style={s.detailRow}>
-                    <View style={s.detailInner}>
-                      {item.icon(14, colors.mutedForeground)}
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={s.detailLabel}>{item.label}</Text>
-                        <Text style={s.detailValue}>{item.value}</Text>
+                {detailRows.map(row => {
+                  const Icon = row.Icon;
+                  return (
+                    <View key={row.key} style={s.detailCell}>
+                      <View style={s.detailRow}>
+                        <Icon size={14} color={colors.mutedForeground} />
+                        <Text style={s.detailLabel}>  {row.label}</Text>
                       </View>
+                      <Text style={s.detailValue}>{row.value}</Text>
                     </View>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
             )}
 
-            {/* Socials */}
+            {/* Social links */}
             {socials.length > 0 && (
-              <View style={s.socialsBox}>
-                <Text style={s.socialsLabel}>Social</Text>
-                <View style={s.socialsRow}>
-                  {socials.map((social, index) => {
-                    const renderIcon = socialIcons[social.platform];
+              <View style={s.socialSection}>
+                <Text style={s.socialLabel}>Social</Text>
+                <View style={s.socialRow}>
+                  {socials.map((soc, i) => {
+                    const Icon = SOCIAL_ICONS[soc.platform] || LinkIcon;
                     return (
-                      <View key={`${social.platform}-${index}`} style={s.socialPill}>
-                        {renderIcon ? renderIcon(12, colors.foreground) : null}
-                        <Text style={s.socialText}>{social.platform}</Text>
+                      <View key={i} style={s.socialChip}>
+                        <Icon size={12} color={colors.foreground} />
+                        <Text style={s.socialChipText}>{soc.platform}</Text>
                       </View>
                     );
                   })}
@@ -344,187 +257,99 @@ export const RoleCardGenerator = ({ role }: RoleCardGeneratorProps) => {
 
         {/* QR row */}
         <View style={s.qrRow}>
-          {/* GAP: react-native-qrcode-svg not installed; placeholder block (matches AdminInvitationCards convention).
-              qrPayload is computed and ready for when QR rendering is wired up. */}
-          <View style={s.qrBox} accessibilityLabel={`QR: ${qrPayload.slice(0, 32)}`}>
-            <Text style={s.qrPlaceholderText}>QR</Text>
-          </View>
-          <View style={{ flex: 1, minWidth: 0 }}>
+          <QRCode value={qrPayload} size={64} color={colors.foreground} backgroundColor={colors.background} />
+          <View style={s.qrInfo}>
             <Text style={s.qrTitle}>
               {role === 'scout' ? 'Scan to view profile' : 'Scan to save contact'}
             </Text>
-            <Text style={s.qrUrl} numberOfLines={2}>
-              {cardUrl}
-            </Text>
+            <Text style={s.qrUrl} numberOfLines={1}>{publicWebUrl}</Text>
           </View>
         </View>
-      </ViewShot>
+
+      </View>
+      {/* /Capture */}
 
       {/* Actions */}
       <View style={s.actions}>
-        <Button
-          variant="outline"
-          size="sm"
-          onPress={handleCopyLink}
-          leftIcon={<Copy size={14} color={colors.foreground} />}
-          style={{ width: '100%' }}
-        >
-          Copy profile link
-        </Button>
+        <Pressable style={s.copyBtn} onPress={handleCopyLink}>
+          <Copy size={14} color={colors.foreground} />
+          <Text style={s.copyText}>  Copy profile link</Text>
+        </Pressable>
         <CardShareActions
-          targetRef={cardRef}
+          targetRef={captureRef}
           senderName={data.name}
-          fileBaseName={`${data.name}-${roleLabel}-card`}
+          fileBaseName={`${safe}-${ROLE_LABELS[role].toLowerCase().replace(' ', '-')}-card`}
         />
       </View>
-    </View>
+    </ScrollView>
   );
-};
+}
 
 export default RoleCardGenerator;
 
 const s = StyleSheet.create({
-  root: { width: '100%', gap: spacing.md },
-  captureWrap: { width: '100%', backgroundColor: colors.background, padding: 4, gap: spacing.md },
+  root: { flex: 1, backgroundColor: colors.background },
+  scroll: { padding: spacing.md, gap: spacing.md },
+  loading: { padding: spacing.xl, alignItems: 'center', gap: spacing.sm },
+  loadingText: { fontFamily: typography.fontFamily.body, color: colors.mutedForeground },
+  hint: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.xs, color: colors.mutedForeground },
 
-  stateWrap: { alignItems: 'center', justifyContent: 'center', paddingVertical: 32, gap: 6 },
-  stateText: {
-    fontFamily: typography.fontFamily.body,
-    fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
-    textAlign: 'center',
-  },
-  stateHint: { fontSize: typography.fontSize.xs },
+  capture: { gap: spacing.md },
 
-  // Outer card
   card: {
-    width: '100%',
-    overflow: 'hidden',
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(231, 175, 8, 0.2)', // primary/20
-    backgroundColor: colors.card,
+    borderRadius: radius.xl, borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+    backgroundColor: colors.background,
   },
   accentBar: { height: 6, backgroundColor: colors.primary },
+  cardBody: { padding: spacing.lg, gap: spacing.md },
 
-  cardBody: { padding: spacing.md, gap: spacing.md },
-
-  headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, minWidth: 0 },
-  avatar: { borderWidth: 2, borderColor: 'rgba(231, 175, 8, 0.3)' },
-  headerText: { flex: 1, minWidth: 0, gap: 6 },
-  nameRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, minWidth: 0 },
-  name: {
-    fontFamily: typography.fontFamily.heading,
-    fontSize: typography.fontSize.lg,
-    color: colors.foreground,
-    lineHeight: 22,
+  identityRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  avatar: { width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: colors.primary, resizeMode: 'cover' },
+  avatarFallback: {
+    width: 64, height: 64, borderRadius: 32,
+    backgroundColor: colors.muted, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: colors.primary,
   },
-  title: {
-    fontFamily: typography.fontFamily.bodySemiBold,
-    fontSize: typography.fontSize.sm,
-    color: colors.mutedForeground,
-    lineHeight: 18,
-  },
-  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  avatarInitials: { fontFamily: typography.fontFamily.heading, fontSize: typography.fontSize.lg, color: colors.primary },
+  identityInfo: { flex: 1, gap: spacing.xs },
+  nameRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
+  nameCol: { flex: 1 },
+  name: { fontFamily: typography.fontFamily.heading, fontSize: typography.fontSize.lg, color: colors.foreground },
+  title: { fontFamily: typography.fontFamily.bodyMedium, fontSize: typography.fontSize.sm, color: colors.mutedForeground },
+  verifiedBadge: { marginTop: 2 },
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  roleBadge: { fontSize: 11 },
+  extraBadge: { fontSize: 11 },
 
-  // Detail rows
   detailGrid: { gap: spacing.xs },
-  detailRow: {
-    minWidth: 0,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(43, 48, 58, 0.5)', // border/50
-    backgroundColor: 'rgba(16, 19, 24, 0.7)', // background/70
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 8,
+  detailCell: {
+    borderRadius: radius.md, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: colors.muted, padding: spacing.sm,
   },
-  detailInner: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, minWidth: 0 },
-  detailLabel: {
-    fontFamily: typography.fontFamily.bodySemiBold,
-    fontSize: 10,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    color: colors.mutedForeground,
-  },
-  detailValue: {
-    fontFamily: typography.fontFamily.body,
-    fontSize: 13,
-    lineHeight: 17,
-    color: colors.foreground,
-  },
+  detailRow: { flexDirection: 'row', alignItems: 'center' },
+  detailLabel: { fontFamily: typography.fontFamily.body, fontSize: 10, color: colors.mutedForeground, textTransform: 'uppercase', letterSpacing: 0.5 },
+  detailValue: { fontFamily: typography.fontFamily.bodySemiBold, fontSize: typography.fontSize.xs, color: colors.foreground, marginTop: 2 },
 
-  // Socials
-  socialsBox: {
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(43, 48, 58, 0.5)',
-    backgroundColor: 'rgba(16, 19, 24, 0.6)',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 8,
-  },
-  socialsLabel: {
-    fontFamily: typography.fontFamily.bodySemiBold,
-    fontSize: 10,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    color: colors.mutedForeground,
-    marginBottom: 8,
-  },
-  socialsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  socialPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(43, 48, 58, 0.6)',
-    backgroundColor: 'rgba(39, 43, 52, 0.4)', // secondary/40
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  socialText: {
-    fontFamily: typography.fontFamily.body,
-    fontSize: 11,
-    color: colors.foreground,
-  },
+  socialSection: { backgroundColor: colors.muted, borderRadius: radius.md, padding: spacing.sm, borderWidth: 1, borderColor: colors.border },
+  socialLabel: { fontFamily: typography.fontFamily.body, fontSize: 10, color: colors.mutedForeground, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.xs },
+  socialRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  socialChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.background, borderRadius: 999, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm, paddingVertical: 4 },
+  socialChipText: { fontFamily: typography.fontFamily.body, fontSize: 11, color: colors.foreground },
 
-  // QR row
   qrRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(43, 48, 58, 0.5)',
-    backgroundColor: 'rgba(39, 43, 52, 0.2)', // secondary/20
-    padding: spacing.md,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.muted, borderRadius: radius.xl,
+    padding: spacing.md, borderWidth: 1, borderColor: colors.border,
   },
-  qrBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 6,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 4,
-  },
-  qrPlaceholderText: {
-    fontFamily: typography.fontFamily.bodySemiBold,
-    fontSize: typography.fontSize.xs,
-    color: colors.mutedForeground,
-  },
-  qrTitle: {
-    fontFamily: typography.fontFamily.bodySemiBold,
-    fontSize: typography.fontSize.xs,
-    color: colors.foreground,
-  },
-  qrUrl: {
-    marginTop: 4,
-    fontFamily: typography.fontFamily.body,
-    fontSize: 10,
-    lineHeight: 14,
-    color: colors.mutedForeground,
-  },
+  qrInfo: { flex: 1 },
+  qrTitle: { fontFamily: typography.fontFamily.bodySemiBold, fontSize: typography.fontSize.sm, color: colors.foreground },
+  qrUrl: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.xs, color: colors.mutedForeground, marginTop: 2 },
 
-  actions: { width: '100%', gap: 8 },
+  actions: { gap: spacing.sm },
+  copyBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+  },
+  copyText: { fontFamily: typography.fontFamily.bodySemiBold, fontSize: typography.fontSize.sm, color: colors.foreground },
 });

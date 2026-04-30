@@ -4,7 +4,7 @@
 //   - shadcn/ui imports → @/components/ui/*
 //   - lucide-react → lucide-react-native (CheckCircle → CircleCheck; lucide v1.x rename)
 //   - sonner toast → @/components/ui/toast
-//   - QRCodeCanvas (qrcode.react) → placeholder View (GAP: react-native-qrcode-svg not installed)
+//   - QRCodeCanvas (qrcode.react) → QRCode (react-native-qrcode-svg)
 //   - HTML <canvas> download flow → Share/copy URL only (GAP: no canvas API in RN)
 //   - navigator.clipboard → expo-clipboard
 //   - window.open → Linking.openURL
@@ -42,6 +42,7 @@ import {
   CircleCheck as CheckCircle, // GAP: lucide-react-native v1.x renamed CheckCircle → CircleCheck
 } from 'lucide-react-native';
 import { toast } from '@/components/ui/toast';
+import QRCode from 'react-native-qrcode-svg';
 import { FounderInvitationCard } from './FounderInvitationCard';
 import { colors, typography, spacing } from '@/lib/theme';
 
@@ -67,7 +68,7 @@ const InvitationCard = ({
   const handleDownload = () => {
     // GAP: Lovable composes a card PNG via HTML canvas + drawImage(qr, ...).
     // RN has no <canvas>; full PNG export requires react-native-view-shot +
-    // react-native-qrcode-svg + Sharing/MediaLibrary. Not in scope for verbatim port.
+    // Swapped to react-native-qrcode-svg (installed for parity with Lovable).
     toast.error('Download not available in mobile app yet');
   };
 
@@ -108,13 +109,8 @@ const InvitationCard = ({
         {/* QR Code Display */}
         <View style={s.qrWrap}>
           <View style={s.qrInner}>
-            {/* GAP: react-native-qrcode-svg not installed; render placeholder block */}
-            <View
-              nativeID={`qr-${type}`}
-              style={s.qrPlaceholder}
-            >
-              <Text style={s.qrPlaceholderText}>QR</Text>
-              <Text style={s.qrPlaceholderHint}>{type}</Text>
+            <View nativeID={`qr-${type}`} style={s.qrBox}>
+              <QRCode value={landingUrl} size={140} color="#000" backgroundColor="#fff" />
             </View>
           </View>
         </View>

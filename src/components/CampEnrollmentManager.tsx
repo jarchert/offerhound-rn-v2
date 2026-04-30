@@ -54,6 +54,7 @@ import {
   Search,
 } from 'lucide-react-native';
 import { colors, typography, spacing, radius } from '@/lib/theme';
+import QRCode from 'react-native-qrcode-svg';
 
 interface Enrollment {
   id: string;
@@ -358,12 +359,7 @@ export function CampEnrollmentManager({
           </DialogHeader>
           <View style={s.qrWrap}>
             {selectedEnrollment?.qr_code_token ? (
-              // GAP: react-native-qrcode-svg not installed; placeholder block
-              // (matches AdminInvitationCards convention).
-              <View style={s.qrPlaceholder}>
-                <Text style={s.qrPlaceholderText}>QR</Text>
-                <Text style={s.qrPlaceholderHint}>scan to check in</Text>
-              </View>
+              <QRCode value={selectedEnrollment.qr_code_token} size={180} color="#000" backgroundColor="#fff" />
             ) : null}
           </View>
           <Text style={s.qrTokenText}>

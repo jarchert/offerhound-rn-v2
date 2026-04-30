@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet, SafeAreaView, RefreshControl } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, SafeAreaView, RefreshControl, Pressable } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-import { Users, Trophy, Mail } from 'lucide-react-native';
+import { Users, Trophy, Mail, Share2 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCoachAthleteMatches } from '@/hooks/useAthleteMatches';
 import { useCoachActivity } from '@/hooks/useCoachActivity';
@@ -10,7 +10,9 @@ import { StatTile } from '@/components/StatTile';
 import { SectionHeader } from '@/components/SectionHeader';
 import { AthleteCard } from '@/components/AthleteCard';
 import { PushNotificationPrompt } from '@/components/PushNotificationPrompt';
-import { colors, typography, spacing } from '@/lib/theme';
+import { ShareRoleCardDialog } from '@/components/ShareRoleCardDialog';
+import { Button } from '@/components/ui/Button';
+import { colors, typography, spacing, radius } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 
 export default function CoachDashboard() {
@@ -21,6 +23,8 @@ export default function CoachDashboard() {
 
   const topMatches = matches.slice(0, 5);
 
+  const [shareCardOpen, setShareCardOpen] = useState(false);
+
   return (
     <SafeAreaView style={s.container}>
       <Navbar />
@@ -29,8 +33,16 @@ export default function CoachDashboard() {
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />}
       >
         <View style={s.header}>
-          <Text style={s.greeting}>Coach Dashboard</Text>
-          <Text style={s.subtitle}>Recruiting overview</Text>
+          <View style={s.headerLeft}>
+            <Text style={s.greeting}>Coach Dashboard</Text>
+            <Text style={s.subtitle}>Recruiting overview</Text>
+          </View>
+          <ShareRoleCardDialog role="coach" open={shareCardOpen} onOpenChange={setShareCardOpen}>
+            <Pressable style={s.shareBtn} accessibilityLabel="Share Coach Card">
+              <Share2 size={14} color={colors.foreground} />
+              <Text style={s.shareBtnText}>Share Card</Text>
+            </Pressable>
+          </ShareRoleCardDialog>
         </View>
 
         <PushNotificationPrompt />
@@ -76,7 +88,14 @@ export default function CoachDashboard() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xxl },
-  header: { marginBottom: spacing.xs },
+  header: { marginBottom: spacing.xs, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerLeft: { flex: 1 },
+  shareBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+  },
+  shareBtnText: { fontFamily: typography.fontFamily.bodySemiBold, fontSize: typography.fontSize.sm, color: colors.foreground },
   greeting: { fontFamily: typography.fontFamily.heading, fontSize: typography.fontSize['2xl'], color: colors.foreground, letterSpacing: typography.letterSpacing.heading },
   subtitle: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.sm, color: colors.mutedForeground, marginTop: 2 },
   statsRow: { flexDirection: 'row', gap: spacing.sm },
