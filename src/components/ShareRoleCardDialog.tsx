@@ -101,7 +101,9 @@ export function ShareRoleCardDialog({ children, role, open: controlled, onOpenCh
 interface CardData {
   name: string; title: string; subtitle: string; organization: string;
   email: string; phone: string; twitter: string; imageUrl: string;
-  isVerified: boolean; sport: string; division: string; conference: string;
+  isVerified: boolean; sport: string;
+  // Generic meta columns (label + value pairs) — varies by role
+  meta: { label: string; value: string }[];
   position: string; bio: string;
 }
 
@@ -114,11 +116,17 @@ function buildData(role: Role, coach: any, scout: any, hs: any, club: any, org: 
       organization: hs.school_name || '',
       email: hs.email || '', phone: hs.phone || '', twitter: hs.twitter || '',
       imageUrl: hs.image_url || '', isVerified: !!hs.is_verified,
-      sport: hs.sport || '', division: hs.school_classification || '', conference: hs.conference_name || '',
+      sport: hs.sport || '',
+      meta: [
+        hs.sport && { label: 'SPORT', value: String(hs.sport).toUpperCase() },
+        hs.school_classification && { label: 'CLASS', value: hs.school_classification },
+        hs.conference_name && { label: 'CONFERENCE', value: hs.conference_name },
+      ].filter(Boolean) as any,
       position: hs.position_coached || '', bio: hs.bio || '',
     };
   }
   if (role === 'scout' && scout) {
+    const yrs = scout.years_experience || scout.years_of_experience || scout.experience_years;
     return {
       name: (scout.name || 'Scout').toUpperCase(),
       title: scout.title || scout.specialization || 'Scout',
@@ -126,7 +134,12 @@ function buildData(role: Role, coach: any, scout: any, hs: any, club: any, org: 
       organization: scout.company || org?.organization?.name || '',
       email: scout.email || '', phone: scout.phone || '', twitter: scout.twitter || '',
       imageUrl: scout.image_url || '', isVerified: !!scout.is_verified,
-      sport: scout.sports?.[0] || '', division: scout.specialization || '', conference: scout.is_independent ? 'Independent' : 'Agency',
+      sport: scout.sports?.[0] || '',
+      meta: [
+        scout.sports?.[0] && { label: 'SPORT', value: String(scout.sports[0]).toUpperCase() },
+        scout.specialization && { label: 'SPECIALIZATION', value: scout.specialization },
+        yrs && { label: 'EXPERIENCE', value: `${yrs} yrs` },
+      ].filter(Boolean) as any,
       position: '', bio: scout.bio || '',
     };
   }
@@ -139,7 +152,12 @@ function buildData(role: Role, coach: any, scout: any, hs: any, club: any, org: 
       email: coach.email || '', phone: coach.phone || '', twitter: coach.twitter || '',
       imageUrl: role === 'club_coach' && club?.club_logo_url ? club.club_logo_url : coach.image_url || '',
       isVerified: !!coach.is_verified,
-      sport: coach.sport || '', division: coach.division || '', conference: coach.conference || '',
+      sport: coach.sport || '',
+      meta: [
+        coach.sport && { label: 'SPORT', value: String(coach.sport).toUpperCase() },
+        coach.division && { label: 'DIVISION', value: coach.division },
+        coach.conference && { label: 'CONFERENCE', value: coach.conference },
+      ].filter(Boolean) as any,
       position: coach.position_coached || coach.position || '', bio: coach.bio || '',
     };
   }
@@ -233,13 +251,18 @@ function Body({ data, role, tab, setTab, captureRef, scoutProfile }: any) {
 
           <View style={s.divider} />
 
-          {/* Meta grid */}
-          <View style={s.metaRow}>
-            {data.sport ? <MetaCell label="SPORT" value={data.sport.toUpperCase()} /> : null}
-            {data.division ? <MetaCell label="DIVISION" value={data.division} /> : null}
-            {data.conference ? <MetaCell label="CONFERENCE" value={data.conference} /> : null}
-          </View>
-          {data.position ? (
+          {/* Meta grid (role-specific columns) */}
+          {data.meta.length > 0 && (
+            <View style={s.metaRow}>
+              {data.meta.map((m: any, i: number) => (
+                <React.Fragment key={`m-${i}`}>
+                  <MetaCell label={String(m.label)} value={String(m.value)} />
+                </React.Fragment>
+              ))}
+            </View>
+          )}
+          {/* Position row (coach/hs_coach only — scouts don't have position) */}
+          {data.position && role !== 'scout' ? (
             <View style={{ marginTop: spacing.sm }}>
               <MetaCell label="POSITION" value={data.position} />
             </View>
@@ -306,8 +329,8 @@ function TabBtn({ active, icon, label, onPress }: any) {
 function MetaCell({ label, value }: { label: string; value: string }) {
   return (
     <View style={s.metaCell}>
-      <Text style={s.metaLabel}>{label}</Text>
-      <Text style={s.metaValue}>{value}</Text>
+      <Text style={s.metaLabel} numberOfLines={1}>{label}</Text>
+      <Text style={s.metaValue} numberOfLines={2} ellipsizeMode="tail">{value}</Text>
     </View>
   );
 }
@@ -394,9 +417,9 @@ const s = StyleSheet.create({
 
   // Meta grid
   metaRow: { flexDirection: 'row', gap: spacing.md },
-  metaCell: { flex: 1 },
+  metaCell: { flex: 1, minWidth: 0 },
   metaLabel: { fontFamily: typography.fontFamily.body, fontSize: 9, color: '#9fb0c4', letterSpacing: 1 },
-  metaValue: { fontFamily: typography.fontFamily.bodySemiBold, fontSize: 14, color: '#ffffff', fontWeight: '700', marginTop: 2 },
+  metaValue: { fontFamily: typography.fontFamily.bodySemiBold, fontSize: 14, color: '#ffffff', fontWeight: '700', marginTop: 2, flexShrink: 1 },
 
   // Bio
   bio: { fontFamily: typography.fontFamily.body, fontStyle: 'italic', fontSize: 11, color: '#9fb0c4', lineHeight: 15, marginTop: spacing.sm },
