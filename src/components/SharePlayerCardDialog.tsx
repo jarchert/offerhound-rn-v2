@@ -98,7 +98,22 @@ function DialogBody({ open, setOpen, tab, setTab, captureRef, profile }: any) {
             </View>
 
             {/* ── Card (capture region) ───────────────────────── */}
-            <Pressable ref={captureRef} onPress={openProfile} style={s.cardWrap}>
+            {tab === 'qr' ? (
+              /* QR-only tab: large centered QR + URL + brand */
+              <View ref={captureRef} style={s.cardWrap}>
+                <LinearGradient colors={['#1e2a47', '#15213a', '#0f1829']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[s.cardGradient, { alignItems: 'center', justifyContent: 'center', minHeight: 360 }]}>
+                  <BokehBackground />
+                  <Text style={[s.name, { textAlign: 'center', marginBottom: spacing.md }]}>{name}</Text>
+                  {profile.position ? <View style={[s.positionBadge, { marginBottom: spacing.md }]}><Text style={s.positionText}>{profile.position.toUpperCase()}</Text></View> : null}
+                  <View style={[s.qrBox, { padding: 12 }]}>
+                    <QRCode value={profileUrl} size={180} color="#000" backgroundColor="#fff" />
+                  </View>
+                  <Text style={[s.qrUrl, { marginTop: spacing.sm }]} numberOfLines={1}>{profileUrl.replace(/^https?:\/\//, '')}</Text>
+                  <Text style={[s.brandLogo, { marginTop: spacing.sm }]}>OFFERHOUND<Text style={s.brandTm}>™</Text></Text>
+                </LinearGradient>
+              </View>
+            ) : (
+            <Pressable ref={captureRef} onPress={openProfile} style={[s.cardWrap, tab === 'story' && s.storyWrap]}>
               <LinearGradient
                 colors={['#1e2a47', '#15213a', '#0f1829']}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
@@ -184,6 +199,7 @@ function DialogBody({ open, setOpen, tab, setTab, captureRef, profile }: any) {
                 </View>
               </LinearGradient>
             </Pressable>
+            )}
 
             <Text style={s.tapHint}>Tap card to view profile</Text>
 
@@ -325,6 +341,7 @@ const s = StyleSheet.create({
 
   // Card
   cardWrap: { borderRadius: radius.xl, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
+  storyWrap: { aspectRatio: 9 / 16 },
   cardGradient: { padding: spacing.md, gap: spacing.sm, position: 'relative' },
 
   // Identity

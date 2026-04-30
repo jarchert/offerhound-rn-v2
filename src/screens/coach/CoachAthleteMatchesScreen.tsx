@@ -114,7 +114,6 @@ export default function CoachAthleteMatchesScreen() {
                   priority: match.priority || undefined,
                 }}
                 letterSlot={
-                  // PORT-PENDING: <LetterButton ... /> shadcn variant.
                   <Pressable
                     onPress={() => goToLetterForAthlete(match.athlete)}
                     style={s.letterBtn}

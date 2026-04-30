@@ -8,7 +8,7 @@
 //   - <div modal> overlay → <Modal> (RN built-in)
 //   - <Card>/<Switch>/<Badge>/<Button> mapped to RN @/components/ui
 //   - SEO is a no-op shim (RN has no <head>); kept for parity.
-//   - PORT-PENDING: MediaShareButtons component does not yet exist in RN.
+//   - MediaShareButtons wired for gallery image sharing.
 //     Rendered as a placeholder text fallback. Tracked under
 //     session-parity-port.
 //   - PORT-PENDING: video playback uses static thumbnails (Image of poster/url)
@@ -49,6 +49,7 @@ import { HighlightVideoUpload } from '@/components/HighlightVideoUpload';
 import SEO from '@/components/SEO';
 import { Badge, Button, Switch, toast } from '@/components/ui';
 import { colors, typography, spacing } from '@/lib/theme';
+import { MediaShareButtons } from '@/components/MediaShareButtons';
 
 type MediaItem = {
   id: number;
@@ -387,7 +388,10 @@ export default function GalleryScreen() {
               <Text style={s.modalType}>
                 {selectedImage.type === 'video' ? 'Video' : 'Photo'}
               </Text>
-              {/* PORT-PENDING: MediaShareButtons not yet ported */}
+              <MediaShareButtons
+                mediaUrl={`https://offer-hound.com/gallery/${selectedImage.id}`}
+                mediaTitle={selectedImage.title || 'Check out this media on OfferHound!'}
+              />
               {isOwnerView &&
                 selectedImage.type === 'video' &&
                 selectedImage.id !== featuredHighlight && (
