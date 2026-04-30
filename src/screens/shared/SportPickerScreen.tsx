@@ -7,6 +7,7 @@ import { View, Text, ScrollView, Pressable, StyleSheet, Image } from 'react-nati
 import { useNavigation } from '@react-navigation/native';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
+import { BackButton } from '@/components/BackButton';
 // The 13 sports Lovable supports. Hero backgrounds are stubbed to the Lovable
 // hero for now; Session 6/8 can swap to per-sport assets.
 const SPORTS = [
@@ -29,6 +30,7 @@ export default function SportPickerScreen() {
   const navigation = useNavigation<any>();
   return (
     <ScrollView style={s.root} contentContainerStyle={s.content}>
+      <BackButton />
       <View style={s.header}>
         <Image source={require('../../../assets/logo-wordmark.png')} style={s.logo} resizeMode="contain" />
         <Text style={s.eyebrow}>DISCOVER</Text>

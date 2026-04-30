@@ -6,6 +6,7 @@ import type { RootStackParamList } from '@/navigation/RootNavigator';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors, typography, spacing } from '@/lib/theme';
 
+import { BackButton } from '@/components/BackButton';
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function SignUpScreen() {
@@ -28,6 +29,7 @@ export default function SignUpScreen() {
 
   return (
     <SafeAreaView style={s.container}>
+      <BackButton />
       <ScrollView contentContainerStyle={s.content}>
         <Text style={s.title}>Create Account</Text>
         <Text style={s.subtitle}>Join OfferHound and get recruited</Text>

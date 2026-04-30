@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/Button';
 import { colors, typography, spacing } from '@/lib/theme';
 import type { CampStackParamList } from '@/navigation/stacks/CampStack';
 
+import { BackButton } from '@/components/BackButton';
 interface SpectatorTokenRow {
   id: string;
   camp_id: string;
@@ -242,6 +243,7 @@ export default function CampSpectatorViewScreen() {
               const best = bestOf((perf as any)?.[d.key], d.lower);
               return (
                 <View key={d.key} style={s.metricCell}>
+      <BackButton />
                   <Text style={s.metricLabel}>{d.label}</Text>
                   <Text style={s.metricValue}>{best != null ? `${best.toFixed(1)}${d.unit}` : '—'}</Text>
                 </View>

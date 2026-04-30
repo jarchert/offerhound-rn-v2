@@ -36,6 +36,7 @@ import {
 import { SPORTS_LIST } from '@/lib/data/sports';
 import { colors, typography, spacing } from '@/lib/theme';
 
+import { BackButton } from '@/components/BackButton';
 interface ClubCoach {
   id: string;
   user_id: string;
@@ -415,6 +416,7 @@ function TeamCard({
     <Card style={s.cardItem}>
       <CardContent>
         <View style={s.cardRow}>
+      <BackButton />
           <Avatar
             source={team.logo_url ? { uri: team.logo_url } : null}
             fallback={initials}

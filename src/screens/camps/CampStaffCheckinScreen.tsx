@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { colors, typography, spacing } from '@/lib/theme';
 import type { CampStackParamList } from '@/navigation/stacks/CampStack';
 
+import { BackButton } from '@/components/BackButton';
 type State = 'loading' | 'success' | 'already' | 'error';
 interface Info {
   staff_name?: string;
@@ -76,6 +77,7 @@ export default function CampStaffCheckinScreen() {
 
   return (
     <SafeAreaView style={s.container}>
+      <BackButton />
       <ScrollView contentContainerStyle={s.scroll}>
         <Card style={s.card}>
           <CardHeader>

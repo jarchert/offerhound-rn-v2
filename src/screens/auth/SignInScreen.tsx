@@ -6,6 +6,7 @@ import type { RootStackParamList } from '@/navigation/RootNavigator';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors, typography, spacing } from '@/lib/theme';
 
+import { BackButton } from '@/components/BackButton';
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function SignInScreen() {
@@ -25,6 +26,7 @@ export default function SignInScreen() {
 
   return (
     <SafeAreaView style={s.container}>
+      <BackButton />
       <ScrollView contentContainerStyle={s.content}>
         <Text style={s.title}>Welcome Back</Text>
         <Text style={s.subtitle}>Sign in to your OfferHound account</Text>

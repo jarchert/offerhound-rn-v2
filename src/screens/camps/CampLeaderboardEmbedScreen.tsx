@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { colors, typography, spacing } from '@/lib/theme';
 import type { CampStackParamList } from '@/navigation/stacks/CampStack';
 
+import { BackButton } from '@/components/BackButton';
 interface PublicRow {
   enrollment_id: string;
   jersey_number: string | null;
@@ -95,6 +96,7 @@ export default function CampLeaderboardEmbedScreen() {
             const display = isComposite ? Number(v).toFixed(1) : col!.fmt(v);
             return (
               <View key={r.enrollment_id} style={[s.row, { borderColor: dyn.border }]}>
+      <BackButton />
                 <Text style={[s.rank, { color: idx === 0 ? '#f59e0b' : dyn.muted }]}>{idx + 1}</Text>
                 {r.jersey_number ? (
                   <Text style={[s.jersey, { color: dyn.fg }]}>#{r.jersey_number}</Text>

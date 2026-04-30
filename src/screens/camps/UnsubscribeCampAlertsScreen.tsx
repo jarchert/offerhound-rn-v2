@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { colors, typography, spacing } from '@/lib/theme';
 import type { CampStackParamList } from '@/navigation/stacks/CampStack';
 
+import { BackButton } from '@/components/BackButton';
 type Status = 'loading' | 'confirm' | 'done' | 'error';
 interface Subscription { id: string; sport: string; email: string }
 
@@ -85,6 +86,7 @@ export default function UnsubscribeCampAlertsScreen() {
 
   return (
     <SafeAreaView style={s.container}>
+      <BackButton />
       <ScrollView contentContainerStyle={s.scroll}>
         <Card style={s.card}>
           <CardContent style={s.content}>
