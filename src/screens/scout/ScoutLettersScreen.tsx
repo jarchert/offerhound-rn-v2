@@ -3,11 +3,11 @@
 // shadcn lowercase→PascalCase; Tailwind→StyleSheet via @/lib/theme; sonner→@/hooks/use-toast.
 // Renders the LetterDashboard (compose + history) plus a "Saved Prospects" tab pulled
 // from useScoutSavedAthletes. The route accepts the same prefill query params as web.
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, ScrollView, Image, Pressable, ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Users, User, MapPin } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useScoutProfile } from '@/hooks/useScoutProfile';
@@ -30,6 +30,8 @@ import { colors, typography, spacing, radius } from '@/lib/theme';
 import { Navbar } from '@/components/Navbar';
 export default function ScoutLettersScreen() {
   const nav = useNavigation<any>();
+  const route = useRoute<any>();
+  const routeParams = (route?.params || {}) as Record<string, any>;
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { data: profile, isLoading: profileLoading, isFetched: profileFetched } = useScoutProfile();
   const { data: orgData } = useScoutOrganization();
@@ -38,6 +40,17 @@ export default function ScoutLettersScreen() {
   const { toast } = useToast();
   const [isSending, setIsSending] = useState(false);
   const [activeMainTab, setActiveMainTab] = useState('letters');
+  const [localPrefill, setLocalPrefill] = useState<Record<string, any> >({});
+
+  const mergedPrefill = useMemo(() => ({
+    recipientName: localPrefill.recipientName ?? routeParams.recipientName,
+    recipientEmail: localPrefill.recipientEmail ?? routeParams.recipientEmail,
+    recipientType: localPrefill.recipientType ?? routeParams.recipientType,
+    recipientCategory: localPrefill.recipientCategory ?? routeParams.recipientCategory,
+    organizationName: localPrefill.organizationName ?? routeParams.organizationName,
+    recipientTitle: localPrefill.recipientTitle ?? routeParams.recipientTitle,
+    letterType: localPrefill.letterType ?? routeParams.letterType,
+  }), [localPrefill, routeParams]);
 
   const allLoading = authLoading || profileLoading || !profileFetched;
 
@@ -148,6 +161,7 @@ export default function ScoutLettersScreen() {
               isSending={isSending}
               pageTitle="Scouting Letters"
               pageDescription="Generate AI-powered outreach letters to athletes, parents, and coaches. Select a template, customize, and send."
+              prefill={mergedPrefill}
             />
           </TabsContent>
 
@@ -212,7 +226,16 @@ export default function ScoutLettersScreen() {
                             variant="outline"
                             size="sm"
                             onPress={() => {
-                              // PORT-PENDING: deep-link prefill via route params (web uses query string).
+                              // Sibling prefill: populate dashboard without navigating.
+                              const a = (item.athlete || {}) as any;
+                              const fullName = [a.first_name, a.last_name].filter(Boolean).join(' ') || a.name || '';
+                              setLocalPrefill({
+                                recipientName: fullName,
+                                recipientEmail: a.email,
+                                recipientCategory: 'athlete',
+                                recipientType: 'athlete',
+                                organizationName: a.school_name || a.school,
+                              });
                               setActiveMainTab('letters');
                             }}>
                             Send Letter

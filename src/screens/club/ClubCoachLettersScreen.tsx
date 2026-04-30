@@ -1,9 +1,9 @@
 // ClubCoachLettersScreen — RN port of Lovable src/pages/ClubCoachLetters.tsx (71 LOC).
 // Web→RN mapping: react-router-dom→@react-navigation/native; lucide-react→lucide-react-native;
 // shadcn lowercase→PascalCase; Tailwind→StyleSheet via @/lib/theme; sonner→@/hooks/use-toast.
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { supabase, SUPABASE_FUNCTIONS_URL } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useCoachProfile } from '@/hooks/useCoachProfile';
@@ -17,6 +17,17 @@ import { colors, typography, spacing } from '@/lib/theme';
 import { Navbar } from '@/components/Navbar';
 export default function ClubCoachLettersScreen() {
   const nav = useNavigation<any>();
+  const route = useRoute<any>();
+  const routeParams = (route?.params || {}) as Record<string, any>;
+  const prefillFromRoute = useMemo(() => ({
+    recipientName: routeParams.recipientName,
+    recipientEmail: routeParams.recipientEmail,
+    recipientType: routeParams.recipientType,
+    recipientCategory: routeParams.recipientCategory,
+    organizationName: routeParams.organizationName,
+    recipientTitle: routeParams.recipientTitle,
+    letterType: routeParams.letterType,
+  }), [routeParams]);
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { data: profile, isLoading: profileLoading } = useCoachProfile();
   const { history, isLoading: historyLoading, addToHistory, deleteFromHistory } =
@@ -113,6 +124,7 @@ export default function ClubCoachLettersScreen() {
           isSending={isSending}
           pageTitle="Club Coach Letters"
           pageDescription="AI-powered letters for athletes, parents, college coaches, scouts, HS coaches, and media."
+          prefill={prefillFromRoute}
         />
       </ScrollView>
     </SafeAreaView>

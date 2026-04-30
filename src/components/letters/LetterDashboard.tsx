@@ -39,6 +39,19 @@ interface LetterDashboardProps {
   isSending?: boolean;
   pageTitle: string;
   pageDescription: string;
+  /**
+   * Optional explicit prefill override. When provided, these values take precedence over route.params.
+   * Use for sibling callers (e.g. a prospect list in the same screen) that need to prefill without navigation.
+   */
+  prefill?: {
+    recipientName?: string;
+    recipientEmail?: string;
+    recipientType?: RecipientType;
+    recipientCategory?: RecipientCategory;
+    organizationName?: string;
+    recipientTitle?: string;
+    letterType?: string;
+  };
 }
 
 const CATEGORY_META: Record<RecipientCategory, { label: string; icon: any; description: string; defaultRecipientType: RecipientType }> = {
@@ -51,7 +64,7 @@ const CATEGORY_META: Record<RecipientCategory, { label: string; icon: any; descr
   'influencer': { label: 'Influencer / Media', icon: Building2, description: 'Outreach to a recruiting media creator', defaultRecipientType: 'coach' },
 };
 
-export function LetterDashboard({ senderType, senderProfile, letterTypes, history, historyLoading, onSendLetter, onDeleteHistory, isSending, pageTitle, pageDescription }: LetterDashboardProps) {
+export function LetterDashboard({ senderType, senderProfile, letterTypes, history, historyLoading, onSendLetter, onDeleteHistory, isSending, pageTitle, pageDescription, prefill: prefillOverride }: LetterDashboardProps) {
   const route = useRoute<any>();
   const searchParams = (route?.params || {}) as Record<string, any>;
   const [activeTab, setActiveTab] = useState<'compose' | 'history'>('compose');
@@ -62,7 +75,11 @@ export function LetterDashboard({ senderType, senderProfile, letterTypes, histor
   const [actionMenuFor, setActionMenuFor] = useState<HistoryEntry | null>(null);
   const [audienceCleared, setAudienceCleared] = useState(false);
 
-  const sanitized = useMemo(() => sanitizeLetterPrefill(searchParams), [searchParams]);
+  const sanitized = useMemo(() => {
+    // Explicit prefillOverride wins over route.params for sibling callers.
+    const combined = { ...searchParams, ...(prefillOverride || {}) };
+    return sanitizeLetterPrefill(combined);
+  }, [searchParams, prefillOverride]);
   const recipientCategory = audienceCleared ? null : (sanitized.recipientCategory ?? null);
 
   const prefill = useMemo(() => ({
