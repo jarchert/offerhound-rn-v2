@@ -25,6 +25,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { CoachMatchCard } from '@/components/coach/CoachMatchCard';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
+import { Navbar } from '@/components/Navbar';
 export default function SavedCoachesScreen() {
   const { isAuthenticated } = useAuth() as any;
   const nav = useNavigation<any>();
@@ -66,6 +67,7 @@ export default function SavedCoachesScreen() {
 
   return (
     <SafeAreaView style={s.container}>
+      <Navbar />
       <ScrollView contentContainerStyle={s.scroll}>
         <BackButton />
         <View style={s.header}>

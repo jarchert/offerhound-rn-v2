@@ -27,6 +27,7 @@ import {
 import { SPORTS_CONFIG, type SportType } from '@/lib/data/sports';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
+import { Navbar } from '@/components/Navbar';
 export default function CoachCampsScreen() {
   const nav = useNavigation<any>();
   const route = useRoute<any>();
@@ -72,6 +73,7 @@ export default function CoachCampsScreen() {
   return (
     <TermsAcceptanceGate>
       <SafeAreaView style={s.root}>
+      <Navbar />
         <View style={s.header}>
           <BackButton label="Back" />
           <Text style={s.headerTitle}>{headerLabel}</Text>

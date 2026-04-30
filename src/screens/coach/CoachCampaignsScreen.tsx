@@ -22,6 +22,7 @@ import { useHSCoachProfile } from '@/hooks/useHSCoachProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
+import { Navbar } from '@/components/Navbar';
 type CampaignStatus = 'draft' | 'active' | 'paused' | 'completed';
 
 const STATUS_CONFIG: Record<
@@ -99,6 +100,7 @@ export default function CoachCampaignsScreen() {
 
   return (
     <SafeAreaView style={s.root}>
+      <Navbar />
       <View style={s.headerBar}>
         <BackButton label="Back" />
       </View>

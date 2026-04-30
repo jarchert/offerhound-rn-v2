@@ -79,6 +79,7 @@ import { extractSports, sportsOverlap } from '@/lib/utils/sportMatching';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 
+import { Navbar } from '@/components/Navbar';
 // PORT-PENDING: CoachOutreachComposer (shadcn Sheet + email body builder).
 type OutreachCoach = {
   id: string;
@@ -363,6 +364,7 @@ export default function CoachDirectoryScreen() {
 
   return (
     <SafeAreaView style={s.root}>
+      <Navbar />
       <ScrollView contentContainerStyle={s.content}>
         <View style={s.headerRow}>
           <BackButton />

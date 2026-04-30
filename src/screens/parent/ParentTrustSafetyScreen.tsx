@@ -19,6 +19,7 @@ import { Footer } from '@/components/Footer';
 import { Card, CardContent } from '@/components/ui/Card';
 import { colors, typography, spacing } from '@/lib/theme';
 
+import { Navbar } from '@/components/Navbar';
 const ITEMS = [
   { icon: Eye, title: 'Profile Visibility', desc: "Control what coaches and scouts can see on your athlete's profile." },
   { icon: Bell, title: 'Activity Alerts', desc: "Get notified when coaches view your athlete's profile or send messages." },
@@ -28,6 +29,7 @@ const ITEMS = [
 export default function ParentTrustSafetyScreen() {
   return (
     <SafeAreaView style={s.root}>
+      <Navbar />
       <ScrollView contentContainerStyle={s.content}>
         <BackButton />
         <View style={s.header}>

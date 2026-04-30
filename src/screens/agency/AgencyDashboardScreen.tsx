@@ -44,6 +44,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 
+import { Navbar } from '@/components/Navbar';
 export default function AgencyDashboardScreen() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
@@ -96,6 +97,7 @@ export default function AgencyDashboardScreen() {
 
   return (
     <SafeAreaView style={s.root}>
+      <Navbar />
       {/* PORT-PENDING: SEO — web-only meta component, intentionally omitted on RN */}
       <ScrollView contentContainerStyle={s.content}>
         {/* PORT-PENDING: BackButton — header back is handled by stack navigator on RN */}

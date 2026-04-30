@@ -5,9 +5,11 @@ import { SafeAreaView, ScrollView, StyleSheet } from 'react-native';
 import { AdminAuditLog } from '@/components/AdminAuditLog';
 import { colors, spacing } from '@/lib/theme';
 
+import { Navbar } from '@/components/Navbar';
 export default function AdminAuditScreen() {
   return (
     <SafeAreaView style={s.root}>
+      <Navbar />
       <ScrollView contentContainerStyle={s.content}>
         <AdminAuditLog />
       </ScrollView>

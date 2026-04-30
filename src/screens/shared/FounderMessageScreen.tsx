@@ -1,9 +1,10 @@
 // FounderMessageScreen — RN port of Lovable src/pages/FounderMessage.tsx
 import React from 'react';
-import { ScrollView, View, Text, StyleSheet } from 'react-native';
+import { ScrollView, View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft } from 'lucide-react-native';
 import { Button } from '@/components/ui';
+import { Navbar } from '@/components/Navbar';
 import { colors, spacing, typography } from '@/lib/theme';
 
 const PARAGRAPHS = [
@@ -17,7 +18,9 @@ export default function FounderMessageScreen() {
   const nav = useNavigation<any>();
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <SafeAreaView style={styles.root}>
+      <Navbar />
+      <ScrollView style={styles.root} contentContainerStyle={styles.content}>
       <Button
         variant="ghost"
         onPress={() => (nav.canGoBack() ? nav.goBack() : nav.navigate('PublicTabs' as never))}
@@ -37,6 +40,7 @@ export default function FounderMessageScreen() {
         <Text style={styles.signoff}>— The OfferHound Team</Text>
       </View>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 

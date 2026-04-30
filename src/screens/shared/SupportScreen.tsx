@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
+import { Navbar } from '@/components/Navbar';
 const FAQS = [
   { question: 'How do I create my athlete profile?', answer: "After signing up, you'll be guided through our onboarding process." },
   { question: 'How do coaches find my profile?', answer: 'Once published, coaches can discover you through athlete search.' },
@@ -57,6 +58,7 @@ export default function SupportScreen() {
 
   return (
     <SafeAreaView style={s.root}>
+      <Navbar />
       <View style={s.headerBar}>
         <BackButton label="Back" />
       </View>

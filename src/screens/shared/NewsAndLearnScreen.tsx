@@ -12,6 +12,7 @@ import { BackButton } from '@/components/BackButton';
 import { Card, CardContent } from '@/components/ui';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
+import { Navbar } from '@/components/Navbar';
 const ITEMS = [
   { Icon: Newspaper, title: 'Recruiting News', desc: 'Latest updates from college recruiting.' },
   { Icon: BookOpen, title: 'Guides & Tips', desc: 'Expert advice for athletes, coaches, and parents.' },
@@ -21,6 +22,7 @@ const ITEMS = [
 export default function NewsAndLearnScreen() {
   return (
     <SafeAreaView style={s.container}>
+      <Navbar />
       <ScrollView contentContainerStyle={s.scroll}>
         <BackButton />
         <Text style={s.title}>News & Learn</Text>

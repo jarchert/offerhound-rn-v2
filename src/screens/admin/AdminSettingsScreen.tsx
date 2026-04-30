@@ -6,9 +6,11 @@ import { SafeAreaView, ScrollView, StyleSheet } from 'react-native';
 import { AdminTermsManagement } from '@/components/AdminTermsManagement';
 import { colors, spacing } from '@/lib/theme';
 
+import { Navbar } from '@/components/Navbar';
 export default function AdminSettingsScreen() {
   return (
     <SafeAreaView style={s.root}>
+      <Navbar />
       <ScrollView contentContainerStyle={s.content}>
         <AdminTermsManagement />
       </ScrollView>

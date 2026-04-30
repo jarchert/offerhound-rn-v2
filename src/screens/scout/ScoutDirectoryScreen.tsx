@@ -41,6 +41,7 @@ import { partitionByFullName } from '@/lib/utils/nameSorting';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 
+import { Navbar } from '@/components/Navbar';
 export default function ScoutDirectoryScreen() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
   const [search, setSearch] = useState('');
@@ -116,6 +117,7 @@ export default function ScoutDirectoryScreen() {
 
   return (
     <SafeAreaView style={s.root}>
+      <Navbar />
       <ScrollView contentContainerStyle={s.content}>
         <BackButton />
 

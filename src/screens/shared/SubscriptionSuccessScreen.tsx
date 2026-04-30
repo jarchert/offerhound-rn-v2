@@ -3,10 +3,11 @@
 // NOTE: original mentioned Stripe webhook delay; on IAP the receipt validator
 // is faster but we still retry a few times to be safe.
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, SafeAreaView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { CheckCircle } from 'lucide-react-native';
 import { Button } from '@/components/ui';
+import { Navbar } from '@/components/Navbar';
 import { useSubscription } from '@/hooks/useSubscription';
 import { colors, spacing, typography } from '@/lib/theme';
 
@@ -40,7 +41,8 @@ export default function SubscriptionSuccessScreen() {
   };
 
   return (
-    <View style={styles.root}>
+    <SafeAreaView style={styles.root}>
+      <Navbar />
       <View style={styles.inner}>
         <CheckCircle size={80} color={colors.success} />
         <Text style={styles.title}>You're All Set!</Text>
@@ -63,7 +65,7 @@ export default function SubscriptionSuccessScreen() {
           <Text style={styles.ctaText}>Go to Dashboard</Text>
         </Button>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

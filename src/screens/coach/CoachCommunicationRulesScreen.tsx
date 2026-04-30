@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { BackButton } from '@/components/BackButton';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
+import { Navbar } from '@/components/Navbar';
 function Bullet({ children }: { children: React.ReactNode }) {
   return (
     <View style={s.bulletRow}>
@@ -20,6 +21,7 @@ function Bullet({ children }: { children: React.ReactNode }) {
 export default function CoachCommunicationRulesScreen() {
   return (
     <SafeAreaView style={s.root}>
+      <Navbar />
       <View style={s.header}>
         <BackButton label="Back" />
       </View>

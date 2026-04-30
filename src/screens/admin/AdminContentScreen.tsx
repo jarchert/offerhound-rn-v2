@@ -8,9 +8,11 @@ import { SafeAreaView, ScrollView, StyleSheet, View, Text } from 'react-native';
 import { PodcastTileUpload } from '@/components/admin/PodcastTileUpload';
 import { colors, typography, spacing } from '@/lib/theme';
 
+import { Navbar } from '@/components/Navbar';
 export default function AdminContentScreen() {
   return (
     <SafeAreaView style={s.root}>
+      <Navbar />
       <ScrollView contentContainerStyle={s.content}>
         <View style={s.header}>
           <Text style={s.title}>Content</Text>

@@ -28,6 +28,7 @@ import {
 } from '@/hooks/useCollegeCamps';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
+import { Navbar } from '@/components/Navbar';
 interface SavedCampRow {
   id: string;
   camp: CollegeCamp | null;
@@ -67,6 +68,7 @@ export default function SavedCampsScreen() {
 
   return (
     <SafeAreaView style={s.container}>
+      <Navbar />
       <ScrollView contentContainerStyle={s.scroll}>
         <BackButton />
         <Text style={s.title}>My Camps ({camps.length})</Text>

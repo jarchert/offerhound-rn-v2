@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { BackButton } from '@/components/BackButton';
 import { colors, typography, spacing } from '@/lib/theme';
 
+import { Navbar } from '@/components/Navbar';
 export default function HSCoachLettersScreen() {
   const nav = useNavigation<any>();
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -80,6 +81,7 @@ export default function HSCoachLettersScreen() {
 
   return (
     <SafeAreaView style={s.root}>
+      <Navbar />
       <View style={s.header}>
         <BackButton label="Back" />
         <Text style={s.headerTitle}>HS Coach Letters</Text>

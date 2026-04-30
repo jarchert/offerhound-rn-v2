@@ -41,6 +41,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Progress } from '@/components/ui/Progress';
 import { colors, typography, spacing } from '@/lib/theme';
 
+import { Navbar } from '@/components/Navbar';
 type CountRow<TKey extends string> = Record<TKey, string> & { count: number };
 
 export default function ScoutTrendsScreen() {
@@ -159,6 +160,7 @@ export default function ScoutTrendsScreen() {
 
   return (
     <SafeAreaView style={s.root}>
+      <Navbar />
       <ScrollView contentContainerStyle={s.content}>
         <BackButton />
         <View style={s.header}>

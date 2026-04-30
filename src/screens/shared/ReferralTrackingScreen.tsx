@@ -30,6 +30,7 @@ import { copyToClipboard } from '@/lib/utils';
 import { toast } from '@/components/ui/toast';
 import { colors, typography, spacing } from '@/lib/theme';
 
+import { Navbar } from '@/components/Navbar';
 const REFERRAL_BASE_URL = 'https://offer-hound.com/auth';
 
 export default function ReferralTrackingScreen() {
@@ -57,6 +58,7 @@ export default function ReferralTrackingScreen() {
 
   return (
     <SafeAreaView style={s.root}>
+      <Navbar />
       <ScrollView contentContainerStyle={s.content}>
         <BackButton />
 

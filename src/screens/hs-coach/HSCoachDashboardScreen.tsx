@@ -57,6 +57,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 
+import { Navbar } from '@/components/Navbar';
 // PORT-PENDING: LetterButton — RN equivalent of the shared <LetterButton> composite.
 // Renders a minimal stub button that opens the letter composer, matching prop shape.
 function LetterButton({
@@ -174,6 +175,7 @@ export default function HSCoachDashboardScreen() {
     <TermsAcceptanceGate>
       {/* PORT-PENDING: SEO — web-only meta component, intentionally omitted on RN */}
       <SafeAreaView style={s.root}>
+      <Navbar />
         <ScrollView contentContainerStyle={s.content}>
           {/* Header */}
           <View style={s.header}>

@@ -17,6 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { colors, typography, spacing } from '@/lib/theme';
 
+import { Navbar } from '@/components/Navbar';
 interface FollowedInfluencer {
   id: string;
   influencer_id: string;
@@ -122,6 +123,7 @@ export default function FollowingSettingsScreen() {
 
   return (
     <SafeAreaView style={s.container}>
+      <Navbar />
       <ScrollView contentContainerStyle={s.content}>
         <BackButton label="Back" />
         <View style={s.headingBlock}>

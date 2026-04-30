@@ -16,6 +16,7 @@ import { Card, CardContent } from '@/components/ui';
 import { supabase } from '@/integrations/supabase/client';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
+import { Navbar } from '@/components/Navbar';
 interface Episode {
   id: string;
   title: string;
@@ -39,6 +40,7 @@ export default function PodcastLibraryScreen() {
 
   return (
     <SafeAreaView style={s.container}>
+      <Navbar />
       <ScrollView contentContainerStyle={s.scroll}>
         <BackButton />
         <View style={s.header}>

@@ -24,6 +24,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { colors, typography, spacing } from '@/lib/theme';
 
+import { Navbar } from '@/components/Navbar';
 const NOTIFICATION_LABELS = ['Welcome Emails', 'Coach Contact Notifications', 'Letter Sent Confirmations', 'Weekly Digest'] as const;
 
 export default function AccountSettingsScreen() {
@@ -87,6 +88,7 @@ export default function AccountSettingsScreen() {
 
   return (
     <SafeAreaView style={s.container}>
+      <Navbar />
       <ScrollView contentContainerStyle={s.content}>
         <BackButton label="Back" />
         <View style={s.headingBlock}>

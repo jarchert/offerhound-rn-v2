@@ -38,6 +38,7 @@ import { useLetterCenter } from '@/hooks/useLetterCenter';
 import { colors, typography, spacing } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 
+import { Navbar } from '@/components/Navbar';
 export default function CoachAthleteMatchesScreen() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
   const { data: matches = [], isLoading } = useCoachAthleteMatches();
@@ -53,6 +54,7 @@ export default function CoachAthleteMatchesScreen() {
 
   return (
     <SafeAreaView style={s.root}>
+      <Navbar />
       <ScrollView contentContainerStyle={s.content}>
         <BackButton />
 

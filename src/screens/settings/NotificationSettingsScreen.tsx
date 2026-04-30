@@ -10,6 +10,7 @@ import { BackButton } from '@/components/BackButton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { colors, typography, spacing } from '@/lib/theme';
 
+import { Navbar } from '@/components/Navbar';
 type IconCmp = React.ComponentType<{ size?: number; color?: string }>;
 interface Category {
   icon: IconCmp;
@@ -33,6 +34,7 @@ export default function NotificationSettingsScreen() {
 
   return (
     <SafeAreaView style={s.container}>
+      <Navbar />
       <ScrollView contentContainerStyle={s.content}>
         <BackButton label="Back" />
         <View style={s.headingBlock}>

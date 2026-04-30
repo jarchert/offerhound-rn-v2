@@ -16,6 +16,7 @@ import { TransferPortalFeed } from '@/components/TransferPortalFeed';
 import { useScoutOrganization } from '@/hooks/useScoutOrganization';
 import { colors, typography, spacing } from '@/lib/theme';
 
+import { Navbar } from '@/components/Navbar';
 type TabKey = 'general' | 'members';
 
 export default function OrganizationSettingsScreen() {
@@ -27,6 +28,7 @@ export default function OrganizationSettingsScreen() {
 
   return (
     <SafeAreaView style={s.container}>
+      <Navbar />
       <ScrollView contentContainerStyle={s.content}>
         <BackButton label="Back" />
         <View style={s.headerRow}>

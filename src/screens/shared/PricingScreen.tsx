@@ -56,6 +56,7 @@ import { TIER_TO_PRODUCT_ID, type SubscriptionTierId } from '@/lib/iap';
 import { PRICING_TIERS, type PricingTier } from '@/lib/pricing';
 import { shouldHidePricingUI } from '@/lib/platform';
 import { colors, spacing, typography, radius } from '@/lib/theme';
+import { Navbar } from '@/components/Navbar';
 
 const isIos = Platform.OS === 'ios';
 
@@ -258,6 +259,7 @@ export default function PricingScreen() {
 
   return (
     <>
+      <Navbar />
       <ScrollView style={styles.root} contentContainerStyle={styles.content}>
         <View style={styles.heroWrap}>
           <Badge style={styles.heroBadge}>

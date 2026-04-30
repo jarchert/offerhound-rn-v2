@@ -18,6 +18,7 @@ import { Card, CardContent } from '@/components/ui';
 import { supabase } from '@/integrations/supabase/client';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
+import { Navbar } from '@/components/Navbar';
 type ParamList = { PodcastEpisodeDetail: { id?: string } };
 
 interface Episode {
@@ -62,6 +63,7 @@ export default function PodcastEpisodeDetailScreen() {
 
   return (
     <SafeAreaView style={s.container}>
+      <Navbar />
       <ScrollView contentContainerStyle={s.scroll}>
         <BackButton />
         <Card style={s.card}>

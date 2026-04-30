@@ -24,6 +24,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
+import { Navbar } from '@/components/Navbar';
 const EMERALD = '#34d399';
 const EMERALD_DIM = 'rgba(52,211,153,0.6)';
 const EMERALD_BG = 'rgba(52,211,153,0.05)';
@@ -130,6 +131,7 @@ export default function NILIntelligenceScreen() {
 
   return (
     <SafeAreaView style={s.root}>
+      <Navbar />
       <View style={s.headerBar}>
         <BackButton label="Back" />
       </View>

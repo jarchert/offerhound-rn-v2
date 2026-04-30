@@ -119,6 +119,7 @@ import { SharePlayerCardDialog } from '@/components/SharePlayerCardDialog';
 import { SPORTS_CONFIG } from '@/lib/data/sports';
 import { colors, spacing, typography, radius } from '@/lib/theme';
 
+import { Navbar } from '@/components/Navbar';
 type Priority = 'high' | 'medium' | 'low';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -940,6 +941,7 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <Navbar />
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1 }}

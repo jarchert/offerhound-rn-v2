@@ -54,6 +54,7 @@ import { AthleteMatchCard } from '@/components/athlete/AthleteMatchCard';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 
+import { Navbar } from '@/components/Navbar';
 // PORT-PENDING: react-native-toast-message wrapper. Falls back to console.
 function showToast(level: 'success' | 'info' | 'error', msg: string) {
   // eslint-disable-next-line no-console
@@ -202,6 +203,7 @@ export default function AthleteSearchScreen() {
 
   return (
     <SafeAreaView style={s.root}>
+      <Navbar />
       <ScrollView contentContainerStyle={s.content}>
         <BackButton />
         <Text style={s.title}>Athlete Search</Text>
