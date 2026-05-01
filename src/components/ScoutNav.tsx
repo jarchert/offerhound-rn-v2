@@ -30,6 +30,7 @@ import {
   Building2,
   LogOut,
   User,
+  LucideIcon,
 } from 'lucide-react-native';
 import { colors, typography, spacing, radius, shadows } from '@/lib/theme';
 import { useScoutOrganization } from '@/hooks/useScoutOrganization';
@@ -42,7 +43,7 @@ type NavItem = {
   route: string;
   params?: Record<string, unknown>;
   label: string;
-  icon: React.ComponentType<{ size?: number; color?: string }>;
+  icon: LucideIcon;
   description: string;
 };
 

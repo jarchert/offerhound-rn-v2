@@ -12,6 +12,7 @@ import {
   BarChart3,
   Clock,
   BookUser,
+  LucideIcon,
 } from 'lucide-react-native';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,7 +24,7 @@ import { colors, typography, spacing, radius, gradients, shadows } from '@/lib/t
 const bgFeaturesTraining = require('../../../assets/lovable/bg-features-training.jpg');
 
 type Feature = {
-  icon: React.ComponentType<{ width?: number; height?: number; color?: string }>;
+  icon: LucideIcon;
   title: string;
   description: string;
   patentPending?: boolean;

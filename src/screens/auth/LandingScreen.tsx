@@ -33,6 +33,7 @@ import { FounderRibbon } from '@/components/landing/FounderRibbon';
 import { LandingHeroContent } from '@/components/landing/LandingHeroContent';
 import { LandingFeatures } from '@/components/landing/LandingFeatures';
 import { AIUseCasesSection } from '@/components/AIUseCasesSection';
+import { LandingPodcastSection } from '@/components/landing/LandingPodcastSection';
 
 const VIEWER_STORAGE_KEY = 'offerhound_viewer_type';
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -179,7 +180,7 @@ export default function LandingScreen() {
         <WhyOfferhoundSection viewerType={viewerType} />
 
         {/* ── Podcast section (athlete only) ── */}
-        {viewerType === 'athlete' && <PodcastTeaser onPress={() => nav.navigate('PodcastLibrary')} />}
+        {viewerType === 'athlete' && <LandingPodcastSection />}
 
         <View style={{ height: 40 }} />
       </Animated.ScrollView>

@@ -20,7 +20,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { CardShareActions } from '@/components/CardShareActions';
 import { Badge } from '@/components/ui/Badge';
-import { toast } from '@/components/ui/toast';
+import { toast } from '@/hooks/use-toast';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
 type Role = 'coach' | 'club_coach' | 'scout' | 'hs_coach';
@@ -28,8 +28,8 @@ type Role = 'coach' | 'club_coach' | 'scout' | 'hs_coach';
 const BASE_URL = 'https://offer-hound.com';
 
 const SOCIAL_ICONS: Record<string, React.ElementType> = {
-  instagram: Instagram, facebook: Facebook, x: Twitter, twitter: Twitter,
-  tiktok: LinkIcon, youtube: Youtube, linkedin: LinkIcon,
+  instagram: LinkIcon, facebook: LinkIcon, x: LinkIcon, twitter: LinkIcon,
+  tiktok: LinkIcon, youtube: LinkIcon, linkedin: LinkIcon,
 };
 
 const ROLE_LABELS: Record<Role, string> = {
@@ -318,8 +318,8 @@ const s = StyleSheet.create({
   title: { fontFamily: typography.fontFamily.bodyMedium, fontSize: typography.fontSize.sm, color: colors.mutedForeground },
   verifiedBadge: { marginTop: 2 },
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  roleBadge: { fontSize: 11 },
-  extraBadge: { fontSize: 11 },
+  roleBadge: {},
+  extraBadge: {},
 
   detailGrid: { gap: spacing.xs },
   detailCell: {

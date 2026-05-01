@@ -3,12 +3,12 @@
 // flex-wrapped row of Card tiles. Hover shadow omitted (no hover on touch).
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Target, Users, Megaphone, BarChart3 } from 'lucide-react-native';
+import { Target, Users, Megaphone, BarChart3, LucideIcon } from 'lucide-react-native';
 import { Card, CardContent } from '@/components/ui/Card';
 import { colors, typography, spacing } from '@/lib/theme';
 
 type Feature = {
-  icon: React.ComponentType<{ width?: number; height?: number; color?: string }>;
+  icon: LucideIcon;
   title: string;
   desc: string;
 };

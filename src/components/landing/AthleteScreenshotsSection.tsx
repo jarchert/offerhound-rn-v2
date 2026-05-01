@@ -2,12 +2,13 @@
 // Source: offerhound-repo/src/components/landing/AthleteScreenshotsSection.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { UserCircle, BarChart3, Mail, Search } from 'lucide-react-native';
+import { UserCircle, BarChart3, Mail, Search, LucideIcon,
+} from 'lucide-react-native';
 import { Card, CardContent } from '@/components/ui/Card';
 import { colors, typography, spacing } from '@/lib/theme';
 
 interface Feature {
-  icon: React.ComponentType<{ size?: number; color?: string }>;
+  icon: LucideIcon;
   title: string;
   desc: string;
 }

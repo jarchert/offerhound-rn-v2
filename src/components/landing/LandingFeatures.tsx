@@ -5,6 +5,7 @@ import { View, Text, StyleSheet, ImageBackground, ScrollView } from 'react-nativ
 import {
   TrendingUp, Users, Search, Mail, MessageSquare, BarChart3, Clock, BookUser,
   Filter, Bookmark, Target, FileText, Send, Download,
+  LucideIcon,
 } from 'lucide-react-native';
 import { colors, typography, spacing, radius, shadows } from '@/lib/theme';
 import { BG_FEATURES_TRAINING, BG_COACH_SCOUT } from '@/lib/assets';
@@ -12,7 +13,7 @@ import { BG_FEATURES_TRAINING, BG_COACH_SCOUT } from '@/lib/assets';
 type ViewerType = 'athlete' | 'coach';
 
 interface Feature {
-  icon: React.ComponentType<{ size: number; color: string }>;
+  icon: LucideIcon;
   title: string;
   description: string;
   patentPending?: boolean;

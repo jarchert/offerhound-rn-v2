@@ -11,12 +11,13 @@ import {
   Send,
   BarChart3,
   Download,
+  LucideIcon,
 } from 'lucide-react-native';
 import { colors, typography, spacing, radius, shadows } from '@/lib/theme';
 import { BG_COACH_SCOUT } from '@/lib/assets';
 
 interface Feature {
-  icon: React.ComponentType<{ size: number; color: string }>;
+  icon: LucideIcon;
   title: string;
   description: string;
   patentPending?: boolean;

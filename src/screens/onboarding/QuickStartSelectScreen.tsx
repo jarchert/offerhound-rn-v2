@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   Zap, Trophy, Users, Binoculars, Building2, Megaphone, Clock, CheckCircle2, ArrowRight,
+  LucideIcon,
 } from 'lucide-react-native';
 import { BackButton } from '@/components/BackButton';
 import { colors, typography, spacing } from '@/lib/theme';
@@ -17,7 +18,7 @@ type RoleId = 'athlete' | 'coach' | 'scout' | 'organization' | 'influencer';
 
 interface RoleOption {
   id: RoleId;
-  icon: React.ComponentType<{ size?: number; color?: string }>;
+  icon: LucideIcon;
   title: string;
   description: string;
   features: string[];

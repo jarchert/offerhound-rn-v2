@@ -51,6 +51,7 @@ import {
   Clock,
   Star,
   Megaphone,
+  LucideIcon,
 } from "lucide-react-native";
 import { cn } from "@/lib/utils";
 import { colors, typography, spacing } from "@/lib/theme";
@@ -68,7 +69,7 @@ interface QuickStartCompleteDialogProps {
   profileCompletion?: number;
 }
 
-type IconType = React.ComponentType<{ size?: number; color?: string }>;
+type IconType = LucideIcon;
 
 interface UserTypeConfig {
   icon: IconType;

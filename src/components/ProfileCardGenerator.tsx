@@ -248,8 +248,8 @@ const styles = StyleSheet.create({
   },
 
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  badge: { fontSize: 12 },
-  badgePublished: { fontSize: 12, color: '#059669', borderColor: 'rgba(5,150,105,0.3)' },
+  badge: {},
+  badgePublished: { borderColor: 'rgba(5,150,105,0.3)' },
 
   metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   metricCell: {

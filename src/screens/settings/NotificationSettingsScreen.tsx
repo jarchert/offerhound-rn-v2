@@ -5,13 +5,14 @@
 // Neither RN component exists yet — schedule alongside camp-notification work.
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, SafeAreaView, Switch } from 'react-native';
-import { Bell, Mail, MessageSquare, Trophy, Calendar } from 'lucide-react-native';
+import { Bell, Mail, MessageSquare, Trophy, Calendar, LucideIcon,
+} from 'lucide-react-native';
 import { BackButton } from '@/components/BackButton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { colors, typography, spacing } from '@/lib/theme';
 
 import { Navbar } from '@/components/Navbar';
-type IconCmp = React.ComponentType<{ size?: number; color?: string }>;
+type IconCmp = LucideIcon;
 interface Category {
   icon: IconCmp;
   label: string;

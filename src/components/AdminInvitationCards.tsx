@@ -279,6 +279,10 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
   },
+  qrBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   qrInner: {
     backgroundColor: '#ffffff',
     padding: spacing.md,

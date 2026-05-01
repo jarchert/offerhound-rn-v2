@@ -13,6 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import {
   Mail, MessageSquare, Search, FileText, Sparkles, Brain, Target,
   TrendingUp, ArrowRight, Shield, DollarSign, Scale, Users,
+  LucideIcon,
 } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
 import { PatentPendingBadge } from '@/components/ui/PatentPendingBadge';
@@ -20,7 +21,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { colors, typography, spacing, radius, shadows } from '@/lib/theme';
 
 interface UseCase {
-  icon: React.ComponentType<{ size?: number; color?: string; width?: number; height?: number }>;
+  icon: LucideIcon;
   title: string;
   description: string;
   benefit: string;

@@ -50,6 +50,7 @@ import {
   Sparkles,
   Target,
   Users,
+  LucideIcon,
 } from "lucide-react-native";
 import { cn } from "@/lib/utils";
 import { colors, typography, spacing } from "@/lib/theme";
@@ -70,7 +71,7 @@ interface AthleteQuickStartGuideProps {
 type LovableRoute = "/dashboard" | "/coaches" | null;
 
 type StepDef = {
-  icon: React.ComponentType<{ size?: number; color?: string }>;
+  icon: LucideIcon;
   title: string;
   description: string;
   action: string;

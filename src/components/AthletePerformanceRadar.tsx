@@ -111,6 +111,7 @@ interface AthleteData {
   arm_length?: string | null;
   position?: string | null;
   positions?: string[] | null;
+  sport_stats?: Record<string, unknown> | null;
 }
 
 interface AthletePerformanceRadarProps {

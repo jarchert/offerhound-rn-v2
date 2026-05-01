@@ -50,6 +50,7 @@ import {
   Sparkles,
   Binoculars,
   MapPin,
+  LucideIcon,
 } from "lucide-react-native";
 import { cn } from "@/lib/utils";
 import { colors, typography, spacing } from "@/lib/theme";
@@ -67,7 +68,7 @@ interface ScoutQuickStartGuideProps {
 type LovableRoute = "/athletes" | "/coaches" | "/organization/settings" | null;
 
 type StepDef = {
-  icon: React.ComponentType<{ size?: number; color?: string }>;
+  icon: LucideIcon;
   title: string;
   description: string;
   action: string;
