@@ -9,17 +9,18 @@ import {
   Pressable,
   StyleSheet,
   View,
+  Image,
   Keyboard,
   Animated,
   Easing,
 } from 'react-native';
-import { Sparkles } from 'lucide-react-native';
 import {
   useNavigation,
   useNavigationState,
 } from '@react-navigation/native';
 
 import { colors, spacing, shadows } from '@/lib/theme';
+import { COACH_AVATAR } from '@/lib/assets';
 
 export interface FloatingAICoachProps {
   /** Optional override for which route name represents the AI coach screen. */
@@ -105,7 +106,7 @@ export function FloatingAICoach({
           style={s.fab}
           accessibilityRole="button"
           accessibilityLabel="Open OfferHound AI Coach">
-          <Sparkles size={24} color={colors.primaryForeground} />
+          <Image source={COACH_AVATAR} style={s.fabImage} />
         </Pressable>
       </Animated.View>
     </View>
@@ -129,6 +130,14 @@ const s = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+    borderWidth: 3,
+    borderColor: colors.primary,
     ...shadows.gold,
+  },
+  fabImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
   },
 });
