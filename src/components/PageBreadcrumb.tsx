@@ -1,22 +1,11 @@
-// TODO(session4): Port full implementation from Ch.13 of the conversion guide.
-// This is a minimal scaffold so the bundle compiles.
+// PageBreadcrumb is a no-op on mobile.
+// Rationale: Lovable/web uses breadcrumbs because URLs are visible; RN already
+// communicates hierarchy via the stack header + BackButton. Rendering extra
+// breadcrumb chrome on phones would waste vertical space and double up with
+// the existing header row.
+// Kept as a named export so imports from ported Lovable code don't break.
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, typography, spacing } from '@/lib/theme';
-
 export function PageBreadcrumb(_props: any) {
-  return (
-    <View style={s.container}>
-      <Text style={s.text}>[PageBreadcrumb]</Text>
-      <Text style={s.hint}>Scaffold — port from Ch.13</Text>
-    </View>
-  );
+  return null;
 }
-
 export default PageBreadcrumb;
-
-const s = StyleSheet.create({
-  container: { padding: spacing.md, backgroundColor: colors.muted, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
-  text: { fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, fontSize: typography.fontSize.sm },
-  hint: { fontFamily: typography.fontFamily.body, color: colors.mutedForeground, fontSize: typography.fontSize.xs, marginTop: 2 },
-});

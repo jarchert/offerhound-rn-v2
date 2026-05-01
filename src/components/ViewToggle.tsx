@@ -1,14 +1,28 @@
-// TODO(session4): Port full implementation from Ch.13 of the conversion guide.
-// This is a minimal scaffold so the bundle compiles.
+// Ported from Lovable src/components/ViewToggle.tsx.
+// Toggles between owner view (private stats) and public preview for profiles.
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, typography, spacing } from '@/lib/theme';
+import { View, Text, Switch, StyleSheet } from 'react-native';
+import { Eye, EyeOff } from 'lucide-react-native';
+import { colors, typography, spacing, radius } from '@/lib/theme';
 
-export function ViewToggle(_props: any) {
+export function ViewToggle({
+  isOwnerView,
+  onToggle,
+}: {
+  isOwnerView: boolean;
+  onToggle: (v: boolean) => void;
+}) {
   return (
-    <View style={s.container}>
-      <Text style={s.text}>[ViewToggle]</Text>
-      <Text style={s.hint}>Scaffold — port from Ch.13</Text>
+    <View style={s.wrap}>
+      <EyeOff color={colors.foregroundSubtle} size={14} />
+      <Switch
+        value={isOwnerView}
+        onValueChange={onToggle}
+        trackColor={{ false: colors.border, true: colors.primary }}
+        thumbColor={colors.foreground}
+      />
+      <Eye color={colors.foreground} size={14} />
+      <Text style={s.label}>{isOwnerView ? 'Owner View' : 'Public View'}</Text>
     </View>
   );
 }
@@ -16,7 +30,20 @@ export function ViewToggle(_props: any) {
 export default ViewToggle;
 
 const s = StyleSheet.create({
-  container: { padding: spacing.md, backgroundColor: colors.muted, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
-  text: { fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, fontSize: typography.fontSize.sm },
-  hint: { fontFamily: typography.fontFamily.body, color: colors.mutedForeground, fontSize: typography.fontSize.xs, marginTop: 2 },
+  wrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    padding: spacing.xs,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    alignSelf: 'flex-start',
+  },
+  label: {
+    fontFamily: typography.fontFamily.bodyMedium,
+    color: colors.foreground,
+    fontSize: typography.size.sm,
+  },
 });
