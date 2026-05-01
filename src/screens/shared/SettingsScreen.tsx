@@ -5,6 +5,7 @@ import { Bell, Moon, Shield, FileText, Trash2, LogOut, ChevronRight, Users, Cook
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Navbar } from '@/components/Navbar';
+import { BackButton } from '@/components/BackButton';
 import { colors, typography, spacing } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 
@@ -17,6 +18,7 @@ export default function SettingsScreen() {
     <SafeAreaView style={s.container}>
       <Navbar />
       <ScrollView contentContainerStyle={s.content}>
+        <BackButton label="Back" />
         <Text style={s.title}>Settings</Text>
         <Text style={s.email}>{user?.email}</Text>
 
@@ -34,12 +36,12 @@ export default function SettingsScreen() {
         </SettingsGroup>
 
         <SettingsGroup title="Legal">
-          <SettingsRow icon={Shield} label="Privacy Policy" onPress={() => nav.navigate('SettingsStack' as any, { screen: 'LegalStack', params: { screen: 'PrivacyPolicy' } })} />
-          <SettingsRow icon={FileText} label="Terms of Use" onPress={() => nav.navigate('SettingsStack' as any, { screen: 'LegalStack', params: { screen: 'TermsOfUse' } })} />
-          <SettingsRow icon={Users} label="Community Guidelines" onPress={() => nav.navigate('SettingsStack' as any, { screen: 'LegalStack', params: { screen: 'CommunityGuidelines' } })} />
-          <SettingsRow icon={Shield} label="California Privacy Rights" onPress={() => nav.navigate('SettingsStack' as any, { screen: 'LegalStack', params: { screen: 'CCPARights' } })} />
-          <SettingsRow icon={Cookie} label="Cookies Policy" onPress={() => nav.navigate('SettingsStack' as any, { screen: 'LegalStack', params: { screen: 'CookiesPolicy' } })} />
-          <SettingsRow icon={Eye} label="Accessibility" onPress={() => nav.navigate('SettingsStack' as any, { screen: 'LegalStack', params: { screen: 'Accessibility' } })} />
+          <SettingsRow icon={Shield} label="Privacy Policy" onPress={() => nav.navigate('LegalStack' as any, { screen: 'PrivacyPolicy' })} />
+          <SettingsRow icon={FileText} label="Terms of Use" onPress={() => nav.navigate('LegalStack' as any, { screen: 'TermsOfUse' })} />
+          <SettingsRow icon={Users} label="Community Guidelines" onPress={() => nav.navigate('LegalStack' as any, { screen: 'CommunityGuidelines' })} />
+          <SettingsRow icon={Shield} label="California Privacy Rights" onPress={() => nav.navigate('LegalStack' as any, { screen: 'CCPARights' })} />
+          <SettingsRow icon={Cookie} label="Cookies Policy" onPress={() => nav.navigate('LegalStack' as any, { screen: 'CookiesPolicy' })} />
+          <SettingsRow icon={Eye} label="Accessibility" onPress={() => nav.navigate('LegalStack' as any, { screen: 'Accessibility' })} />
         </SettingsGroup>
 
         <SettingsGroup title="Account">

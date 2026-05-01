@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CheckCircle } from 'lucide-react-native';
+import { CheckCircle, Menu } from 'lucide-react-native';
 
 import { colors, typography, spacing, radius } from '@/lib/theme';
 import { SportType, SPORTS_CONFIG, getSportConfig } from '@/lib/data/sports';
@@ -83,6 +83,26 @@ export default function LandingScreen() {
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
+      {/* Static top navbar — always visible */}
+      <View style={s.topNav}>
+        <Text style={s.topNavLogo}>
+          <Text style={{ color: colors.primary }}>OFFER</Text>
+          <Text style={{ color: colors.foreground }}>HOUND</Text>
+          <Text style={s.topNavTm}>™</Text>
+        </Text>
+        <View style={s.topNavActions}>
+          {isAuthenticated ? (
+            <Pressable onPress={() => nav.navigate('SettingsStack' as any)} hitSlop={8}>
+              <Menu size={22} color={colors.foreground} />
+            </Pressable>
+          ) : (
+            <Pressable onPress={() => nav.navigate('AuthStack' as any)} style={s.topNavSignIn}>
+              <Text style={s.topNavSignInText}>Sign In</Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
+
       {/* Sticky sport header — appears after scrolling past hero (400px) */}
       <StickyHeader
         scrollY={scrollY}
@@ -394,6 +414,36 @@ function PodcastTeaser({ onPress }: { onPress: () => void }) {
 // ─────────────────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
+  // Static top navbar
+  topNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    zIndex: 30,
+  },
+  topNavLogo: {
+    fontFamily: typography.fontFamily.heading,
+    fontSize: 20,
+    letterSpacing: typography.letterSpacing.heading,
+  },
+  topNavTm: { fontSize: 9, color: colors.primary },
+  topNavActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  topNavSignIn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  topNavSignInText: {
+    fontFamily: typography.fontFamily.bodySemiBold,
+    color: colors.primaryForeground,
+    fontSize: typography.fontSize.sm,
+  },
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },
 

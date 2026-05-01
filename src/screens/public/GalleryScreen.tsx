@@ -24,6 +24,7 @@ import {
   ActivityIndicator,
   Modal,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, CommonActions } from '@react-navigation/native';
 import {
   Camera,
@@ -176,8 +177,26 @@ export default function GalleryScreen() {
     );
   }
   if (!profile) {
-    nav.dispatch(CommonActions.navigate({ name: 'Onboarding' as any }));
-    return null;
+    // User has no player profile — show a helpful message instead of redirecting
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={s.loading}>
+          <BackButton label="Back" />
+          <Camera size={48} color={colors.mutedForeground} />
+          <Text style={{ color: colors.foreground, fontFamily: typography.fontFamily.heading, fontSize: 22, marginTop: spacing.md, textAlign: 'center' }}>
+            Gallery
+          </Text>
+          <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginTop: spacing.sm, paddingHorizontal: spacing.lg }}>
+            Create an athlete profile to access your media gallery.
+          </Text>
+          <Button
+            onPress={() => nav.dispatch(CommonActions.navigate({ name: 'OnboardingStack' as any }))}
+            style={{ marginTop: spacing.md }}>
+            Set Up Profile
+          </Button>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   const p = profile as any;

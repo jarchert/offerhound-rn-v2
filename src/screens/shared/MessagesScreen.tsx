@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet, SafeAreaView, RefreshControl } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navbar } from '@/components/Navbar';
+import { BackButton } from '@/components/BackButton';
 import { Avatar } from '@/components/ui/Avatar';
 import { MessageThread } from '@/components/MessageThread';
 import { MessageComposer } from '@/components/MessageComposer';
-import { BackButton } from '@/components/BackButton';
 import { colors, typography, spacing } from '@/lib/theme';
 
 interface Conversation {
@@ -23,6 +24,8 @@ interface Conversation {
 export default function MessagesScreen() {
   const { user } = useAuth();
   const [activeId, setActiveId] = useState<string | null>(null);
+  const navigation = useNavigation();
+  const canGoBack = navigation.canGoBack();
 
   const { data: conversations = [], isLoading, refetch } = useQuery({
     queryKey: ['conversations', user?.id],
@@ -69,6 +72,7 @@ export default function MessagesScreen() {
     <SafeAreaView style={s.container}>
       <Navbar />
       <View style={s.header}>
+        {canGoBack && <BackButton label="Back" />}
         <Text style={s.title}>Messages</Text>
       </View>
       <FlatList
