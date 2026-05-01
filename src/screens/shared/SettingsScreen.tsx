@@ -3,7 +3,6 @@ import { View, Text, ScrollView, StyleSheet, SafeAreaView, Pressable, Switch } f
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Bell, Moon, Shield, FileText, Trash2, LogOut, ChevronRight, Users, Cookie, Eye } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTheme } from '@/contexts/ThemeContext';
 import { Navbar } from '@/components/Navbar';
 import { BackButton } from '@/components/BackButton';
 import { colors, typography, spacing } from '@/lib/theme';
@@ -12,7 +11,6 @@ import type { RootStackParamList } from '@/navigation/RootNavigator';
 export default function SettingsScreen() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
   const { signOut, user } = useAuth();
-  const { theme, toggleTheme } = useTheme();
 
   return (
     <SafeAreaView style={s.container}>
@@ -26,7 +24,12 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={Moon}
             label="Dark mode"
-            right={<Switch value={theme === 'dark'} onValueChange={toggleTheme} />}
+            right={
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={{ color: '#808897', fontSize: 11, fontFamily: 'Inter_500Medium' }}>Always on</Text>
+                <Switch value={true} disabled />
+              </View>
+            }
           />
           <SettingsRow
             icon={Bell}

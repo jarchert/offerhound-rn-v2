@@ -79,12 +79,8 @@ export default function LetterComposerScreen() {
     setIsGenerating(true);
     setGenerated('');
     try {
-      // Invoke streaming edge function via fetch (Supabase client wraps non-streaming).
-      const { data: { session } } = await supabase.auth.getSession();
+      // Match Lovable Letters.tsx payload exactly — clean fields only, anon key auth.
       const url = `${SUPABASE_FUNCTIONS_URL}/generate-letter`;
-      // Lovable parity: pack athlete profile into the edge-function payload so the
-      // generated letter is personalized (name, position, height, weight, GPA,
-      // graduation_year, school, city/state, etc.).
       const athleteProfile = profile
         ? {
             name: (profile as any).full_name,
@@ -106,33 +102,25 @@ export default function LetterComposerScreen() {
       const resp = await fetch(url, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${session?.access_token ?? SUPABASE_ANON_KEY}`,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...draft,
-          // Edge function expects letterType key (Lovable Letters.tsx)
           letterType: draft.letterType,
-          coachName: draft.recipientName,
-          schoolName: draft.schoolName,
+          coachName: draft.recipientName || undefined,
+          schoolName: draft.schoolName || undefined,
           athleteProfile,
         }),
       });
-      if (!resp.ok) throw new Error(`Edge function returned ${resp.status}`);
-
-      const reader = (resp.body as any)?.getReader?.();
-      if (!reader) {
-        const text = await resp.text();
-        setGenerated(text);
-        return;
+      if (!resp.ok) {
+        const errBody = await resp.json().catch(() => ({}));
+        throw new Error((errBody as any)?.error || `Edge function returned ${resp.status}`);
       }
-      const decoder = new TextDecoder();
-      let buffered = '';
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffered += decoder.decode(value, { stream: true });
-        setGenerated(buffered);
+      const data = await resp.json().catch(() => ({}));
+      if ((data as any).letter) {
+        setGenerated((data as any).letter);
+      } else {
+        throw new Error('No letter returned');
       }
     } catch (e: any) {
       Alert.alert('Generation failed', e?.message ?? 'Unable to generate letter.');
