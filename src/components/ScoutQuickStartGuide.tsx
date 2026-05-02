@@ -172,7 +172,7 @@ export function ScoutQuickStartGuide({
     // "/athletes", "/coaches", "/organization/settings" all land on ScoutTabs for now
     // (GAP_IN_LOVABLE: no dedicated screens yet — post-Session 4).
     if (!link) return;
-    navigation.navigate("ScoutTabs");
+    navigation.navigate("ScoutDrawer");
   };
 
   const handleStepAction = (index: number, link: LovableRoute) => {

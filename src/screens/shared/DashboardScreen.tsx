@@ -91,13 +91,13 @@ import {
   Checkbox,
 } from '@/components/ui';
 
-import { Footer } from '@/components/Footer';
+// Footer removed — not needed on mobile.
 import { BackButton } from '@/components/BackButton';
 import { ProfileCompletionTracker } from '@/components/ProfileCompletionTracker';
 import { SubscriptionStatus } from '@/components/SubscriptionStatus';
 import { ReferralCard } from '@/components/ReferralCard';
-import { ViewToggle } from '@/components/ViewToggle';
-import { OwnerNav } from '@/components/OwnerNav';
+// ViewToggle and OwnerNav removed — web-only concepts, not needed on mobile.
+// Profile tab serves the owner/public view purpose; tab bar replaces OwnerNav.
 import { ScrollToTop } from '@/components/ScrollToTop';
 import { TermsAcceptanceBanner } from '@/components/TermsAcceptanceBanner';
 import { OfflineBanner } from '@/components/OfflineBanner';
@@ -119,7 +119,7 @@ import { SharePlayerCardDialog } from '@/components/SharePlayerCardDialog';
 import { SPORTS_CONFIG } from '@/lib/data/sports';
 import { colors, spacing, typography, radius } from '@/lib/theme';
 
-import { Navbar } from '@/components/Navbar';
+// Navbar removed — drawer/tab header handles top nav on mobile.
 type Priority = 'high' | 'medium' | 'low';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -140,7 +140,7 @@ export default function DashboardScreen() {
   const nav = useNavigation<NavigationProp<any>>();
   const route = useRoute<RouteProp<Record<string, { tab?: string } | undefined>, string>>();
 
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdminRole();
   const { data: stats, isLoading: statsLoading } = useActivityStats();
   const { isOfflineData, profile: ownProfile } = usePlayerProfile();
@@ -240,7 +240,8 @@ export default function DashboardScreen() {
     [savedCoaches, showHighPriorityOnly, coachSearchQuery],
   );
 
-  // Role-based redirects (mirrors web Dashboard.tsx useEffect).
+  // Role-based redirects — if a non-athlete somehow lands here, send them to
+  // their own dashboard. Mirrors web Dashboard.tsx useEffect + adds missing roles.
   useEffect(() => {
     if (
       authLoading ||
@@ -258,12 +259,34 @@ export default function DashboardScreen() {
       nav.navigate('AdminTabs' as never);
       return;
     }
+    // Check user meta role for roles that don't have profile hooks here
+    const metaRole = (user as any)?.user_metadata?.role;
+    if (metaRole === 'high_school_coach' || metaRole === 'hs_coach') {
+      nav.navigate('HSCoachDrawer' as never);
+      return;
+    }
+    if (metaRole === 'club_coach') {
+      nav.navigate('ClubCoachDrawer' as never);
+      return;
+    }
+    if (metaRole === 'parent') {
+      nav.navigate('ParentDrawer' as never);
+      return;
+    }
+    if (metaRole === 'influencer') {
+      nav.navigate('InfluencerDrawer' as never);
+      return;
+    }
+    if (metaRole === 'agency') {
+      nav.navigate('AgencyDrawer' as never);
+      return;
+    }
     if (coachProfile) {
-      nav.navigate('CoachTabs' as never);
+      nav.navigate('CoachDrawer' as never);
       return;
     }
     if (scoutProfile) {
-      nav.navigate('ScoutTabs' as never);
+      nav.navigate('ScoutDrawer' as never);
       return;
     }
   }, [
@@ -277,6 +300,7 @@ export default function DashboardScreen() {
     coachProfile,
     scoutProfile,
     nav,
+    user,
   ]);
 
   const handleRemoveCoach = async (coachId: string) => {
@@ -941,7 +965,7 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <Navbar />
+      {/* Navbar removed — mobile uses tab bar, not web top nav */}
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1 }}
@@ -1100,15 +1124,14 @@ export default function DashboardScreen() {
         {activeTab === 'profile' && renderProfileTab()}
         {activeTab === 'social' && renderSocialTab()}
 
-        <Footer />
+        {/* Footer removed — not needed on mobile */}
       </ScrollView>
 
       <ScrollToTop
         visible={scrollToTopVisible}
         onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
       />
-      {isOwnerView && <OwnerNav />}
-      <ViewToggle isOwnerView={isOwnerView} onToggle={setIsOwnerView} />
+      {/* OwnerNav + ViewToggle removed — web-only concepts */}
 
       {/* Edit coach notes dialog */}
       <Dialog open={!!editingCoachId} onOpenChange={(o) => !o && setEditingCoachId(null)}>

@@ -1,22 +1,23 @@
 // RootNavigator — post-Session 2 rewrite per Part 2 §2.1
 // NO NavigationContainer here (App.tsx owns it). This is the root Stack that
-// branches on auth + role and exposes 9 role navigators + 7 shared stacks.
+// branches on auth + role. Athlete + Admin use bottom tabs; all other roles
+// use drawer (hamburger menu) navigators per NAV_REDESIGN.md.
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors } from '@/lib/theme';
 import type { UserRole } from '@/lib/constants';
 
-// Role navigators
+// Role navigators — Athlete + Admin keep bottom tabs; all others use drawer.
 import AthleteTabs from '@/navigation/role/AthleteTabs';
-import CoachTabs from '@/navigation/role/CoachTabs';
-import ScoutTabs from '@/navigation/role/ScoutTabs';
-import ParentTabs from '@/navigation/role/ParentTabs';
-import InfluencerTabs from '@/navigation/role/InfluencerTabs';
 import AdminTabs from '@/navigation/role/AdminTabs';
-import HSCoachTabs from '@/navigation/role/HSCoachTabs';
-import ClubCoachTabs from '@/navigation/role/ClubCoachTabs';
-import AgencyTabs from '@/navigation/role/AgencyTabs';
+import CoachDrawer from '@/navigation/role/CoachDrawer';
+import ScoutDrawer from '@/navigation/role/ScoutDrawer';
+import ParentDrawer from '@/navigation/role/ParentDrawer';
+import InfluencerDrawer from '@/navigation/role/InfluencerDrawer';
+import HSCoachDrawer from '@/navigation/role/HSCoachDrawer';
+import ClubCoachDrawer from '@/navigation/role/ClubCoachDrawer';
+import AgencyDrawer from '@/navigation/role/AgencyDrawer';
 
 // Shared stacks
 import AuthStack from '@/navigation/stacks/AuthStack';
@@ -57,14 +58,14 @@ export type RootStackParamList = {
   AuthStack: undefined;
   OnboardingStack: undefined;
   AthleteTabs: undefined;
-  CoachTabs: undefined;
-  ScoutTabs: undefined;
-  ParentTabs: undefined;
-  InfluencerTabs: undefined;
+  CoachDrawer: undefined;
+  ScoutDrawer: undefined;
+  ParentDrawer: undefined;
+  InfluencerDrawer: undefined;
   AdminTabs: undefined;
-  HSCoachTabs: undefined;
-  ClubCoachTabs: undefined;
-  AgencyTabs: undefined;
+  HSCoachDrawer: undefined;
+  ClubCoachDrawer: undefined;
+  AgencyDrawer: undefined;
   CampStack: undefined;
   SettingsStack: undefined;
   PublicProfileStack: undefined;
@@ -98,15 +99,15 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 function roleToInitialRoute(role: UserRole | null | undefined): keyof RootStackParamList {
   switch (role) {
     case 'athlete': return 'AthleteTabs';
-    case 'coach': return 'CoachTabs';
-    case 'scout': return 'ScoutTabs';
-    case 'parent': return 'ParentTabs';
-    case 'influencer': return 'InfluencerTabs';
+    case 'coach': return 'CoachDrawer';
+    case 'scout': return 'ScoutDrawer';
+    case 'parent': return 'ParentDrawer';
+    case 'influencer': return 'InfluencerDrawer';
     case 'admin':
     case 'moderator': return 'AdminTabs';
-    case 'high_school_coach': return 'HSCoachTabs';
-    case 'club_coach': return 'ClubCoachTabs';
-    case 'agency' as UserRole: return 'AgencyTabs';
+    case 'high_school_coach': return 'HSCoachDrawer';
+    case 'club_coach': return 'ClubCoachDrawer';
+    case 'agency' as UserRole: return 'AgencyDrawer';
     default: return 'AthleteTabs';
   }
 }
@@ -145,14 +146,14 @@ export default function RootNavigator() {
         <>
           {/* Role-specific navigators — the initialRouteName picks one */}
           <Stack.Screen name="AthleteTabs" component={AthleteTabs} />
-          <Stack.Screen name="CoachTabs" component={CoachTabs} />
-          <Stack.Screen name="ScoutTabs" component={ScoutTabs} />
-          <Stack.Screen name="ParentTabs" component={ParentTabs} />
-          <Stack.Screen name="InfluencerTabs" component={InfluencerTabs} />
+          <Stack.Screen name="CoachDrawer" component={CoachDrawer} />
+          <Stack.Screen name="ScoutDrawer" component={ScoutDrawer} />
+          <Stack.Screen name="ParentDrawer" component={ParentDrawer} />
+          <Stack.Screen name="InfluencerDrawer" component={InfluencerDrawer} />
           <Stack.Screen name="AdminTabs" component={AdminTabs} />
-          <Stack.Screen name="HSCoachTabs" component={HSCoachTabs} />
-          <Stack.Screen name="ClubCoachTabs" component={ClubCoachTabs} />
-          <Stack.Screen name="AgencyTabs" component={AgencyTabs} />
+          <Stack.Screen name="HSCoachDrawer" component={HSCoachDrawer} />
+          <Stack.Screen name="ClubCoachDrawer" component={ClubCoachDrawer} />
+          <Stack.Screen name="AgencyDrawer" component={AgencyDrawer} />
 
           {/* Shared stacks accessible from any role */}
           <Stack.Screen name="OnboardingStack" component={OnboardingStack} />

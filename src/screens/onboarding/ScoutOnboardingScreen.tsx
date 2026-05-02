@@ -48,7 +48,7 @@ export default function ScoutOnboardingScreen() {
 
   useEffect(() => {
     if (!authLoading && !profileLoading && existingProfile && (existingProfile as any)?.onboarding_complete) {
-      nav.navigate('ScoutTabs' as any);
+      nav.navigate('ScoutDrawer' as any);
     }
   }, [authLoading, profileLoading, existingProfile, nav]);
 
@@ -65,7 +65,7 @@ export default function ScoutOnboardingScreen() {
         onboarding_complete: true,
       });
       toast({ title: 'Scout profile created!' });
-      nav.navigate('ScoutTabs' as any);
+      nav.navigate('ScoutDrawer' as any);
     } catch (e: any) {
       toast({ title: 'Error', description: e?.message || 'Failed to create profile', variant: 'destructive' });
     }

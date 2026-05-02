@@ -104,7 +104,7 @@ export default function CoachOnboardingScreen() {
   }, [authLoading, isAuthenticated, nav]);
 
   useEffect(() => {
-    if (!authLoading && !profileLoading && existingProfile) nav.navigate('CoachTabs' as any);
+    if (!authLoading && !profileLoading && existingProfile) nav.navigate('CoachDrawer' as any);
   }, [authLoading, profileLoading, existingProfile, nav]);
 
   useEffect(() => {
@@ -182,7 +182,7 @@ export default function CoachOnboardingScreen() {
         await supabase.from('user_roles').insert({ user_id: user.id, role: 'high_school_coach' as any }).select();
         await acceptReferralIfPresent();
         toast({ title: 'High School Coach profile created!' });
-        nav.navigate('HSCoachTabs' as any);
+        nav.navigate('HSCoachDrawer' as any);
       } else {
         const coachData =
           coachType === 'club'
@@ -244,7 +244,7 @@ export default function CoachOnboardingScreen() {
 
         await queryClient.refetchQueries({ queryKey: ['coach-profile', user.id] });
         await acceptReferralIfPresent();
-        nav.navigate(coachType === 'club' ? ('ClubCoachTabs' as any) : ('CoachTabs' as any));
+        nav.navigate(coachType === 'club' ? ('ClubCoachDrawer' as any) : ('CoachDrawer' as any));
       }
     } catch (e: any) {
       toast({ title: 'Error', description: e?.message || 'Failed to save profile', variant: 'destructive' });

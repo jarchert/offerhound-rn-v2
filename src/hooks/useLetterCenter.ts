@@ -238,21 +238,22 @@ export function sanitizeLetterPrefill(
 
 // Map the resolved web letter-center path to the matching RN nested route.
 // Keeps the per-role routing semantics of the web hook intact.
+// Drawer navigators use 'Letters' screen name; AthleteTabs keeps 'LettersTab'.
 type LetterRoute = {
-  parent: keyof RootStackParamList;
-  screen: "LettersTab";
+  parent: string;
+  screen: string;
 };
 
 function letterRouteForPath(path: string): LetterRoute {
   switch (path) {
     case "/hs-coach/letters":
-      return { parent: "HSCoachTabs", screen: "LettersTab" };
+      return { parent: "HSCoachDrawer", screen: "Letters" };
     case "/club/letters":
-      return { parent: "ClubCoachTabs", screen: "LettersTab" };
+      return { parent: "ClubCoachDrawer", screen: "Letters" };
     case "/coach/letters":
-      return { parent: "CoachTabs", screen: "LettersTab" };
+      return { parent: "CoachDrawer", screen: "Letters" };
     case "/scout/letters":
-      return { parent: "ScoutTabs", screen: "LettersTab" };
+      return { parent: "ScoutDrawer", screen: "Letters" };
     case "/letters":
     default:
       return { parent: "AthleteTabs", screen: "LettersTab" };

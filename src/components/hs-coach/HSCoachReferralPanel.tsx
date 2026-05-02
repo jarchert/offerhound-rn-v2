@@ -88,7 +88,7 @@ export function HSCoachReferralPanel() {
       default:
         // eslint-disable-next-line no-console
         console.warn('[HSCoachReferralPanel] unknown nav target', target);
-        nav.navigate('HSCoachTabs');
+        nav.navigate('HSCoachDrawer');
     }
   };
 

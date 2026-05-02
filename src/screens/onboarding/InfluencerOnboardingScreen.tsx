@@ -78,7 +78,7 @@ export default function InfluencerOnboardingScreen() {
         .eq('user_id', user.id)
         .maybeSingle();
       if (cancelled) return;
-      if (data) nav.navigate('InfluencerTabs' as any);
+      if (data) nav.navigate('InfluencerDrawer' as any);
       else setChecking(false);
     })();
     return () => { cancelled = true; };
@@ -147,7 +147,7 @@ export default function InfluencerOnboardingScreen() {
         if (links.length) await supabase.from('influencer_social_links' as any).insert(links);
       }
       toast({ title: 'Creator profile created — welcome!' });
-      nav.navigate('InfluencerTabs' as any);
+      nav.navigate('InfluencerDrawer' as any);
     } catch (e: any) {
       toast({ title: 'Error', description: e?.message || 'Failed to create profile', variant: 'destructive' });
     } finally {

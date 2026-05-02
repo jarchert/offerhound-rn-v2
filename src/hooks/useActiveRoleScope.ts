@@ -22,13 +22,13 @@ export type ActiveRole =
 
 const ROUTE_TO_ROLE: Record<string, ActiveRole> = {
   AdminTabs: 'admin',
-  HSCoachTabs: 'hs_coach',
-  ClubCoachTabs: 'club_coach',
-  CoachTabs: 'coach',
-  AgencyTabs: 'agency',
-  ScoutTabs: 'scout',
-  InfluencerTabs: 'influencer',
-  ParentTabs: 'parent',
+  HSCoachDrawer: 'hs_coach',
+  ClubCoachDrawer: 'club_coach',
+  CoachDrawer: 'coach',
+  AgencyDrawer: 'agency',
+  ScoutDrawer: 'scout',
+  InfluencerDrawer: 'influencer',
+  ParentDrawer: 'parent',
   AthleteTabs: 'athlete',
 };
 

@@ -53,7 +53,7 @@ const allNavItems: NavItem[] = [
   { path: '/gallery',    route: 'PublicProfileStack', label: 'Gallery',   icon: ImageIcon,       description: 'Gallery',              adminOnly: false, athleteOnly: true },
   { path: '/dashboard',  route: 'AthleteTabs',        label: 'Dashboard', icon: LayoutDashboard, description: 'Dashboard',            adminOnly: false, athleteOnly: true },
   { path: '/messages',   route: 'Messages',           label: 'Messages',  icon: MessageCircle,   description: 'Messages with coaches', adminOnly: false, athleteOnly: true },
-  { path: '/activity',   route: 'CoachTabs',          label: 'Coaches',   icon: Users,           description: 'Find the coach and program that is searching for you', adminOnly: false, athleteOnly: true },
+  { path: '/activity',   route: 'CoachDrawer',          label: 'Coaches',   icon: Users,           description: 'Find the coach and program that is searching for you', adminOnly: false, athleteOnly: true },
   { path: '/news-learn', route: 'PublicTabs',         label: 'News',      icon: FileText,        description: 'Sports news and podcasts', adminOnly: false, athleteOnly: false },
   { path: '/letters',    route: 'LetterComposer',     label: 'Letters',   icon: FileText,        description: 'Use the AI OfferHound™ Coach to draft the perfect letter to coaches', adminOnly: false, athleteOnly: true },
   { path: '/camps',      route: 'CampStack',          label: 'Camps',     icon: CalendarDays,    description: 'Find college camps and showcases', adminOnly: false, athleteOnly: true },

@@ -87,7 +87,7 @@ export default function CoachDashboard() {
             title="Top Athlete Matches"
             subtitle={matches.length > 0 ? `${matches.length} athletes matched` : 'Set your recruiting criteria'}
             actionLabel={matches.length > 0 ? 'See all' : undefined}
-            onAction={() => nav.navigate('CoachTabs' as any)}
+            onAction={() => nav.navigate('CoachDrawer' as any)}
           />
           {topMatches.length === 0 ? (
             <View style={s.empty}>

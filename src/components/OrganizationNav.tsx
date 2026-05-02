@@ -43,10 +43,10 @@ type NavItem = {
 };
 
 const orgNavItems: NavItem[] = [
-  { path: '/scout/dashboard',      route: 'ScoutTabs',     label: 'Dashboard',    icon: LayoutDashboard, description: 'Organization dashboard' },
+  { path: '/scout/dashboard',      route: 'ScoutDrawer',     label: 'Dashboard',    icon: LayoutDashboard, description: 'Organization dashboard' },
   { path: '/organization/settings', route: 'SettingsStack', label: 'Organization', icon: Building2,       description: 'Manage organization settings' },
   { path: '/athletes',             route: 'AthleteTabs',   label: 'Athletes',     icon: Search,          description: 'Search and discover athletes' },
-  { path: '/coaches',              route: 'CoachTabs',     label: 'Coaches',      icon: Users,           description: 'Browse coach directory' },
+  { path: '/coaches',              route: 'CoachDrawer',     label: 'Coaches',      icon: Users,           description: 'Browse coach directory' },
   { path: '/messages',             route: 'Messages',      label: 'Messages',     icon: MessageCircle,   description: 'Messages with athletes and coaches' },
   { path: '/settings',             route: 'SettingsStack', label: 'Settings',     icon: Settings,        description: 'Account settings' },
 ];

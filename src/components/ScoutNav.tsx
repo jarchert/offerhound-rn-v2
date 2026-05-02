@@ -107,10 +107,10 @@ export function ScoutNav() {
 
   // Build nav items dynamically based on organization membership — verbatim from Lovable.
   const scoutNavItems: NavItem[] = [
-    { path: '/scout/dashboard',                route: 'ScoutTabs',        label: 'Dashboard',    icon: LayoutDashboard, description: 'Your scouting dashboard' },
-    { path: '/scout/dashboard?tab=profile',    route: 'ScoutTabs',        params: { tab: 'profile' }, label: 'My Profile', icon: User, description: 'Update your scout profile' },
-    { path: '/athletes',                       route: 'ScoutTabs',        label: 'Athletes',     icon: Search,          description: 'Search and discover athletes' },
-    { path: '/coaches',                        route: 'CoachTabs',        label: 'Coaches',      icon: Users,           description: 'Browse coach directory' },
+    { path: '/scout/dashboard',                route: 'ScoutDrawer',        label: 'Dashboard',    icon: LayoutDashboard, description: 'Your scouting dashboard' },
+    { path: '/scout/dashboard?tab=profile',    route: 'ScoutDrawer',        params: { tab: 'profile' }, label: 'My Profile', icon: User, description: 'Update your scout profile' },
+    { path: '/athletes',                       route: 'ScoutDrawer',        label: 'Athletes',     icon: Search,          description: 'Search and discover athletes' },
+    { path: '/coaches',                        route: 'CoachDrawer',        label: 'Coaches',      icon: Users,           description: 'Browse coach directory' },
     { path: '/messages',                       route: 'Messages',         label: 'Messages',     icon: MessageCircle,   description: 'Messages with athletes and coaches' },
     // Show organization settings if user is an org owner
     ...(orgData?.isOwner

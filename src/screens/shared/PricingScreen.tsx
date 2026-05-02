@@ -203,7 +203,7 @@ export default function PricingScreen() {
             : 'Free tier — no purchase required.',
       });
       // Navigate to relevant dashboard based on tier category
-      if (tier.category === 'coach') nav.navigate('CoachTabs' as never);
+      if (tier.category === 'coach') nav.navigate('CoachDrawer' as never);
       else nav.navigate('AthleteTabs' as never);
       return;
     }

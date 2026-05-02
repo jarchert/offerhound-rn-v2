@@ -172,7 +172,7 @@ export default function ClubCoachDashboardScreen() {
 
   useEffect(() => {
     if (!authLoading && profileFetched && !clubLoading && !clubProfile && isAuthenticated) {
-      nav.navigate('CoachTabs' as any);
+      nav.navigate('CoachDrawer' as any);
     }
   }, [authLoading, profileFetched, clubLoading, clubProfile, isAuthenticated, nav]);
 

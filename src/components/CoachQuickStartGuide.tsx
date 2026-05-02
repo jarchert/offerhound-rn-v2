@@ -152,7 +152,7 @@ export function CoachQuickStartGuide({
     // "/athletes" lands on the coach tabs for now
     // (GAP_IN_LOVABLE: no dedicated Athletes screen in coach flow yet).
     if (!link) return;
-    navigation.navigate("CoachTabs");
+    navigation.navigate("CoachDrawer");
   };
 
   const handleStepAction = (index: number, link: LovableRoute) => {

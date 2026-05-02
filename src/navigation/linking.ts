@@ -127,66 +127,71 @@ export const linking: LinkingOptions<any> = {
         },
       },
 
-      // Coach role tabs
-      CoachTabs: {
+      // Coach role (drawer)
+      CoachDrawer: {
         screens: {
-          DashboardTab: 'coach',
-          PipelineTab: 'coach/pipeline',
-          CampsTab: 'coach/camps',
-          LettersTab: 'coach/letters',
-          DirectoryTab: 'coach/directory',
+          Dashboard: 'coach',
+          Pipeline: 'coach/pipeline',
+          FindAthletes: 'coach/athletes',
+          Letters: 'coach/letters',
+          Camps: 'coach/camps',
         },
       },
 
-      // Scout role tabs
-      ScoutTabs: {
+      // Scout role (drawer)
+      ScoutDrawer: {
         screens: {
-          DashboardTab: 'scout',
-          LettersTab: 'scout/letters',
-          TrendsTab: 'scout/trends',
-          OnboardingTab: 'scout/guide',
+          Dashboard: 'scout',
+          FindAthletes: 'scout/athletes',
+          Letters: 'scout/letters',
+          Trends: 'scout/trends',
         },
       },
 
-      // Club coach role tabs
-      ClubCoachTabs: {
+      // Club coach role (drawer)
+      ClubCoachDrawer: {
         screens: {
-          DashboardTab: 'club-coach',
-          CampsTab: 'club-coach/camps',
-          LettersTab: 'club-coach/letters',
+          Dashboard: 'club-coach',
+          Camps: 'club-coach/camps',
+          FindAthletes: 'club-coach/athletes',
+          Letters: 'club-coach/letters',
         },
       },
 
-      // HS coach role tabs
-      HSCoachTabs: {
+      // HS coach role (drawer)
+      HSCoachDrawer: {
         screens: {
-          DashboardTab: 'hs-coach',
-          LettersTab: 'hs-coach/letters',
+          Dashboard: 'hs-coach',
+          FindAthletes: 'hs-coach/athletes',
+          Letters: 'hs-coach/letters',
         },
       },
 
-      // Parent role tabs
-      ParentTabs: {
+      // Parent role (drawer)
+      ParentDrawer: {
         screens: {
-          DashboardTab: 'parent',
-          TrustSafetyTab: 'parent/safety',
+          Dashboard: 'parent',
+          TrustSafety: 'parent/safety',
         },
       },
 
-      // Influencer role tabs
-      InfluencerTabs: {
+      // Influencer role (drawer)
+      InfluencerDrawer: {
         screens: {
-          DashboardTab: 'influencer',
-          BoardTab: 'influencer/board',
-          PodcastsTab: 'influencer/podcasts',
+          Dashboard: 'influencer',
+          MyProfile: 'influencer/profile',
+          Board: 'influencer/board',
+          Podcasts: 'influencer/podcasts',
         },
       },
 
-      // Agency role tabs (NEW in Session 2)
-      AgencyTabs: {
+      // Agency role (drawer)
+      AgencyDrawer: {
         screens: {
-          DashboardTab: 'agency',
-          LettersTab: 'agency/letters',
+          Dashboard: 'agency',
+          FindAthletes: 'agency/athletes',
+          Letters: 'agency/letters',
+          AgencyTeam: 'agency/team',
         },
       },
 
