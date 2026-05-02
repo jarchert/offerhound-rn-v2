@@ -83,7 +83,7 @@ export function InfluencerMatchCard({
     if (disableNavigate) return;
     // Web: navigate(`/influencers/${influencer.handle}`)
     if (influencer.handle) {
-      navigation.navigate('InfluencerProfile', { handle: influencer.handle });
+      navigation.navigate('PublicProfileStack' as any, { screen: 'InfluencerProfile', params: { handle: influencer.handle } });
     }
   };
 

@@ -78,7 +78,7 @@ export default function QuickStartOrganizationScreen() {
 
     setIsSubmitting(true);
     try {
-      if (!user) { nav.navigate('Auth' as any); setIsSubmitting(false); return; }
+      if (!user) { nav.navigate('AuthStack' as any); setIsSubmitting(false); return; }
 
       const { data: existingScout } = await supabase.from('scout_profiles').select('id').eq('user_id', user.id).maybeSingle();
       if (!existingScout) {

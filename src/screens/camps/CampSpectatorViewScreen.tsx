@@ -143,7 +143,7 @@ export default function CampSpectatorViewScreen() {
       <SafeAreaView style={s.fullCenter}>
         <AlertCircle size={40} color={colors.mutedForeground} />
         <Text style={s.errorText}>This spectator link is invalid.</Text>
-        <Button variant="outline" onPress={() => navigation.navigate('Landing' as never)}>Go home</Button>
+        <Button variant="outline" onPress={() => navigation.navigate('PublicTabs' as never)}>Go home</Button>
       </SafeAreaView>
     );
   }
@@ -155,7 +155,7 @@ export default function CampSpectatorViewScreen() {
         <Text style={s.errorText}>
           {isRevoked ? 'This spectator link has been revoked.' : 'This spectator link has expired.'}
         </Text>
-        <Button variant="outline" onPress={() => navigation.navigate('Landing' as never)}>Go home</Button>
+        <Button variant="outline" onPress={() => navigation.navigate('PublicTabs' as never)}>Go home</Button>
       </SafeAreaView>
     );
   }

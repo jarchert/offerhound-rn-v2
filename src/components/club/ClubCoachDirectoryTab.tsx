@@ -367,7 +367,7 @@ export function ClubCoachDirectoryTab({ clubProfile }: Props) {
                   <Pressable
                     key={scout.id}
                     onPress={() =>
-                      navigation.navigate('ScoutDetail', { scoutId: scout.id })
+                      navigation.navigate('PublicProfileStack' as any, { screen: 'PublicScoutProfile', params: { scoutId: scout.id } })
                     }
                     style={styles.scoutPressable}
                   >

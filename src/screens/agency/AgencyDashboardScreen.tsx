@@ -147,11 +147,7 @@ export default function AgencyDashboardScreen() {
               variant="outline" size="sm"
               leftIcon={<TrendingUp size={14} color={colors.primary} />}
               onPress={() => {
-                // TODO: ScoutTrends is currently only available as a Scout role tab
-                // (TrendsTab in src/navigation/role/ScoutTabs.tsx) and not as a standalone
-                // route accessible from AgencyTabs. Add a dedicated 'ScoutTrends' Stack.Screen
-                // in src/navigation/RootNavigator.tsx pointing at
-                // src/screens/scout/ScoutTrendsScreen.tsx, then wire this onPress.
+                nav.navigate('ScoutTrends' as never);
               }}
             >
               Trends

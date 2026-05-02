@@ -150,7 +150,7 @@ export function CoachMatchCard({
       };
       const letterCenter =
         viewerRole === 'scout'      ? 'ScoutLetters' :
-        viewerRole === 'club-coach' ? 'ClubLetters' :
+        viewerRole === 'club-coach' ? 'LetterComposer' :
         viewerRole === 'hs-coach'   ? 'HsCoachLetters' :
                                       'CoachLetters';
       navigation.navigate(letterCenter, params);

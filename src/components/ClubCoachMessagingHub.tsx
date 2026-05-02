@@ -188,7 +188,7 @@ export function ClubCoachMessagingHub() {
       });
       return;
     }
-    navigation.navigate("ClubLetters" as never, {
+    navigation.navigate("LetterComposer" as never, {
       recipientCategory: inferRecipientCategory(contact),
       recipientType: "coach",
       recipientName: contact.contact_name || "",
@@ -200,7 +200,7 @@ export function ClubCoachMessagingHub() {
 
   const handleRecommendAthlete = (contact: any, athlete: any) => {
     if (!contact.email) return;
-    navigation.navigate("ClubLetters" as never, {
+    navigation.navigate("LetterComposer" as never, {
       recipientCategory: inferRecipientCategory(contact),
       recipientType: "coach",
       recipientName: contact.contact_name || "",

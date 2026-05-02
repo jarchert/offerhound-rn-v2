@@ -166,7 +166,7 @@ export default function GalleryScreen() {
   };
 
   if (!authLoading && !isAuthenticated) {
-    nav.dispatch(CommonActions.navigate({ name: 'Landing' as any }));
+    nav.dispatch(CommonActions.navigate({ name: 'PublicTabs' as any }));
     return null;
   }
   if (isLoading || authLoading) {
@@ -372,7 +372,7 @@ export default function GalleryScreen() {
             {isOwnerView && galleryItems.length === 0 && (
               <Button
                 onPress={() =>
-                  nav.dispatch(CommonActions.navigate({ name: 'Dashboard' as any }))
+                  nav.dispatch(CommonActions.navigate({ name: 'AthleteTabs' as any }))
                 }
                 leftIcon={<Upload size={16} color={colors.primaryForeground} />}>
                 Upload Photos

@@ -117,7 +117,7 @@ export default function SampleAthleteScreen() {
             <Button
               size="lg"
               onPress={() =>
-                nav.dispatch(CommonActions.navigate({ name: 'Auth' as any }))
+                nav.dispatch(CommonActions.navigate({ name: 'AuthStack' as any }))
               }>
               Create Your Free Profile
             </Button>

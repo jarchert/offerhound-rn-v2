@@ -194,7 +194,7 @@ export default function InfluencerProfileScreen() {
                     onPress={() =>
                       // PORT-PENDING: routes to influencer dashboard. The RN
                       // InfluencerStack/Dashboard wiring is in a sibling stack.
-                      nav.navigate('InfluencerDashboard' as any)
+                      nav.navigate('InfluencerDrawer' as any)
                     }>
                     Manage your profile
                   </Button>

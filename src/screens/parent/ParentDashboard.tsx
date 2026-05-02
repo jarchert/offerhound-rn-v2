@@ -28,7 +28,7 @@ export default function ParentDashboard() {
           <Card style={s.empty}>
             <Text style={s.emptyTitle}>Link an athlete</Text>
             <Text style={s.emptyText}>Send an invite to your child to manage their recruiting profile together.</Text>
-            <Button variant="default" onPress={() => {/* invite flow */}}>Invite athlete</Button>
+            <Button variant="default" onPress={() => nav.navigate('Messages')}>Invite athlete</Button>
           </Card>
         ) : (
           linkedAthletes.map(a => (

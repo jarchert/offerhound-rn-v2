@@ -216,7 +216,7 @@ function StickyHeader({
   });
   return (
     <Animated.View style={[s.stickyHeader, { transform: [{ translateY }], opacity }]}>
-      <Pressable onPress={() => nav.navigate('LandingTab')}>
+      <Pressable onPress={() => nav.navigate('Landing' as any)}>
         <Text style={s.stickyLogo}>
           <Text style={{ color: colors.primary }}>OFFER</Text>
           <Text style={{ color: colors.foreground }}>HOUND</Text>

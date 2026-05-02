@@ -48,6 +48,15 @@ import SavedCoachesScreen from '@/screens/shared/SavedCoachesScreen';
 import AthleteSearchScreen from '@/screens/shared/AthleteSearchScreen';
 import CoachDirectoryScreen from '@/screens/shared/CoachDirectoryScreen';
 import ScoutTrendsScreen from '@/screens/scout/ScoutTrendsScreen';
+import CampDiscoveryScreen from '@/screens/shared/CampDiscoveryScreen';
+import CoachSearchScreen from '@/screens/shared/CoachSearchScreen';
+import NILAdvisorScreen from '@/screens/athlete/NILAdvisorScreen';
+import PodcastLibraryScreen from '@/screens/shared/PodcastLibraryScreen';
+import PodcastEpisodeDetailScreen from '@/screens/shared/PodcastEpisodeDetailScreen';
+import NewsAndLearnScreen from '@/screens/shared/NewsAndLearnScreen';
+import SavedCampsScreen from '@/screens/shared/SavedCampsScreen';
+import ReferralTrackingScreen from '@/screens/shared/ReferralTrackingScreen';
+import InfluencerBoardScreen from '@/screens/influencer/InfluencerBoardScreen';
 
 // Persistent post-auth overlay
 import FloatingAICoach from '@/components/FloatingAICoach';
@@ -88,6 +97,15 @@ export type RootStackParamList = {
   AthleteSearch: { q?: string; sport?: string; state?: string; position?: string } | undefined;
   CoachDirectory: undefined;
   ScoutTrends: undefined;
+  CampDiscovery: undefined;
+  CoachSearch: undefined;
+  NILAdvisor: undefined;
+  PodcastLibrary: undefined;
+  PodcastEpisodeDetail: { episodeId?: string } | undefined;
+  NewsAndLearn: undefined;
+  SavedCamps: undefined;
+  ReferralTracking: undefined;
+  InfluencerBoard: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -190,6 +208,15 @@ export default function RootNavigator() {
           <Stack.Screen name="AthleteSearch" component={AthleteSearchScreen} />
           <Stack.Screen name="CoachDirectory" component={CoachDirectoryScreen} />
           <Stack.Screen name="ScoutTrends" component={ScoutTrendsScreen} />
+          <Stack.Screen name="CampDiscovery" component={CampDiscoveryScreen} />
+          <Stack.Screen name="CoachSearch" component={CoachSearchScreen} />
+          <Stack.Screen name="NILAdvisor" component={NILAdvisorScreen} />
+          <Stack.Screen name="PodcastLibrary" component={PodcastLibraryScreen} />
+          <Stack.Screen name="PodcastEpisodeDetail" component={PodcastEpisodeDetailScreen} />
+          <Stack.Screen name="NewsAndLearn" component={NewsAndLearnScreen} />
+          <Stack.Screen name="SavedCamps" component={SavedCampsScreen} />
+          <Stack.Screen name="ReferralTracking" component={ReferralTrackingScreen} />
+          <Stack.Screen name="InfluencerBoard" component={InfluencerBoardScreen} />
         </>
       )}
     </Stack.Navigator>

@@ -317,7 +317,7 @@ export function ReferralCard() {
             rightIcon={<ArrowRight size={16} color={colors.foreground} />}
             onPress={() => {
               try {
-                navigation.navigate('Referrals' as never);
+                navigation.navigate('ReferralTracking' as never);
               } catch {
                 /* navigator may not be present in all hosts */
               }

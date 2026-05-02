@@ -69,7 +69,7 @@ export default function InfluencerOnboardingScreen() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) { nav.navigate('Auth' as any); return; }
+    if (!user) { nav.navigate('AuthStack' as any); return; }
     let cancelled = false;
     (async () => {
       const { data } = await supabase

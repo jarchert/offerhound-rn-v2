@@ -190,9 +190,9 @@ export function ScoutSavedCoachesTab() {
     });
   }, [data, search, sportFilter, stateFilter, priorityFilter]);
 
-  const goAddCoach = () => navigation.navigate('Coaches' as never);
+  const goAddCoach = () => navigation.navigate('CoachDirectory' as never);
   const viewCoach = (coachId: string) =>
-    navigation.navigate('Coaches' as never, { coach: coachId } as never);
+    navigation.navigate('CoachDirectory' as never);
 
   if (isLoading) {
     return (

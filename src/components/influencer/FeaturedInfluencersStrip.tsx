@@ -47,7 +47,7 @@ export function FeaturedInfluencersStrip({ limit = 8 }: { limit?: number }) {
             <Text style={s.title}>Hear it from people who've been there.</Text>
           </View>
           <Pressable
-            onPress={() => nav.navigate('Influencers')}
+            onPress={() => nav.navigate('InfluencerBoard' as any)}
             style={({ pressed }) => [s.viewAllBtn, pressed && s.viewAllBtnPressed]}
           >
             <Text style={s.viewAllText}>View all</Text>

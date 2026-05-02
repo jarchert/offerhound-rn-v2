@@ -45,7 +45,7 @@ export default function SportPickerScreen() {
           <Pressable
             key={sport.id}
             style={s.card}
-            onPress={() => navigation.navigate('DiscoverTab', { sport: sport.id })}>
+            onPress={() => navigation.navigate('AthleteSearch' as any, { sport: sport.id })}>
             <Text style={s.emoji}>{sport.emoji}</Text>
             <Text style={s.cardLabel}>{sport.label}</Text>
             <Text style={s.cardCta}>Explore →</Text>

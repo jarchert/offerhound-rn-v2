@@ -66,7 +66,7 @@ export function AthleteHeroContent({ selectedSport, sportConfig }: AthleteHeroCo
             variant="ghost"
             size="xl"
             leftIcon={<UserCircle width={20} height={20} color={colors.mutedForeground} />}
-            onPress={() => nav.navigate('AthletePublic', { slug: getSampleAthletePath(selectedSport).replace('/athlete/', '') })}
+            onPress={() => nav.navigate('PublicProfileStack' as any, { screen: 'PublicProfile', params: { slug: getSampleAthletePath(selectedSport).replace('/athlete/', '') } })}
           >
             Sample Profile
           </Button>

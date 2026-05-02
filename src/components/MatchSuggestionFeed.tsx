@@ -124,7 +124,7 @@ export function MatchSuggestionFeed({
         {variant === 'compact' && filteredMatches.length > maxItems ? (
           <Pressable
             style={s.viewAllBtn}
-            onPress={() => nav.navigate('Matches' as never)}
+            onPress={() => nav.navigate('AthleteTabs' as never, { screen: 'MatchesTab' } as never)}
             hitSlop={6}
           >
             <Text style={s.viewAllText}>View All</Text>

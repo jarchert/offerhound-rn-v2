@@ -87,7 +87,7 @@ export default function CoachDashboard() {
             title="Top Athlete Matches"
             subtitle={matches.length > 0 ? `${matches.length} athletes matched` : 'Set your recruiting criteria'}
             actionLabel={matches.length > 0 ? 'See all' : undefined}
-            onAction={() => nav.navigate('CoachDrawer' as any)}
+            onAction={() => nav.navigate('AthleteSearch' as any)}
           />
           {topMatches.length === 0 ? (
             <View style={s.empty}>
@@ -100,7 +100,7 @@ export default function CoachDashboard() {
                   key={m.id}
                   athlete={m.athlete as any}
                   matchScore={m.match_score}
-                  onPress={() => {/* navigate to athlete detail */}}
+                  onPress={() => nav.navigate('PublicProfileStack' as any, { screen: 'PublicProfile', params: { id: (m.athlete as any)?.id } })}
                 />
               ))}
             </View>

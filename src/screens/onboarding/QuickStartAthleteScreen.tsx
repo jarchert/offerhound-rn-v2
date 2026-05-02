@@ -34,7 +34,7 @@ export default function QuickStartAthleteScreen() {
   // Auth gate: unauthenticated users go to Auth.
   useEffect(() => {
     if (!authLoading && !user) {
-      nav.navigate('Auth' as any);
+      nav.navigate('AuthStack' as any);
     }
   }, [authLoading, user, nav]);
 

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, TextInput, FlatList, StyleSheet, SafeAreaView, RefreshControl } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react-native';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +9,7 @@ import { CoachCard } from '@/components/CoachCard';
 import { colors, typography, spacing } from '@/lib/theme';
 
 export default function CoachSearchScreen() {
+  const nav = useNavigation();
   const [query, setQuery] = useState('');
 
   const { data: coaches = [], isLoading, refetch } = useQuery({
@@ -51,7 +53,7 @@ export default function CoachSearchScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <CoachCard coach={item} onPress={() => {/* navigate to detail */}} />
+          <CoachCard coach={item} onPress={() => nav.navigate('PublicProfileStack' as any, { screen: 'PublicProfile', params: { id: item.id } })} />
         )}
       />
     </SafeAreaView>

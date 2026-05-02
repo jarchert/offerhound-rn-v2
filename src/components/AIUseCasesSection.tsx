@@ -262,7 +262,7 @@ export function AIUseCasesSection({ showGetStartedCta }: AIUseCasesSectionProps 
             <Button
               variant="outline"
               size="lg"
-              onPress={() => nav.navigate('QuickStart' as never)}
+              onPress={() => nav.navigate('OnboardingStack' as never, { screen: 'QuickStartSelect' } as never)}
               rightIcon={<ArrowRight size={18} color={colors.foreground} />}
             >
               Try Quick Start

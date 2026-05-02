@@ -32,7 +32,7 @@ export function TermsAcceptanceBanner() {
         <Button
           size="sm"
           variant="outline"
-          onPress={() => nav.navigate("Terms" as any)}
+          onPress={() => nav.navigate("SettingsStack" as any, { screen: 'LegalStack', params: { screen: 'TermsOfUse' } })}
           style={styles.button}
           textStyle={styles.buttonText}
         >

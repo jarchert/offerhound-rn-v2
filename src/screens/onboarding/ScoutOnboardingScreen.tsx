@@ -42,7 +42,7 @@ export default function ScoutOnboardingScreen() {
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      nav.navigate('Auth' as any);
+      nav.navigate('AuthStack' as any);
     }
   }, [authLoading, isAuthenticated, nav]);
 

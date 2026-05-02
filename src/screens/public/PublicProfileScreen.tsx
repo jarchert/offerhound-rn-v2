@@ -131,7 +131,7 @@ export default function PublicProfileScreen() {
             </Text>
             <Button
               onPress={() =>
-                nav.dispatch(CommonActions.navigate({ name: 'Dashboard' as any }))
+                nav.dispatch(CommonActions.navigate({ name: 'AthleteTabs' as any }))
               }
               leftIcon={<Home size={16} color={colors.primaryForeground} />}>
               Go Home

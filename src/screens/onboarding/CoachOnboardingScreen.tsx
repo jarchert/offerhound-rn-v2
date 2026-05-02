@@ -100,7 +100,7 @@ export default function CoachOnboardingScreen() {
   const STEPS = useMemo(() => (coachType ? getSteps(coachType) : ['Personal Info', 'Coach Type']), [coachType]);
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) nav.navigate('Auth' as any);
+    if (!authLoading && !isAuthenticated) nav.navigate('AuthStack' as any);
   }, [authLoading, isAuthenticated, nav]);
 
   useEffect(() => {

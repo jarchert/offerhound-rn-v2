@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, FlatList, StyleSheet, SafeAreaView, RefreshControl, Pressable } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { X } from 'lucide-react-native';
 import { useCoachAthleteMatches, useDismissCoachMatch } from '@/hooks/useAthleteMatches';
 import { Navbar } from '@/components/Navbar';
@@ -8,6 +9,7 @@ import { MessageButton } from '@/components/MessageButton';
 import { colors, typography, spacing } from '@/lib/theme';
 
 export default function CoachSearchAthletesScreen() {
+  const nav = useNavigation();
   const { data: matches = [], isLoading, refetch } = useCoachAthleteMatches();
   const dismiss = useDismissCoachMatch();
 
@@ -34,7 +36,7 @@ export default function CoachSearchAthletesScreen() {
             <AthleteCard
               athlete={item.athlete as any}
               matchScore={item.match_score}
-              onPress={() => {/* navigate to athlete profile */}}
+              onPress={() => nav.navigate('PublicProfileStack' as any, { screen: 'PublicProfile', params: { id: (item.athlete as any)?.id } })}
               rightSlot={
                 <Pressable onPress={() => dismiss.mutate(item.id)} hitSlop={8} style={s.dismiss}>
                   <X size={16} color={colors.mutedForeground} />

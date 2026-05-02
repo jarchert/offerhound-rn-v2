@@ -1,11 +1,13 @@
 import React from 'react';
 import { View, Text, FlatList, StyleSheet, SafeAreaView, RefreshControl } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useSavedAthletes } from '@/hooks/useSavedAthletes';
 import { Navbar } from '@/components/Navbar';
 import { AthleteCard } from '@/components/AthleteCard';
 import { colors, typography, spacing } from '@/lib/theme';
 
 export default function CoachRosterScreen() {
+  const nav = useNavigation();
   const { data: saved = [], isLoading, refetch } = useSavedAthletes();
 
   return (
@@ -27,7 +29,7 @@ export default function CoachRosterScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <AthleteCard athlete={item.athlete ?? item} onPress={() => {/* detail */}} />
+          <AthleteCard athlete={item.athlete ?? item} onPress={() => nav.navigate('PublicProfileStack' as any, { screen: 'PublicProfile', params: { id: (item.athlete ?? item)?.id } })} />
         )}
       />
     </SafeAreaView>

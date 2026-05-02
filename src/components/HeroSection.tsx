@@ -66,7 +66,7 @@ export function HeroSection({ isOwnerView = true, profile }: HeroSectionProps) {
 
   const goToCoaches = () => {
     // Mirrors Lovable: navigate("/activity", { state: { scrollTo: "coaches-section" } }).
-    navigation.navigate('Activity' as never, { scrollTo: 'coaches-section' } as never);
+    navigation.navigate('CoachDirectory' as never);
   };
 
   // Fallback values for when profile is not provided

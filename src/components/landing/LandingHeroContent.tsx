@@ -56,7 +56,7 @@ export function LandingHeroContent({
             <Button
               variant="ghost"
               size="xl"
-              onPress={() => nav.navigate('SampleAthlete' as never, { sport: selectedSport } as never)}
+              onPress={() => nav.navigate('PublicProfileStack' as never, { screen: 'SampleAthlete', params: { sport: selectedSport } } as never)}
               leftIcon={<UserCircle size={20} color={colors.foregroundSubtle} />}
               textStyle={{ color: colors.foregroundSubtle }}
             >
@@ -113,7 +113,7 @@ export function LandingHeroContent({
             <Button
               variant="outline"
               size="xl"
-              onPress={() => nav.navigate('CoachOnboarding' as never)}
+              onPress={() => nav.navigate('OnboardingStack' as never, { screen: 'CoachOnboarding' } as never)}
               leftIcon={<Users size={20} color={colors.foreground} />}
             >
               Register as Coach
@@ -121,7 +121,7 @@ export function LandingHeroContent({
             <Button
               variant="ghost"
               size="xl"
-              onPress={() => nav.navigate('ScoutOnboarding' as never)}
+              onPress={() => nav.navigate('OnboardingStack' as never, { screen: 'ScoutOnboarding' } as never)}
               leftIcon={<Shield size={20} color={colors.foregroundSubtle} />}
               textStyle={{ color: colors.foregroundSubtle }}
             >

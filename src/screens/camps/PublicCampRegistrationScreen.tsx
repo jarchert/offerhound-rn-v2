@@ -325,7 +325,7 @@ export default function PublicCampRegistrationScreen() {
     if (!isAuthenticated) {
       // PORT-PENDING: web pushes to /auth?redirect=/camps/:id; RN bounces to Auth root.
       try {
-        navigation.navigate('Auth' as never);
+        navigation.navigate('AuthStack' as never);
       } catch {
         /* noop */
       }

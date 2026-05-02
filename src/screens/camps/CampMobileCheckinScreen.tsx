@@ -83,7 +83,7 @@ export default function CampMobileCheckinScreen() {
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       // Auth gate parity with web (web redirects to /auth?redirect=...).
-      navigation.navigate('Auth' as never);
+      navigation.navigate('AuthStack' as never);
     }
   }, [authLoading, isAuthenticated, navigation]);
 

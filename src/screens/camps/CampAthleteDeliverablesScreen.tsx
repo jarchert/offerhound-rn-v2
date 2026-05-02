@@ -60,7 +60,7 @@ export default function CampAthleteDeliverablesScreen() {
       // current navigator (deep link directly into deliverables shouldn't
       // crash if auth route is unmounted).
       try {
-        navigation.navigate('Auth' as never);
+        navigation.navigate('AuthStack' as never);
       } catch {
         /* noop */
       }
@@ -101,7 +101,7 @@ export default function CampAthleteDeliverablesScreen() {
       <SafeAreaView style={s.container}>
         <View style={s.center}>
           <Text style={s.muted}>Camp not found.</Text>
-          <Button variant="outline" onPress={() => navigation.navigate('Home' as never)} style={{ marginTop: spacing.md }}>
+          <Button variant="outline" onPress={() => navigation.navigate('AthleteTabs' as never)} style={{ marginTop: spacing.md }}>
             Go home
           </Button>
         </View>

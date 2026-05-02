@@ -85,7 +85,7 @@ export function CoachMatchSuggestionFeed({
     enabled: !!user,
   });
 
-  const goMatches = useCallback(() => nav.navigate('Matches' as never), [nav]);
+  const goMatches = useCallback(() => nav.navigate('AthleteTabs' as never, { screen: 'MatchesTab' } as never), [nav]);
 
   if (isLoading) {
     return (

@@ -89,7 +89,7 @@ export default function CampEvaluatorScoringScreen() {
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      navigation.navigate('Auth' as never);
+      navigation.navigate('AuthStack' as never);
     }
   }, [authLoading, isAuthenticated, navigation]);
 

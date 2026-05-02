@@ -61,7 +61,7 @@ export function RequestTranscriptButton({
 
   const onPressTrigger = () => {
     if (!user) {
-      navigation.navigate('Auth' as never);
+      navigation.navigate('AuthStack' as never);
       return;
     }
     setOpen(true);

@@ -71,7 +71,7 @@ export function CoachHeroContent({ selectedSport: _selectedSport, sportConfig }:
               variant="outline"
               size="xl"
               leftIcon={<Users width={20} height={20} color={colors.foreground} />}
-              onPress={() => nav.navigate('CoachOnboarding' as never)}
+              onPress={() => nav.navigate('OnboardingStack' as never, { screen: 'CoachOnboarding' } as never)}
             >
               Register as Coach
             </Button>
@@ -79,7 +79,7 @@ export function CoachHeroContent({ selectedSport: _selectedSport, sportConfig }:
               variant="ghost"
               size="xl"
               leftIcon={<Shield width={20} height={20} color={colors.mutedForeground} />}
-              onPress={() => nav.navigate('ScoutOnboarding' as never)}
+              onPress={() => nav.navigate('OnboardingStack' as never, { screen: 'ScoutOnboarding' } as never)}
             >
               Register as Scout
             </Button>

@@ -446,7 +446,7 @@ export default function DashboardScreen() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onPress={() => nav.navigate('NILAdvisorScreen' as never)}>
+            <Button onPress={() => nav.navigate('NILAdvisor' as never)}>
               Explore NIL Education
             </Button>
           </CardContent>
@@ -711,7 +711,7 @@ export default function DashboardScreen() {
           </Pressable>
           <Button
             variant="outline"
-            onPress={() => nav.navigate('CoachSearchScreen' as never)}
+            onPress={() => nav.navigate('CoachSearch' as never)}
           >
             Find Coaches
           </Button>
@@ -865,13 +865,15 @@ export default function DashboardScreen() {
                   <View style={styles.savedActions}>
                     <Button
                       onPress={() =>
-                        (nav.navigate as any)('LettersScreen', {
-                          coach: {
-                            name: saved.coach?.name || '',
-                            school: saved.coach?.school || '',
-                            email: saved.coach?.email || '',
+                        nav.navigate('LetterComposer' as never, {
+                          seed: {
+                            coach: {
+                              name: saved.coach?.name || '',
+                              school: saved.coach?.school || '',
+                              email: saved.coach?.email || '',
+                            },
                           },
-                        })
+                        } as never)
                       }
                     >
                       Send Letter
@@ -899,7 +901,7 @@ export default function DashboardScreen() {
                 <Text style={styles.emptySub}>
                   Start searching for coaches and save them to your target list.
                 </Text>
-                <Button onPress={() => nav.navigate('CoachSearchScreen' as never)}>
+                <Button onPress={() => nav.navigate('CoachSearch' as never)}>
                   Find Coaches
                 </Button>
               </View>
@@ -1062,7 +1064,7 @@ export default function DashboardScreen() {
                 <View style={{ gap: spacing.xs, marginTop: spacing.md }}>
                   <Button
                     onPress={() => {
-                      nav.navigate('AthleteMatchesScreen' as never);
+                      nav.navigate('AthleteTabs' as never, { screen: 'MatchesTab' } as never);
                       setMobileMenuOpen(false);
                     }}
                   >
@@ -1070,7 +1072,7 @@ export default function DashboardScreen() {
                   </Button>
                   <Button
                     onPress={() => {
-                      nav.navigate('CoachSearchScreen' as never);
+                      nav.navigate('CoachSearch' as never);
                       setMobileMenuOpen(false);
                     }}
                   >
@@ -1079,7 +1081,7 @@ export default function DashboardScreen() {
                   <Button
                     variant="outline"
                     onPress={() => {
-                      nav.navigate('CampsScreen' as never);
+                      nav.navigate('CampDiscovery' as never);
                       setMobileMenuOpen(false);
                     }}
                   >
@@ -1088,7 +1090,7 @@ export default function DashboardScreen() {
                   <Button
                     variant="outline"
                     onPress={() => {
-                      nav.navigate('CampDiscoveryScreen' as never);
+                      nav.navigate('CampDiscovery' as never);
                       setMobileMenuOpen(false);
                     }}
                   >

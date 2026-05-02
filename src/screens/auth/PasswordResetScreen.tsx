@@ -40,7 +40,7 @@ export default function PasswordResetScreen() {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
       Alert.alert('Password Updated', 'Your password has been changed.', [
-        { text: 'OK', onPress: () => (nav.canGoBack() ? nav.goBack() : nav.navigate('Landing' as any)) },
+        { text: 'OK', onPress: () => (nav.canGoBack() ? nav.goBack() : nav.navigate('PublicTabs' as any)) },
       ]);
     } catch (err: any) {
       Alert.alert('Error', err?.message || 'Failed to update password.');

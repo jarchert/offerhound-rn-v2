@@ -188,11 +188,11 @@ export default function InviteShareCardScreen() {
     await recordAcceptClick();
     await AsyncStorage.setItem('post_auth_redirect', '/').catch(() => {});
     // PORT-PENDING: web routes to /auth?mode=signup. Map to RN Auth screen.
-    nav.navigate('Auth' as any, { mode: 'signup' });
+    nav.navigate('AuthStack' as any, { mode: 'signup' });
   };
 
   const handleSkip = () => {
-    nav.navigate('Dashboard' as any);
+    nav.navigate('AthleteTabs' as any);
   };
 
   const valueProps = useMemo(
@@ -292,7 +292,7 @@ export default function InviteShareCardScreen() {
                     {cardUrl ? "Here's the card they sent you." : 'Head to your home to keep going.'}
                   </Text>
                   <Button
-                    onPress={() => nav.navigate('Dashboard' as any)}
+                    onPress={() => nav.navigate('AthleteTabs' as any)}
                     size="lg"
                     rightIcon={<ArrowRight size={16} color={colors.primaryForeground} />}>
                     Go to My Home
@@ -310,7 +310,7 @@ export default function InviteShareCardScreen() {
                     Continue without account
                   </Button>
                   <Pressable
-                    onPress={() => nav.navigate('Auth' as any, { mode: 'signin' })}
+                    onPress={() => nav.navigate('AuthStack' as any, { mode: 'signin' })}
                     style={s.signInLine}>
                     <Text style={s.muted}>Already a member? </Text>
                     <Text style={s.signInLink}>Sign in</Text>

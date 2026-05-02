@@ -37,7 +37,7 @@ export default function AthleteMatchesScreen() {
             <CoachCard
               coach={item.coach as any}
               matchScore={item.match_score}
-              onPress={() => {/* navigate to coach detail */}}
+              onPress={() => nav.navigate('PublicProfileStack' as any, { screen: 'PublicProfile', params: { id: (item.coach as any)?.id } })}
               rightSlot={
                 <Pressable onPress={() => dismiss.mutate(item.id)} hitSlop={8} style={s.dismiss}>
                   <X size={16} color={colors.mutedForeground} />
