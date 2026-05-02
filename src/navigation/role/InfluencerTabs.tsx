@@ -1,5 +1,5 @@
-// InfluencerTabs — 3 tabs per Part 2 §2.1: Dashboard, Profile, BlogPost
-// Part 43 describes AI Coach + influencer content library.
+// InfluencerTabs — 5 tabs: Home, Board, Podcasts, Inbox, Profile
+// Standardized baseline (Home/Inbox/Profile) + role-specific Board & Podcasts.
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
@@ -7,6 +7,8 @@ import { colors, typography } from '@/lib/theme';
 import InfluencerDashboard from '@/screens/influencer/InfluencerDashboard';
 import InfluencerBoardScreen from '@/screens/influencer/InfluencerBoardScreen';
 import PodcastScreen from '@/screens/influencer/PodcastScreen';
+import InboxScreen from '@/screens/shared/InboxScreen';
+import ProfileScreen from '@/screens/shared/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -30,6 +32,8 @@ export default function InfluencerTabs() {
       <Tab.Screen name="DashboardTab" component={InfluencerDashboard} options={{ title: 'Home' }} />
       <Tab.Screen name="BoardTab" component={InfluencerBoardScreen} options={{ title: 'Board' }} />
       <Tab.Screen name="PodcastsTab" component={PodcastScreen} options={{ title: 'Podcasts' }} />
+      <Tab.Screen name="InboxTab" component={InboxScreen} options={{ title: 'Inbox' }} />
+      <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );
 }

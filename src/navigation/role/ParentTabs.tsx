@@ -1,11 +1,13 @@
-// ParentTabs — 2 tabs per Part 2 §2.1: Dashboard, TrustSafety
-// Part 33 describes parent experience + COPPA consent flows.
+// ParentTabs — 4 tabs: Home, Inbox, Safety, Profile
+// Standardized baseline (Home/Inbox/Profile) + role-specific Safety tab.
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
 
 import ParentDashboard from '@/screens/parent/ParentDashboard';
+import InboxScreen from '@/screens/shared/InboxScreen';
 import ParentTrustSafetyScreen from '@/screens/parent/ParentTrustSafetyScreen';
+import ProfileScreen from '@/screens/shared/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -27,7 +29,9 @@ export default function ParentTabs() {
         },
       }}>
       <Tab.Screen name="DashboardTab" component={ParentDashboard} options={{ title: 'Home' }} />
+      <Tab.Screen name="InboxTab" component={InboxScreen} options={{ title: 'Inbox' }} />
       <Tab.Screen name="TrustSafetyTab" component={ParentTrustSafetyScreen} options={{ title: 'Safety' }} />
+      <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );
 }

@@ -1,13 +1,13 @@
-// AgencyTabs — 2 tabs per Part 2 §2.1: Dashboard, Letters
-// Part 35 describes agency multi-recruiter collaboration + staff management.
-// AgencyDashboardScreen is now the full RN port of the Lovable AgencyDashboard page
-// (see screens/agency/AgencyDashboardScreen.tsx).
+// AgencyTabs — 4 tabs: Home, Inbox, Letters, Profile
+// Standardized baseline (Home/Inbox/Profile) + role-specific Letters tab.
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
 
 import AgencyDashboardScreen from '@/screens/agency/AgencyDashboardScreen';
+import InboxScreen from '@/screens/shared/InboxScreen';
 import LetterComposerScreen from '@/screens/shared/LetterComposerScreen';
+import ProfileScreen from '@/screens/shared/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -29,7 +29,9 @@ export default function AgencyTabs() {
         },
       }}>
       <Tab.Screen name="DashboardTab" component={AgencyDashboardScreen} options={{ title: 'Home' }} />
+      <Tab.Screen name="InboxTab" component={InboxScreen} options={{ title: 'Inbox' }} />
       <Tab.Screen name="LettersTab" component={LetterComposerScreen} options={{ title: 'Letters' }} />
+      <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );
 }

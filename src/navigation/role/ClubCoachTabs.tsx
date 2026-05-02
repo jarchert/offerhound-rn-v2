@@ -1,7 +1,6 @@
-// ClubCoachTabs — 3 tabs per Part 2 §2.1: Dashboard, Camps, Letters.
-// The Home tab now points at the full ported ClubCoachDashboardScreen
-// (Lovable parity: 13 inner tabs covering teams, camps, calendar, staff,
-// CRM, messaging, media, social, insights, directory, saved athletes, profile).
+// ClubCoachTabs — 5 tabs: Home, Camps, Letters, Inbox, Profile
+// Standardized baseline (Home/Inbox/Profile) + role-specific Camps & Letters.
+// The Home tab points at the full ported ClubCoachDashboardScreen (13 inner tabs).
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
@@ -9,6 +8,8 @@ import { colors, typography } from '@/lib/theme';
 import CampsScreen from '@/screens/shared/CampsScreen';
 import ClubCoachDashboardScreen from '@/screens/club/ClubCoachDashboardScreen';
 import LetterComposerScreen from '@/screens/shared/LetterComposerScreen';
+import InboxScreen from '@/screens/shared/InboxScreen';
+import ProfileScreen from '@/screens/shared/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -32,6 +33,8 @@ export default function ClubCoachTabs() {
       <Tab.Screen name="DashboardTab" component={ClubCoachDashboardScreen} options={{ title: 'Home' }} />
       <Tab.Screen name="CampsTab" component={CampsScreen} options={{ title: 'Camps' }} />
       <Tab.Screen name="LettersTab" component={LetterComposerScreen} options={{ title: 'Letters' }} />
+      <Tab.Screen name="InboxTab" component={InboxScreen} options={{ title: 'Inbox' }} />
+      <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );
 }
