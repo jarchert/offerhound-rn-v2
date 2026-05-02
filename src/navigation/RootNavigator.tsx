@@ -79,10 +79,10 @@ export type RootStackParamList = {
   SettingsStack: undefined;
   PublicProfileStack: undefined;
   Profile: { userId?: string };
-  Messages: undefined;
+  Messages: { recipientId?: string; recipientName?: string } | undefined;
   Notifications: undefined;
   Inbox: undefined;
-  LetterComposer: { seed?: any } | undefined;
+  LetterComposer: { seed?: any; coachName?: string; coachRole?: string; coachSchool?: string; schoolName?: string; recipientName?: string; recipientRole?: string; athleteName?: string; athletePosition?: string; athleteSchool?: string } | undefined;
   AICoach: undefined;
   SmokeTest: undefined;
   Install: undefined;

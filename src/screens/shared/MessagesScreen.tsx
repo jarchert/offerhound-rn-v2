@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet, SafeAreaView, RefreshControl } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useQuery } from '@tanstack/react-query';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navbar } from '@/components/Navbar';
@@ -25,7 +25,13 @@ export default function MessagesScreen() {
   const { user } = useAuth();
   const [activeId, setActiveId] = useState<string | null>(null);
   const navigation = useNavigation();
+  const route = useRoute<any>();
   const canGoBack = navigation.canGoBack();
+  const queryClient = useQueryClient();
+
+  // Handle incoming recipientId param to initiate/open a conversation
+  const recipientId = route.params?.recipientId as string | undefined;
+  const recipientName = route.params?.recipientName as string | undefined;
 
   const { data: conversations = [], isLoading, refetch } = useQuery({
     queryKey: ['conversations', user?.id],
@@ -52,6 +58,47 @@ export default function MessagesScreen() {
     },
     enabled: !!user,
   });
+
+  // Find or create conversation when navigated with recipientId
+  const findOrCreateConversation = useMutation({
+    mutationFn: async ({ targetId, targetName }: { targetId: string; targetName?: string }) => {
+      if (!user) throw new Error('Not authenticated');
+      // Check if conversation already exists
+      const { data: existing } = await supabase
+        .from('conversations')
+        .select('id')
+        .or(
+          `and(user_a_id.eq.${user.id},user_b_id.eq.${targetId}),and(user_a_id.eq.${targetId},user_b_id.eq.${user.id})`
+        )
+        .maybeSingle();
+      if (existing) return existing.id;
+      // Create new conversation
+      const { data: newConv, error } = await supabase
+        .from('conversations')
+        .insert({
+          user_a_id: user.id,
+          user_b_id: targetId,
+          user_a_name: user.user_metadata?.full_name || user.email || 'User',
+          user_b_name: targetName || 'User',
+        })
+        .select('id')
+        .single();
+      if (error) throw error;
+      return newConv.id;
+    },
+    onSuccess: (conversationId) => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      setActiveId(conversationId);
+    },
+  });
+
+  // Auto-open conversation when recipientId is provided
+  useEffect(() => {
+    if (recipientId && user && !activeId) {
+      findOrCreateConversation.mutate({ targetId: recipientId, targetName: recipientName });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recipientId, user]);
 
   if (activeId) {
     const conv = conversations.find(c => c.id === activeId);

@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp, CommonActions } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, AlertCircle, Home, Share2, Check } from 'lucide-react-native';
+import { Loader2, AlertCircle, Home, Share2, Check, Mail } from 'lucide-react-native';
 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -190,8 +190,22 @@ export default function PublicProfileScreen() {
             />
           )}
 
-          {/* PORT-PENDING: web `LetterButton` (role-aware AI Letter Center router)
-              has no RN equivalent yet. Tracked under session-parity-port. */}
+          {/* Letter button — role-aware AI Letter Center router */}
+          {isViewerNotOwner && senderRole !== 'athlete' && (
+            <Button
+              variant="outline"
+              onPress={() => nav.navigate('LetterComposer', {
+                seed: {
+                  recipientName: profile.full_name || '',
+                  recipientRole: profile.position || '',
+                  schoolName: profile.school || '',
+                },
+              })}
+              leftIcon={<Mail size={16} color={colors.foreground} />}
+            >
+              Letter
+            </Button>
+          )}
 
           {isViewerNotOwner && (
             <MessageButton

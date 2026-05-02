@@ -54,9 +54,9 @@ export default function LetterComposerScreen() {
   const { profile } = usePlayerProfile();
   const seed = route.params?.seed ?? {};
   const seededFromCoach = {
-    recipientName: seed.recipientName || route.params?.coachName || '',
-    recipientRole: seed.recipientRole || route.params?.coachRole || '',
-    schoolName: seed.schoolName || route.params?.coachSchool || route.params?.schoolName || '',
+    recipientName: seed.recipientName || route.params?.coachName || route.params?.recipientName || route.params?.athleteName || '',
+    recipientRole: seed.recipientRole || route.params?.coachRole || route.params?.recipientRole || route.params?.athletePosition || '',
+    schoolName: seed.schoolName || route.params?.coachSchool || route.params?.schoolName || route.params?.athleteSchool || '',
   };
 
   const [draft, setDraft] = useState<LetterDraft>(() => ({

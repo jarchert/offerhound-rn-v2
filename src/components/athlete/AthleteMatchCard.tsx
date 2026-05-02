@@ -152,8 +152,11 @@ export function AthleteMatchCard({
 
   const handleNavigate = () => {
     if (disableNavigate) return;
-    // Web: navigate(`/p/${athlete.custom_url || athlete.id}`)
-    navigation.navigate('Profile', { handle: athlete.custom_url || athlete.id });
+    // Navigate to the public profile using the athlete's custom URL or ID
+    navigation.navigate('PublicProfileStack', {
+      screen: 'PublicProfile',
+      params: { customUrl: athlete.custom_url || athlete.id },
+    });
   };
 
   const showActionRow =

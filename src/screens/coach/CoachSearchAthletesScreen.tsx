@@ -31,25 +31,32 @@ export default function CoachSearchAthletesScreen() {
             <Text style={s.emptyText}>Update your recruiting preferences to see athletes.</Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <View style={s.item}>
-            <AthleteCard
-              athlete={item.athlete as any}
-              matchScore={item.match_score}
-              onPress={() => nav.navigate('PublicProfileStack' as any, { screen: 'PublicProfile', params: { id: (item.athlete as any)?.id } })}
-              rightSlot={
-                <Pressable onPress={() => dismiss.mutate(item.id)} hitSlop={8} style={s.dismiss}>
-                  <X size={16} color={colors.mutedForeground} />
-                </Pressable>
-              }
-            />
-            {item.athlete && (
-              <View style={s.actions}>
-                <MessageButton recipientId={item.athlete.id} recipientName={item.athlete.full_name} />
-              </View>
-            )}
-          </View>
-        )}
+        renderItem={({ item }) => {
+          const ath = item.athlete as any;
+          return (
+            <View style={s.item}>
+              <AthleteCard
+                athlete={ath}
+                matchScore={item.match_score}
+                matchScores={{
+                  athletic_fit_score: (item as any).athletic_fit_score,
+                  academic_fit_score: (item as any).academic_fit_score,
+                  geographic_fit_score: (item as any).geographic_fit_score,
+                  match_reason: (item as any).match_reason,
+                }}
+                showActions
+                onPress={() => nav.navigate('PublicProfileStack' as any, { screen: 'PublicProfile', params: { customUrl: ath?.custom_url || ath?.id } })}
+                onMessage={() => nav.navigate('Messages', { recipientId: ath?.user_id || ath?.id, recipientName: ath?.full_name } as any)}
+                onLetter={() => nav.navigate('LetterComposer', { seed: { recipientName: ath?.full_name, recipientRole: ath?.position, schoolName: ath?.school } })}
+                rightSlot={
+                  <Pressable onPress={() => dismiss.mutate(item.id)} hitSlop={8} style={s.dismiss}>
+                    <X size={16} color={colors.mutedForeground} />
+                  </Pressable>
+                }
+              />
+            </View>
+          );
+        }}
       />
     </SafeAreaView>
   );

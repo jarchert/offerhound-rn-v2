@@ -34,7 +34,7 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={Bell}
             label="Notifications"
-            onPress={() => nav.navigate('Notifications' as any)}
+            onPress={() => nav.navigate('Notifications')}
           />
         </SettingsGroup>
 

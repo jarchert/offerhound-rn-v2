@@ -16,6 +16,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import {
   Search,
   Mail,
@@ -51,6 +52,7 @@ const PAGE_SIZE = 30;
 type Tab = 'all' | 'head' | 'assistants';
 
 export function CoachSearch() {
+  const nav = useNavigation();
   const [query, setQuery] = useState('');
   const [debounced, setDebounced] = useState('');
   const [conference, setConference] = useState<string>('all');
@@ -255,7 +257,11 @@ export function CoachSearch() {
         <FlatList
           data={coaches}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <CoachCard coach={item} />}
+          renderItem={({ item }) => (
+            <CoachCard
+              coach={item}
+            />
+          )}
           contentContainerStyle={{ gap: spacing.sm, paddingBottom: spacing.lg }}
         />
       )}
@@ -289,6 +295,7 @@ export function CoachSearch() {
 }
 
 function CoachCard({ coach }: { coach: CoachRow }) {
+  const nav = useNavigation();
   const { goToLetterForAthlete, isNavigating } = useLetterCenter();
   const isHead = (coach.title || '').toLowerCase().includes('head coach');
   const location = [coach.city, coach.state].filter(Boolean).join(', ');
@@ -312,7 +319,7 @@ function CoachCard({ coach }: { coach: CoachRow }) {
   };
 
   return (
-    <View style={s.coachCard}>
+    <Pressable style={s.coachCard} onPress={() => (nav as any).navigate('PublicProfileStack', { screen: 'PublicProfile', params: { id: coach.id } })}>
       <View style={s.coachHeader}>
         {coach.image_url ? (
           <Image source={{ uri: coach.image_url }} style={s.avatar} />
@@ -409,7 +416,7 @@ function CoachCard({ coach }: { coach: CoachRow }) {
           ) : null}
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 

@@ -95,14 +95,26 @@ export default function CoachDashboard() {
             </View>
           ) : (
             <View style={s.list}>
-              {topMatches.map(m => (
-                <AthleteCard
-                  key={m.id}
-                  athlete={m.athlete as any}
-                  matchScore={m.match_score}
-                  onPress={() => nav.navigate('PublicProfileStack' as any, { screen: 'PublicProfile', params: { id: (m.athlete as any)?.id } })}
-                />
-              ))}
+              {topMatches.map(m => {
+                const ath = m.athlete as any;
+                return (
+                  <AthleteCard
+                    key={m.id}
+                    athlete={ath}
+                    matchScore={m.match_score}
+                    matchScores={{
+                      athletic_fit_score: (m as any).athletic_fit_score,
+                      academic_fit_score: (m as any).academic_fit_score,
+                      geographic_fit_score: (m as any).geographic_fit_score,
+                      match_reason: (m as any).match_reason,
+                    }}
+                    showActions
+                    onPress={() => nav.navigate('PublicProfileStack' as any, { screen: 'PublicProfile', params: { customUrl: ath?.custom_url || ath?.id } })}
+                    onMessage={() => nav.navigate('Messages', { recipientId: ath?.user_id || ath?.id, recipientName: ath?.full_name } as any)}
+                    onLetter={() => nav.navigate('LetterComposer', { seed: { recipientName: ath?.full_name, recipientRole: ath?.position, schoolName: ath?.school } })}
+                  />
+                );
+              })}
             </View>
           )}
         </View>

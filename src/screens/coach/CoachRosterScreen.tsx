@@ -28,9 +28,18 @@ export default function CoachRosterScreen() {
             <Text style={s.emptyText}>Save athletes from the matches screen to build your roster.</Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <AthleteCard athlete={item.athlete ?? item} onPress={() => nav.navigate('PublicProfileStack' as any, { screen: 'PublicProfile', params: { id: (item.athlete ?? item)?.id } })} />
-        )}
+        renderItem={({ item }) => {
+          const ath = item.athlete ?? item;
+          return (
+            <AthleteCard
+              athlete={ath}
+              showActions
+              onPress={() => nav.navigate('PublicProfileStack' as any, { screen: 'PublicProfile', params: { customUrl: ath?.custom_url || ath?.id } })}
+              onMessage={() => nav.navigate('Messages', { recipientId: ath?.user_id || ath?.id, recipientName: ath?.full_name } as any)}
+              onLetter={() => nav.navigate('LetterComposer', { seed: { recipientName: ath?.full_name, recipientRole: ath?.position, schoolName: ath?.school } })}
+            />
+          );
+        }}
       />
     </SafeAreaView>
   );

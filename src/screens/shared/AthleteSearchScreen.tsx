@@ -291,10 +291,23 @@ export default function AthleteSearchScreen() {
                   isSaved={isSaved}
                   proximityLabel={proxLabel}
                   onToggleSave={isScout ? handleSaveAthlete : undefined}
-                  // PORT-PENDING: letterSlot for shared <LetterButton /> once ported.
+                  onContact={
+                    isRecruiter
+                      ? () => nav.navigate('LetterComposer', {
+                          seed: {
+                            recipientName: athlete.full_name || '',
+                            recipientRole: athlete.position || '',
+                            schoolName: athlete.school || '',
+                          },
+                        })
+                      : undefined
+                  }
                   onMessage={
                     isRecruiter
-                      ? () => nav.navigate('Messages' as any)
+                      ? () => nav.navigate('Messages', {
+                          recipientId: athlete.user_id || athlete.id,
+                          recipientName: athlete.full_name || 'Athlete',
+                        } as any)
                       : undefined
                   }
                 />

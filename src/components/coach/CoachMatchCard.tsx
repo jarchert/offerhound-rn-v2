@@ -140,28 +140,28 @@ export function CoachMatchCard({
     }
 
     if (viewerRole !== 'athlete') {
-      const params = {
-        recipientCategory: coachAudience,
-        recipientType: 'coach',
-        recipientName: coach.name || '',
-        recipientEmail: coach.email || '',
-        organizationName: coach.school || '',
-        recipientTitle: coach.title || '',
-      };
-      const letterCenter =
-        viewerRole === 'scout'      ? 'ScoutLetters' :
-        viewerRole === 'club-coach' ? 'LetterComposer' :
-        viewerRole === 'hs-coach'   ? 'HsCoachLetters' :
-                                      'CoachLetters';
-      navigation.navigate(letterCenter, params);
+      // All non-athlete roles use the shared LetterComposer
+      navigation.navigate('LetterComposer', {
+        seed: {
+          recipientName: coach.name || '',
+          recipientRole: coach.title || '',
+          schoolName: coach.school || '',
+        },
+        coachName: coach.name || '',
+        coachSchool: coach.school || '',
+        coachRole: coach.title || '',
+      });
       return;
     }
 
-    navigation.navigate('Letters', {
+    navigation.navigate('LetterComposer', {
+      seed: {
+        recipientName: coach.name || '',
+        schoolName: coach.school || '',
+      },
       coachName:   coach.name || '',
-      coachEmail:  coach.email || '',
       coachSchool: coach.school || '',
-      coachTitle:  coach.title || '',
+      coachRole:   coach.title || '',
     });
   };
 

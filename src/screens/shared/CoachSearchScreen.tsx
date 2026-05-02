@@ -53,7 +53,13 @@ export default function CoachSearchScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <CoachCard coach={item} onPress={() => nav.navigate('PublicProfileStack' as any, { screen: 'PublicProfile', params: { id: item.id } })} />
+          <CoachCard
+            coach={item}
+            showActions
+            onPress={() => nav.navigate('PublicProfileStack' as any, { screen: 'PublicProfile', params: { id: item.id } })}
+            onContact={() => nav.navigate('Messages', { recipientId: item.user_id || item.id, recipientName: item.name } as any)}
+            onLetter={() => nav.navigate('LetterComposer', { seed: { recipientName: item.name, recipientRole: item.title, schoolName: item.school } })}
+          />
         )}
       />
     </SafeAreaView>

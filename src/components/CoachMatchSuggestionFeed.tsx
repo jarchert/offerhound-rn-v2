@@ -175,8 +175,8 @@ export function CoachMatchSuggestionFeed({
             }
             onMessage={() =>
               (nav as any).navigate('Messages', {
-                athleteProfileId: match.athlete?.id,
-                athleteName: match.athlete?.full_name || '',
+                recipientId: match.athlete?.user_id || match.athlete?.id,
+                recipientName: match.athlete?.full_name || '',
               })
             }
           />

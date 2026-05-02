@@ -32,28 +32,29 @@ export default function AthleteMatchesScreen() {
             <Text style={s.emptyText}>Make sure your profile is complete and published.</Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <View style={s.item}>
-            <CoachCard
-              coach={item.coach as any}
-              matchScore={item.match_score}
-              onPress={() => nav.navigate('PublicProfileStack' as any, { screen: 'PublicProfile', params: { id: (item.coach as any)?.id } })}
-              rightSlot={
-                <Pressable onPress={() => dismiss.mutate(item.id)} hitSlop={8} style={s.dismiss}>
-                  <X size={16} color={colors.mutedForeground} />
-                </Pressable>
-              }
-            />
-            {item.match_reason && (
-              <Text style={s.reason} numberOfLines={2}>{item.match_reason}</Text>
-            )}
-            {item.coach && (
-              <View style={s.actions}>
-                <MessageButton recipientId={item.coach.id} recipientName={item.coach.name} />
-              </View>
-            )}
-          </View>
-        )}
+        renderItem={({ item }) => {
+          const c = item.coach as any;
+          return (
+            <View style={s.item}>
+              <CoachCard
+                coach={c}
+                matchScore={item.match_score}
+                showActions
+                onPress={() => nav.navigate('PublicProfileStack' as any, { screen: 'PublicProfile', params: { id: c?.id } })}
+                onContact={() => nav.navigate('Messages', { recipientId: c?.user_id || c?.id, recipientName: c?.name } as any)}
+                onLetter={() => nav.navigate('LetterComposer', { seed: { recipientName: c?.name, recipientRole: c?.title, schoolName: c?.school } })}
+                rightSlot={
+                  <Pressable onPress={() => dismiss.mutate(item.id)} hitSlop={8} style={s.dismiss}>
+                    <X size={16} color={colors.mutedForeground} />
+                  </Pressable>
+                }
+              />
+              {item.match_reason && (
+                <Text style={s.reason} numberOfLines={2}>{item.match_reason}</Text>
+              )}
+            </View>
+          );
+        }}
       />
     </SafeAreaView>
   );

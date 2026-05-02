@@ -27,6 +27,7 @@ import {
   Search,
   UserCheck,
   Shield,
+  Users,
   LucideIcon,
 } from 'lucide-react-native';
 import { colors, typography, spacing, radius, shadows } from '@/lib/theme';
@@ -46,9 +47,10 @@ const coachNavItems: NavItem[] = [
   { path: '/coach/dashboard',      route: 'CoachDrawer',     label: 'Dashboard',  icon: LayoutDashboard, description: 'Your coaching dashboard' },
   { path: '/club-coach/dashboard', route: 'ClubCoachDrawer', label: 'Club Coach', icon: Shield,          description: 'Manage club teams & rosters' },
   { path: '/coach/matches',        route: 'CoachDrawer',     label: 'Matches',    icon: UserCheck,       description: 'View matched athletes' },
-  { path: '/athletes',             route: 'CoachDrawer',     label: 'Athletes',   icon: Search,          description: 'Search and discover athletes' },
-  { path: '/messages',             route: 'Messages',      label: 'Messages',   icon: MessageCircle,   description: 'Messages with athletes' },
-  { path: '/settings',             route: 'SettingsStack', label: 'Settings',   icon: Settings,        description: 'Account settings' },
+  { path: '/athletes',             route: 'AthleteSearch',   label: 'Athletes',   icon: Search,          description: 'Search and discover athletes' },
+  { path: '/directory',            route: 'CoachDirectory',  label: 'Directory',  icon: Users,           description: 'Coach directory & contacts' },
+  { path: '/messages',             route: 'Messages',        label: 'Messages',   icon: MessageCircle,   description: 'Messages with athletes' },
+  { path: '/settings',             route: 'SettingsStack',   label: 'Settings',   icon: Settings,        description: 'Account settings' },
 ];
 
 const NAV_COLLAPSED_KEY = 'coachNavCollapsed';

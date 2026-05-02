@@ -25,6 +25,7 @@ import {
 } from 'lucide-react-native';
 import { format } from 'date-fns';
 import { SPORTS_LIST } from '@/lib/data/sports';
+import { AddToCalendarButton } from '@/components/AddToCalendarButton';
 import { colors, spacing, typography, radius } from '@/lib/theme';
 
 const US_STATES = [
@@ -202,6 +203,7 @@ export function CampDiscovery({ coachSport, coachState: _coachState }: CampDisco
             >
               Details
             </Button>
+            <AddToCalendarButton camp={camp} variant="outline" size="sm" label="Calendar" />
             {camp.registration_url && (
               <Button
                 size="sm"
@@ -408,6 +410,9 @@ export function CampDiscovery({ coachSport, coachState: _coachState }: CampDisco
             </ScrollView>
           )}
           <DialogFooter>
+            {detailCamp && (
+              <AddToCalendarButton camp={detailCamp} variant="outline" size="default" label="Add to Calendar" />
+            )}
             {detailCamp && (
               <Button
                 variant="outline"
