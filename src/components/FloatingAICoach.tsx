@@ -4,7 +4,7 @@
 //
 // Wave 29 parity scaffold. Replaces the previous inline-chat variant with a
 // thin overlay button per spec; the heavy chat UX lives inside AICoachScreen.
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -16,7 +16,6 @@ import {
 } from 'react-native';
 import {
   useNavigation,
-  useNavigationState,
 } from '@react-navigation/native';
 
 import { colors, spacing, shadows } from '@/lib/theme';
@@ -38,12 +37,31 @@ function getActiveRouteName(state: any): string | undefined {
   return route.name;
 }
 
+/**
+ * Safe alternative to useNavigationState for components rendered outside a
+ * navigator (e.g. siblings of Stack.Navigator inside NavigationContainer).
+ * useNavigationState requires NavigationStateListenerContext which only exists
+ * inside a navigator; this hook uses the navigation ref's state listener instead.
+ */
+function useSafeActiveRoute(nav: any, getRouteName: (state: any) => string | undefined): string | undefined {
+  const [route, setRoute] = useState<string | undefined>(() => {
+    try { return getRouteName(nav.getState?.()); } catch { return undefined; }
+  });
+  useEffect(() => {
+    const unsub = nav.addListener?.('state', () => {
+      try { setRoute(getRouteName(nav.getState?.())); } catch { /* noop */ }
+    });
+    return typeof unsub === 'function' ? unsub : () => {};
+  }, [nav, getRouteName]);
+  return route;
+}
+
 export function FloatingAICoach({
   hideOnRoute = 'AICoach',
   bottomOffset,
 }: FloatingAICoachProps = {}) {
   const navigation = useNavigation<any>();
-  const activeRoute = useNavigationState(getActiveRouteName);
+  const activeRoute = useSafeActiveRoute(navigation, getActiveRouteName);
 
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   useEffect(() => {
