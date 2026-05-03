@@ -18,6 +18,7 @@ import { Mail, Lock, User as UserIcon, Shield, Bell, Phone, Crown, Zap, External
 import { BackButton } from '@/components/BackButton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { DeleteAccountSection } from '@/components/DeleteAccountSection';
+import { OrgBlockEditor } from '@/components/settings/OrgBlockEditor';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -95,6 +96,9 @@ export default function AccountSettingsScreen() {
           <Text style={s.h1}>Account Settings</Text>
           <Text style={s.subtitle}>Manage your profile, account, and preferences</Text>
         </View>
+
+        {/* Organization (non-athlete roles) — renders nothing for athletes */}
+        <OrgBlockEditor />
 
         {/* Subscription */}
         <Card>

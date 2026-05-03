@@ -29,6 +29,7 @@ import { HeroSection } from '@/components/HeroSection';
 import { AthleteProfile } from '@/components/AthleteProfile';
 import { Footer } from '@/components/Footer';
 import { HighlightMediaWindow } from '@/components/HighlightMediaWindow';
+import { AthleteEndorsementsSection } from '@/components/athlete/AthleteEndorsementsSection';
 import { BackButton } from '@/components/BackButton';
 import { NotRegisteredUser } from '@/components/NotRegisteredUser';
 import SEO from '@/components/SEO';
@@ -199,6 +200,9 @@ export default function PublicProfileScreen() {
 
         {/* Athlete Profile section (perf radar + events live in this component) */}
         <AthleteProfile profile={profile} />
+
+        {/* Endorsements + verified credentials (Build 51) */}
+        <AthleteEndorsementsSection athleteProfileId={profile.id} />
 
         <Footer />
       </ScrollView>
