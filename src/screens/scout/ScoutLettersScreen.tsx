@@ -182,7 +182,7 @@ export default function ScoutLettersScreen() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onPress={() => nav.navigate?.('Directory' as never)}>
+                      onPress={() => nav.navigate?.('AthleteSearch' as never)}>
                       Search Athletes
                     </Button>
                   </View>

@@ -262,7 +262,8 @@ export default function AgencyDashboardScreen() {
                 {savedAthletes.length === 0 ? (
                   <View style={s.empty}>
                     <Text style={[s.muted, { marginBottom: spacing.sm }]}>No saved athletes yet.</Text>
-                    <Button variant="outline" size="sm" leftIcon={<Search size={14} color={colors.primary} />}>
+                    <Button variant="outline" size="sm" leftIcon={<Search size={14} color={colors.primary} />}
+                      onPress={() => nav.navigate('AthleteSearch' as never)}>
                       Search Athletes
                     </Button>
                   </View>
@@ -286,7 +287,8 @@ export default function AgencyDashboardScreen() {
                         </View>
                         <View style={s.savedActions}>
                           {item.priority ? <Badge variant="outline">{item.priority}</Badge> : null}
-                          <Button variant="ghost" size="sm">View</Button>
+                          <Button variant="ghost" size="sm"
+                            onPress={() => nav.navigate('PublicProfileStack' as never, { screen: 'PublicProfile', params: { customUrl: item.athlete?.custom_url, id: item.athlete?.id } } as never)}>View</Button>
                           <Button
                             variant="outline" size="sm"
                             leftIcon={<Mail size={14} color={colors.primary} />}
