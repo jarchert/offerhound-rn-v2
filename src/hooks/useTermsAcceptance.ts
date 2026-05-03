@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -123,31 +122,45 @@ export function useDeleteTermsVersion() {
   });
 }
 
+// Build 46 fix #27: refactored to react-query so useAcceptTerms can invalidate
+// and the gate flips to `hasAccepted=true` immediately after mutation, instead
+// of leaving the user stranded on the gate screen until a full app restart.
 export function useHasAcceptedTerms() {
   const { user } = useAuth();
-  const [hasAccepted, setHasAccepted] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!user) { setIsLoading(false); return; }
-    const check = async () => {
-       const { data } = await supabase.from("terms_acceptance" as any).select("id").eq("user_id", user.id).limit(1);
-       setHasAccepted(!!(data && data.length > 0));
-       setIsLoading(false);
-    };
-    check();
-  }, [user]);
-
-  return { hasAccepted, isLoading };
+  const query = useQuery({
+    queryKey: ["terms-acceptance", user?.id ?? null],
+    enabled: !!user,
+    queryFn: async () => {
+      if (!user) return false;
+      const { data } = await supabase
+        .from("terms_acceptance" as any)
+        .select("id")
+        .eq("user_id", user.id)
+        .limit(1);
+      return !!(data && data.length > 0);
+    },
+  });
+  // If no user, treat as accepted=true so the gate doesn't block pre-auth flows
+  return {
+    hasAccepted: user ? (query.data ?? false) : true,
+    isLoading: !!user && query.isLoading,
+  };
 }
 
 export function useAcceptTerms() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
        if (!user) throw new Error("Not authenticated");
        const { error } = await supabase.from("terms_acceptance" as any).insert({ user_id: user.id });
        if (error) throw error;
+    },
+    onSuccess: () => {
+      // Invalidate so the gate re-checks and lets the user through to their dashboard.
+      queryClient.invalidateQueries({ queryKey: ["terms-acceptance", user?.id ?? null] });
+      // Also seed the cache to true so navigation is instant (no flash of the gate).
+      queryClient.setQueryData(["terms-acceptance", user?.id ?? null], true);
     },
   });
 }
