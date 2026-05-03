@@ -26,12 +26,13 @@ import { useHSCoachProfile } from '@/hooks/useHSCoachProfile';
 
 import { colors, typography, spacing, radius } from '@/lib/theme';
 import type { PublicProfileStackParamList } from '@/navigation/stacks/PublicProfileStack';
+import { NotRegisteredUser } from '@/components/NotRegisteredUser';
 
 type R = RouteProp<PublicProfileStackParamList, 'PublicScoutProfile'>;
 
 export default function PublicScoutProfileScreen() {
   const { params } = useRoute<R>();
-  const id = params?.scoutId;
+  const id = params?.scoutId || (params as any)?.id;
   const nav = useNavigation<any>();
 
   const { data: coachProfile } = useCoachProfile();
@@ -91,11 +92,7 @@ export default function PublicScoutProfileScreen() {
     );
   }
   if (!scout) {
-    return (
-      <View style={s.loading}>
-        <Text style={s.muted}>Scout not found.</Text>
-      </View>
-    );
+    return <NotRegisteredUser />;
   }
 
   const city = (scout as any).city as string | undefined;

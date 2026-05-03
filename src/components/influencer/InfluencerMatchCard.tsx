@@ -82,8 +82,10 @@ export function InfluencerMatchCard({
   const handleNavigate = () => {
     if (disableNavigate) return;
     // Web: navigate(`/influencers/${influencer.handle}`)
-    if (influencer.handle) {
-      navigation.navigate('PublicProfileStack' as any, { screen: 'InfluencerProfile', params: { handle: influencer.handle } });
+    // Build 50: fall back to id when handle missing so the card isn't a no-op.
+    const ref = influencer.handle || (influencer as any).id;
+    if (ref) {
+      navigation.navigate('PublicProfileStack' as any, { screen: 'InfluencerProfile', params: { handle: ref } });
     }
   };
 

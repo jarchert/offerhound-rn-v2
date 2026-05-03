@@ -9,6 +9,9 @@ import { colors } from '@/lib/theme';
 import PublicProfileScreen from '@/screens/public/PublicProfileScreen';
 import PublicScoutProfileScreen from '@/screens/public/PublicScoutProfileScreen';
 import PublicCoachProfileScreen from '@/screens/public/PublicCoachProfileScreen';
+import PublicHSCoachProfileScreen from '@/screens/public/PublicHSCoachProfileScreen';
+import PublicClubCoachProfileScreen from '@/screens/public/PublicClubCoachProfileScreen';
+import PublicAgencyProfileScreen from '@/screens/public/PublicAgencyProfileScreen';
 import InfluencerProfileScreen from '@/screens/public/InfluencerProfileScreen';
 import InfluencerBlogPostScreen from '@/screens/public/InfluencerBlogPostScreen';
 import InviteShareCardScreen from '@/screens/public/InviteShareCardScreen';
@@ -24,8 +27,11 @@ export type PublicProfileStackParamList = {
   PublicProfile: { customUrl: string };
   AthleteProfileByUrl: { customUrl: string };
   ProfileLegacy: { customUrl: string };
-  PublicScoutProfile: { scoutId: string };
-  PublicCoachProfile: { coachId: string };
+  PublicScoutProfile: { scoutId?: string; id?: string };
+  PublicCoachProfile: { coachId?: string; id?: string };
+  PublicHSCoachProfile: { id: string };
+  PublicClubCoachProfile: { id: string };
+  PublicAgencyProfile: { id: string };
   InfluencerProfile: { handle: string };
   InfluencerBlogPost: { handle: string; slug: string };
   InviteShareCard: { token?: string; from?: string; role?: string } | undefined;
@@ -52,6 +58,9 @@ export default function PublicProfileStack() {
       <Stack.Screen name="ProfileLegacy" component={PublicProfileScreen} />
       <Stack.Screen name="PublicScoutProfile" component={PublicScoutProfileScreen} />
       <Stack.Screen name="PublicCoachProfile" component={PublicCoachProfileScreen} />
+      <Stack.Screen name="PublicHSCoachProfile" component={PublicHSCoachProfileScreen} />
+      <Stack.Screen name="PublicClubCoachProfile" component={PublicClubCoachProfileScreen} />
+      <Stack.Screen name="PublicAgencyProfile" component={PublicAgencyProfileScreen} />
       <Stack.Screen name="InfluencerProfile" component={InfluencerProfileScreen} />
       <Stack.Screen name="InfluencerBlogPost" component={InfluencerBlogPostScreen} />
       <Stack.Screen name="InviteShareCard" component={InviteShareCardScreen} />

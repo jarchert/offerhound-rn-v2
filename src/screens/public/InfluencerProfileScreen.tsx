@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
+import { NotRegisteredUser } from '@/components/NotRegisteredUser';
 import {
   Star,
   Globe,
@@ -104,11 +105,7 @@ export default function InfluencerProfileScreen() {
     );
   }
   if (!influencer) {
-    return (
-      <View style={s.center}>
-        <Text style={s.muted}>Influencer not found.</Text>
-      </View>
-    );
+    return <NotRegisteredUser />;
   }
 
   const isOwner = user?.id === influencer.user_id;

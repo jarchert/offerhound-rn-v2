@@ -121,6 +121,14 @@ export function CoachMatchCard({
   const { width } = useWindowDimensions();
   const isDesktop = width >= 640;
 
+  // Build 50: tap-card-anywhere → public profile, route by audience.
+  const handleCardPress = () => {
+    if (!coach?.id) return;
+    const screen = coachAudience === 'hs-coach' ? 'PublicHSCoachProfile' : 'PublicCoachProfile';
+    const params = coachAudience === 'hs-coach' ? { id: coach.id } : { coachId: coach.id, id: coach.id };
+    navigation.navigate('PublicProfileStack' as any, { screen, params });
+  };
+
   const priorityKey = (scores?.priority as string) || '';
   const priorityCfg = PRIORITY_CONFIG[priorityKey] || null;
   const hasScore = typeof scores?.match_score === 'number';
@@ -246,7 +254,7 @@ export function CoachMatchCard({
   // ─── Mobile layout ─────────────────────────────────────────
   if (!isDesktop) {
     return (
-      <View style={s.container}>
+      <Pressable style={s.container} onPress={handleCardPress}>
         <View style={s.mobileHeader}>
           <Avatar
             source={coach.image_url ? { uri: coach.image_url } : null}
@@ -308,13 +316,13 @@ export function CoachMatchCard({
             </Pressable>
           ) : null}
         </View>
-      </View>
+      </Pressable>
     );
   }
 
   // ─── Desktop layout ────────────────────────────────────────
   return (
-    <View style={s.container}>
+    <Pressable style={s.container} onPress={handleCardPress}>
       <View style={s.desktopRow}>
         <Avatar
           source={coach.image_url ? { uri: coach.image_url } : null}
@@ -365,7 +373,7 @@ export function CoachMatchCard({
           </View>
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 

@@ -30,6 +30,7 @@ import { AthleteProfile } from '@/components/AthleteProfile';
 import { Footer } from '@/components/Footer';
 import { HighlightMediaWindow } from '@/components/HighlightMediaWindow';
 import { BackButton } from '@/components/BackButton';
+import { NotRegisteredUser } from '@/components/NotRegisteredUser';
 import SEO from '@/components/SEO';
 import { MessageButton } from '@/components/MessageButton';
 import { Button } from '@/components/ui/Button';
@@ -120,26 +121,7 @@ export default function PublicProfileScreen() {
   }
 
   if (!profile) {
-    return (
-      <View style={s.loading}>
-        <Card style={s.notFoundCard}>
-          <CardContent style={s.notFoundContent}>
-            <AlertCircle size={48} color={colors.mutedForeground} />
-            <Text style={s.notFoundTitle}>Profile Not Found</Text>
-            <Text style={s.notFoundDesc}>
-              This profile doesn't exist or hasn't been published yet.
-            </Text>
-            <Button
-              onPress={() =>
-                nav.dispatch(CommonActions.navigate({ name: 'AthleteTabs' as any }))
-              }
-              leftIcon={<Home size={16} color={colors.primaryForeground} />}>
-              Go Home
-            </Button>
-          </CardContent>
-        </Card>
-      </View>
-    );
+    return <NotRegisteredUser />;
   }
 
   const seoTitle = `${profile.full_name} - ${profile.position || 'Athlete'} | OfferHound`;

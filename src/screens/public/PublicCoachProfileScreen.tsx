@@ -16,6 +16,8 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 
+import { NotRegisteredUser } from '@/components/NotRegisteredUser';
+
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { useCoachProfile } from '@/hooks/useCoachProfile';
 import { useScoutProfile } from '@/hooks/useScoutProfile';
@@ -28,7 +30,7 @@ type R = RouteProp<PublicProfileStackParamList, 'PublicCoachProfile'>;
 
 export default function PublicCoachProfileScreen() {
   const { params } = useRoute<R>();
-  const id = params?.coachId;
+  const id = params?.coachId || (params as any)?.id;
   const nav = useNavigation<any>();
 
   const { profile: athleteProfile } = usePlayerProfile();
@@ -86,11 +88,7 @@ export default function PublicCoachProfileScreen() {
     );
   }
   if (!coach) {
-    return (
-      <View style={s.loading}>
-        <Text style={s.muted}>Coach not found.</Text>
-      </View>
-    );
+    return <NotRegisteredUser />;
   }
 
   const city = (coach as any).city as string | undefined;
