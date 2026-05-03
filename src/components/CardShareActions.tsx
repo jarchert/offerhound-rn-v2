@@ -112,7 +112,38 @@ export function CardShareActions({
         setRecipient('');
         setMessage('');
       } catch (e: any) {
-        toast.error(e?.message || 'Failed to send');
+        // Build 48 parity #2/#19/#22 — on-device fallback when Supabase send-share-card fails.
+        try {
+          const SMS = await import('expo-sms');
+          const MailComposer = await import('expo-mail-composer');
+          const Sharing = await import('expo-sharing');
+          const FileSystem = await import('expo-file-system');
+          // Write base64 capture to a temp file so SMS/email can attach it.
+          const ext = cap.extension;
+          const tmp = `${(FileSystem as any).cacheDirectory || ''}offerhound-card-${Date.now()}.${ext}`;
+          await (FileSystem as any).writeAsStringAsync(tmp, cap.base64, { encoding: 'base64' });
+          if (channel === 'email' && (await MailComposer.isAvailableAsync())) {
+            await MailComposer.composeAsync({
+              recipients: [recipient.trim()],
+              subject: `${senderName || 'OfferHound'} shared a card`,
+              body: message.trim() || '',
+              attachments: [tmp],
+            });
+            toast.success('Opened email with card attached');
+          } else if (channel === 'sms' && (await SMS.isAvailableAsync())) {
+            await SMS.sendSMSAsync([recipient.trim()], message.trim() || '', { attachments: [{ uri: tmp, mimeType: cap.mimeType, filename: `${safeName}.${ext}` }] } as any);
+            toast.success('Opened SMS with card attached');
+          } else if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(tmp, { mimeType: cap.mimeType, dialogTitle: `Share ${safeName}` });
+          } else {
+            throw e;
+          }
+          setOpen(false);
+          setRecipient('');
+          setMessage('');
+        } catch (e2: any) {
+          toast.error(e?.message || e2?.message || 'Failed to send');
+        }
       }
     });
   };

@@ -77,8 +77,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
-    return { error: error as Error | null };
+    try {
+      // Build 48 parity #15 — properly complete Supabase OAuth flow in a native Expo app.
+      const WebBrowser = await import('expo-web-browser');
+      const Linking = await import('expo-linking');
+      const redirectTo = (Linking as any).createURL('/auth/callback');
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo, skipBrowserRedirect: true },
+      });
+      if (error) return { error: error as Error | null };
+      const authUrl = (data as any)?.url as string | undefined;
+      if (!authUrl) return { error: new Error('No auth URL returned from Supabase') };
+      const result = await (WebBrowser as any).openAuthSessionAsync(authUrl, redirectTo);
+      if (result?.type !== 'success' || !result.url) return { error: null };
+      // Parse the callback URL for tokens and set the session.
+      const parsed = new URL(String(result.url).replace('#', '?'));
+      const access_token = parsed.searchParams.get('access_token') || undefined;
+      const refresh_token = parsed.searchParams.get('refresh_token') || undefined;
+      const code = parsed.searchParams.get('code') || undefined;
+      if (access_token && refresh_token) {
+        const { error: sErr } = await supabase.auth.setSession({ access_token, refresh_token });
+        return { error: sErr as Error | null };
+      }
+      if (code) {
+        const { error: cErr } = await supabase.auth.exchangeCodeForSession(code);
+        return { error: cErr as Error | null };
+      }
+      return { error: null };
+    } catch (e) {
+      return { error: e as Error };
+    }
   };
 
   const signInWithApple = async () => {
