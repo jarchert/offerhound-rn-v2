@@ -94,7 +94,7 @@ export function SubscriptionStatus() {
         <CardContent>
           <Button
             style={s.fullWidth}
-            onPress={() => navigation.navigate("SettingsStack", { screen: "Pricing" })}
+            onPress={() => navigation.navigate("Pricing" as never)}
             leftIcon={<Crown size={16} color={colors.primaryForeground} style={s.iconMr} />}
           >
             View Plans

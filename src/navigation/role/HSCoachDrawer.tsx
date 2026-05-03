@@ -8,6 +8,7 @@ import { colors } from '@/lib/theme';
 import HSCoachDashboardScreen from '@/screens/hs-coach/HSCoachDashboardScreen';
 import AthleteSearchScreen from '@/screens/shared/AthleteSearchScreen';
 import LetterComposerScreen from '@/screens/shared/LetterComposerScreen';
+import CampsScreen from '@/screens/shared/CampsScreen';
 
 const Drawer = createDrawerNavigator();
 
@@ -24,6 +25,7 @@ export default function HSCoachDrawer() {
       <Drawer.Screen name="Dashboard" component={HSCoachDashboardScreen} />
       <Drawer.Screen name="FindAthletes" component={AthleteSearchScreen} />
       <Drawer.Screen name="Letters" component={LetterComposerScreen} />
+      <Drawer.Screen name="Camps" component={CampsScreen} />
     </Drawer.Navigator>
   );
 }

@@ -223,11 +223,9 @@ export function RecruiterAssistant() {
 
   const goToPricing = () => {
     try {
-      navigation.navigate('SettingsStack', { screen: 'Pricing' });
+      navigation.navigate('Pricing' as never);
     } catch {
-      try {
-        navigation.navigate('Pricing' as never);
-      } catch {}
+      // Pricing screen not available in current navigator state
     }
   };
 

@@ -383,7 +383,7 @@ export default function ClubCoachDashboardScreen() {
           {/* Staff */}
           <TabsContent value="staff">
             <View style={s.tabBody}>
-              <StaffManager onMessageStaff={() => {}} />
+              <StaffManager onMessageStaff={(member: any) => nav.navigate('Messages', { recipientId: member.staff_user_id, recipientName: member.name || 'Staff' } as any)} />
               <StaffMessaging />
             </View>
           </TabsContent>

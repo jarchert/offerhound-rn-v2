@@ -234,7 +234,7 @@ export default function HSCoachDashboardScreen() {
               ) : null}
             </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-              <Button size="sm" leftIcon={<Search size={14} color={colors.primaryForeground} />}>
+              <Button size="sm" leftIcon={<Search size={14} color={colors.primaryForeground} />} onPress={() => nav.navigate('AthleteSearch' as never)}>
                 Search Athletes
               </Button>
               <Button
@@ -415,6 +415,7 @@ export default function HSCoachDashboardScreen() {
                         variant="outline" size="sm"
                         leftIcon={<Search size={14} color={colors.primary} />}
                         style={{ marginTop: spacing.md }}
+                        onPress={() => nav.navigate('AthleteSearch' as never)}
                       >
                         Search Athletes
                       </Button>
@@ -452,7 +453,7 @@ export default function HSCoachDashboardScreen() {
                               size="sm"
                             />
                           }
-                          onMessage={() => nav.navigate('Messages' as never)}
+                          onMessage={() => nav.navigate('Messages', { recipientId: match.athlete?.user_id || match.athlete?.id, recipientName: match.athlete?.full_name || 'Athlete' } as any)}
                         />
                       ))}
                     </View>
@@ -474,7 +475,7 @@ export default function HSCoachDashboardScreen() {
 
             <TabsContent value="staff">
               <View style={{ gap: spacing.md }}>
-                <StaffManager onMessageStaff={() => {}} />
+                <StaffManager onMessageStaff={(member: any) => nav.navigate('Messages', { recipientId: member.staff_user_id, recipientName: member.name || 'Staff' } as any)} />
                 <StaffMessaging />
               </View>
             </TabsContent>
@@ -514,7 +515,15 @@ export default function HSCoachDashboardScreen() {
                               </Badge>
                             </View>
                           </View>
-                          <Button variant="outline" size="sm" style={{ marginTop: spacing.sm }}>
+                          <Button
+                            variant="outline" size="sm" style={{ marginTop: spacing.sm }}
+                            onPress={() =>
+                              nav.navigate('PublicProfileStack' as any, {
+                                screen: 'PublicProfile',
+                                params: { userId: saved.athlete_user_id || saved.athlete?.id },
+                              })
+                            }
+                          >
                             View Profile
                           </Button>
                         </View>
@@ -525,7 +534,7 @@ export default function HSCoachDashboardScreen() {
                       <Users size={36} color={colors.foregroundSubtle} />
                       <Text style={[s.empTitle, { marginTop: spacing.sm }]}>No saved athletes</Text>
                       <Text style={s.muted}>Search for athletes to recommend to college programs.</Text>
-                      <Button leftIcon={<Search size={14} color={colors.primaryForeground} />} style={{ marginTop: spacing.md }}>
+                      <Button leftIcon={<Search size={14} color={colors.primaryForeground} />} style={{ marginTop: spacing.md }} onPress={() => nav.navigate('AthleteSearch' as never)}>
                         Search Athletes
                       </Button>
                     </View>

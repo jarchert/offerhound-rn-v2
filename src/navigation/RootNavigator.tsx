@@ -58,7 +58,7 @@ import SavedCampsScreen from '@/screens/shared/SavedCampsScreen';
 import ReferralTrackingScreen from '@/screens/shared/ReferralTrackingScreen';
 import InfluencerBoardScreen from '@/screens/influencer/InfluencerBoardScreen';
 
-// Persistent post-auth overlay
+import PasswordResetScreen from '@/screens/auth/PasswordResetScreen';
 import FloatingAICoach from '@/components/FloatingAICoach';
 
 export type RootStackParamList = {
@@ -106,6 +106,7 @@ export type RootStackParamList = {
   SavedCamps: undefined;
   ReferralTracking: undefined;
   InfluencerBoard: undefined;
+  PasswordReset: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -217,6 +218,7 @@ export default function RootNavigator() {
           <Stack.Screen name="SavedCamps" component={SavedCampsScreen} />
           <Stack.Screen name="ReferralTracking" component={ReferralTrackingScreen} />
           <Stack.Screen name="InfluencerBoard" component={InfluencerBoardScreen} />
+          <Stack.Screen name="PasswordReset" component={PasswordResetScreen} />
         </>
       )}
     </Stack.Navigator>

@@ -46,10 +46,10 @@ export default function CoachAthleteMatchesScreen() {
   const { goToLetterForAthlete } = useLetterCenter();
 
   const goToMessages = (athlete: any) => {
-    // RN Messages screen takes no params today; PORT-PENDING for athlete
-    // pre-selection. We still navigate to Messages so flow continues.
-    nav.navigate('Messages');
-    void athlete;
+    nav.navigate('Messages', {
+      recipientId: athlete?.user_id || athlete?.id,
+      recipientName: athlete?.full_name || 'Athlete',
+    } as any);
   };
 
   return (

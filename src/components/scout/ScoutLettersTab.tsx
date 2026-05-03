@@ -110,7 +110,7 @@ export function ScoutLettersTab() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageRows = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
 
-  const goCompose = () => navigation.navigate('ScoutLetters' as never);
+  const goCompose = () => navigation.navigate('LetterComposer' as never);
 
   if (isLoading) {
     return (

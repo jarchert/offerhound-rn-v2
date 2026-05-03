@@ -14,7 +14,7 @@ interface Message {
   sender_id: string;
   content: string;
   created_at: string;
-  read_at?: string | null;
+  is_read?: boolean;
 }
 
 export function MessageThread({ conversationId }: { conversationId: string }) {
@@ -58,12 +58,12 @@ export function MessageThread({ conversationId }: { conversationId: string }) {
   useEffect(() => {
     if (!user || messages.length === 0) return;
     const unreadIds = messages
-      .filter((m) => m.sender_id !== user.id && !m.read_at)
+      .filter((m) => m.sender_id !== user.id && !m.is_read)
       .map((m) => m.id);
     if (unreadIds.length > 0) {
       void supabase
         .from('messages')
-        .update({ read_at: new Date().toISOString() })
+        .update({ is_read: true })
         .in('id', unreadIds);
     }
   }, [messages, user]);
@@ -94,7 +94,7 @@ export function MessageThread({ conversationId }: { conversationId: string }) {
             <View style={[s.row, isMine && s.rowMine]}>
               <View style={[s.bubble, isMine ? s.bubbleMine : s.bubbleTheirs]}>
                 <Text style={[s.text, isMine ? s.textMine : s.textTheirs]}>{item.content}</Text>
-                {isMine && item.read_at ? <Text style={s.readBadge}>Read</Text> : null}
+                {isMine && item.is_read ? <Text style={s.readBadge}>Read</Text> : null}
               </View>
             </View>
           );

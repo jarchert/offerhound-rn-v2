@@ -14,7 +14,7 @@ interface Notification {
   title: string;
   body: string | null;
   created_at: string;
-  read: boolean;
+  is_read: boolean;
   type: string;
 }
 
@@ -37,16 +37,16 @@ export default function NotificationsScreen() {
     enabled: !!user,
   });
 
-  const unread = notifications.filter(n => !n.read).length;
+  const unread = notifications.filter(n => !n.is_read).length;
 
   const markAllRead = async () => {
     if (!user) return;
-    await supabase.from('notifications').update({ read: true }).eq('user_id', user.id).eq('read', false);
+    await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false);
     qc.invalidateQueries({ queryKey: ['notifications'] });
   };
 
   const markRead = async (id: string) => {
-    await supabase.from('notifications').update({ read: true }).eq('id', id);
+    await supabase.from('notifications').update({ is_read: true }).eq('id', id);
     qc.invalidateQueries({ queryKey: ['notifications'] });
   };
 
@@ -75,16 +75,16 @@ export default function NotificationsScreen() {
         ItemSeparatorComponent={() => <View style={s.sep} />}
         ListEmptyComponent={<Text style={s.empty}>No notifications yet</Text>}
         renderItem={({ item }) => (
-          <Pressable style={[s.row, !item.read && s.rowUnread]} onPress={() => !item.read && markRead(item.id)}>
+          <Pressable style={[s.row, !item.is_read && s.rowUnread]} onPress={() => !item.is_read && markRead(item.id)}>
             <View style={s.rowText}>
               <View style={s.rowTop}>
                 <Text style={s.rowTitle} numberOfLines={1}>{item.title}</Text>
-                {!item.read && <View style={s.dot} />}
+                {!item.is_read && <View style={s.dot} />}
               </View>
               {item.body && <Text style={s.rowBody}>{item.body}</Text>}
               <Text style={s.rowDate}>{new Date(item.created_at).toLocaleString()}</Text>
             </View>
-            {item.read && <Check size={14} color={colors.mutedForeground} />}
+            {item.is_read && <Check size={14} color={colors.mutedForeground} />}
           </Pressable>
         )}
       />

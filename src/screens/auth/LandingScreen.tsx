@@ -216,7 +216,7 @@ function StickyHeader({
   });
   return (
     <Animated.View style={[s.stickyHeader, { transform: [{ translateY }], opacity }]}>
-      <Pressable onPress={() => nav.navigate('Landing' as any)}>
+      <Pressable onPress={() => nav.navigate('LandingTab' as any)}>
         <Text style={s.stickyLogo}>
           <Text style={{ color: colors.primary }}>OFFER</Text>
           <Text style={{ color: colors.foreground }}>HOUND</Text>
@@ -298,7 +298,6 @@ function HowItWorksSection({
       : 'Find and evaluate athletes in minutes. Build your recruiting board today.';
 
   const ctaLabel = viewerType === 'athlete' ? 'Get Started Free' : 'Search Athletes Now';
-  const ctaRoute = viewerType === 'athlete' ? 'SignUp' : 'AthleteSearch';
 
   return (
     <View style={s.section}>
@@ -319,7 +318,7 @@ function HowItWorksSection({
       </View>
 
       {!isAuthenticated && (
-        <Pressable style={s.ctaBtn} onPress={() => onCta(ctaRoute)}>
+        <Pressable style={s.ctaBtn} onPress={() => onCta('AuthStack')}>
           <Text style={s.ctaBtnText}>{ctaLabel}</Text>
         </Pressable>
       )}

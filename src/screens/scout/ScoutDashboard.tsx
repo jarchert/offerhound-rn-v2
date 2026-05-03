@@ -70,7 +70,12 @@ export default function ScoutDashboard() {
         </View>
 
         <View style={s.section}>
-          <SectionHeader title="Active Pipeline" subtitle={`${pipeline.length} athletes being tracked`} />
+          <SectionHeader
+            title="Active Pipeline"
+            subtitle={`${pipeline.length} athletes being tracked`}
+            actionLabel={pipeline.length > 0 ? 'See all' : undefined}
+            onAction={() => setOpenKey('pipeline')}
+          />
           {pipeline.length === 0 ? (
             <View style={s.empty}><Text style={s.emptyText}>No athletes in your pipeline yet.</Text></View>
           ) : (

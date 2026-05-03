@@ -25,7 +25,7 @@ type NotificationRow = {
   id: string;
   user_id: string;
   title: string;
-  message: string | null;
+  body: string | null;
   type: string | null;
   link: string | null;
   is_read: boolean;
@@ -34,8 +34,8 @@ type NotificationRow = {
 
 type ConversationRow = {
   id: string;
-  coach_user_id: string;
-  athlete_user_id: string;
+  participant_1: string;
+  participant_2: string;
   last_message_at: string | null;
   other_name?: string;
   last_message?: string | null;
@@ -102,9 +102,9 @@ export default function InboxScreen() {
     queryFn: async () => {
       if (!user) return [] as ConversationRow[];
       let filter: string;
-      if (effectiveConvScope === 'coach_side') filter = `coach_user_id.eq.${user.id}`;
-      else if (effectiveConvScope === 'athlete_side') filter = `athlete_user_id.eq.${user.id}`;
-      else filter = `coach_user_id.eq.${user.id},athlete_user_id.eq.${user.id}`;
+      if (effectiveConvScope === 'coach_side') filter = `participant_1.eq.${user.id}`;
+      else if (effectiveConvScope === 'athlete_side') filter = `participant_2.eq.${user.id}`;
+      else filter = `participant_1.eq.${user.id},participant_2.eq.${user.id}`;
       const { data, error } = await supabase
         .from('conversations')
         .select('*')
@@ -115,8 +115,8 @@ export default function InboxScreen() {
 
       const enriched = await Promise.all(
         (data || []).map(async (conv: any) => {
-          const isCoach = conv.coach_user_id === user.id;
-          const otherId = isCoach ? conv.athlete_user_id : conv.coach_user_id;
+          const isCoach = conv.participant_1 === user.id;
+          const otherId = isCoach ? conv.participant_2 : conv.participant_1;
           let otherName = 'Conversation';
           if (isCoach) {
             const { data: p } = await supabase
@@ -145,7 +145,7 @@ export default function InboxScreen() {
             .select('id', { count: 'exact', head: true })
             .eq('conversation_id', conv.id)
             .eq('is_read', false)
-            .neq('sender_user_id', user.id);
+            .neq('sender_id', user.id);
           return {
             ...conv,
             other_name: otherName,
@@ -205,7 +205,7 @@ export default function InboxScreen() {
         .from('messages')
         .update({ is_read: true } as any)
         .eq('conversation_id', conversationId)
-        .neq('sender_user_id', user.id)
+        .neq('sender_id', user.id)
         .eq('is_read', false);
       if (error) throw error;
     },
@@ -248,7 +248,13 @@ export default function InboxScreen() {
 
   const handleConvClick = (c: ConversationRow) => {
     if ((c.unread_count || 0) > 0) markConvRead.mutate(c.id);
-    try { navigation.navigate('Messages' as never); } catch { /* noop */ }
+    try {
+      const otherId = c.participant_1 === user?.id ? c.participant_2 : c.participant_1;
+      navigation.navigate('Messages' as never, {
+        recipientId: otherId,
+        recipientName: c.other_name,
+      } as never);
+    } catch { /* noop */ }
   };
 
   const showRoleScopeBanner =
@@ -476,9 +482,9 @@ function AlertsList({
                                 {formatWhen(n.created_at)}
                               </Text>
                             </View>
-                            {n.message && (
+                            {n.body && (
                               <Text style={s.itemSubtitle} numberOfLines={2}>
-                                {n.message}
+                                {n.body}
                               </Text>
                             )}
                             {unread && (

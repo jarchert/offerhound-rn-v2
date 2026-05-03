@@ -247,7 +247,7 @@ export default function AccountSettingsScreen() {
             </View>
             <Pressable
               style={s.outlineBtn}
-              onPress={() => nav.navigate('AuthStack' as any, { screen: 'PasswordReset' })}>
+              onPress={() => nav.navigate('PasswordReset' as any)}>
               <Lock size={16} color={colors.foreground} />
               <Text style={s.outlineBtnText}>Change Password</Text>
             </Pressable>

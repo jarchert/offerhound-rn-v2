@@ -24,7 +24,32 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
-type LetterType = 'recruiting' | 'endorsement' | 'intro' | 'thank_you' | 'update';
+type LetterType = 'initial-interest' | 'follow-up' | 'camp-invitation' | 'scholarship-offer' | 'thank-you' | 'introduction' | 'recruiting' | 'endorsement' | 'update';
+
+// Normalize legacy/variant letter type names to canonical types
+function normalizeLetterType(raw: string | undefined): LetterType {
+  if (!raw) return 'initial-interest';
+  const map: Record<string, LetterType> = {
+    'recruiting': 'initial-interest',
+    'intro': 'introduction',
+    'thank_you': 'thank-you',
+    'scout-introduction': 'introduction',
+    'player-pitch': 'initial-interest',
+  };
+  return (map[raw] || raw) as LetterType;
+}
+
+const LETTER_TYPE_LABELS: Record<LetterType, string> = {
+  'initial-interest': 'Initial Interest',
+  'follow-up': 'Follow-up',
+  'camp-invitation': 'Camp Invite',
+  'scholarship-offer': 'Scholarship Offer',
+  'thank-you': 'Thank You',
+  'introduction': 'Introduction',
+  'recruiting': 'Recruiting',
+  'endorsement': 'Endorsement',
+  'update': 'Update',
+};
 
 interface LetterDraft {
   recipientName: string;
@@ -39,7 +64,7 @@ const DEFAULT_DRAFT: LetterDraft = {
   recipientName: '',
   recipientRole: '',
   schoolName: '',
-  letterType: 'recruiting',
+  letterType: 'initial-interest',
   keyPoints: '',
   tone: 'professional',
 };
@@ -53,16 +78,20 @@ export default function LetterComposerScreen() {
   // when nav state contains a coach (location.state.coach / ?coachName=...).
   const { profile } = usePlayerProfile();
   const seed = route.params?.seed ?? {};
+  const prefill = route.params?.prefill ?? {};
+  // Support nested coach object from DashboardScreen: { seed: { coach: { name, school } } }
+  const seedCoach = seed.coach ?? {};
   const seededFromCoach = {
-    recipientName: seed.recipientName || route.params?.coachName || route.params?.recipientName || route.params?.athleteName || '',
-    recipientRole: seed.recipientRole || route.params?.coachRole || route.params?.recipientRole || route.params?.athletePosition || '',
-    schoolName: seed.schoolName || route.params?.coachSchool || route.params?.schoolName || route.params?.athleteSchool || '',
+    recipientName: seed.recipientName || prefill.recipientName || seedCoach.name || route.params?.coachName || route.params?.recipientName || route.params?.athleteName || '',
+    recipientRole: seed.recipientRole || prefill.recipientTitle || seedCoach.title || route.params?.coachRole || route.params?.recipientRole || route.params?.athletePosition || '',
+    schoolName: seed.schoolName || prefill.organizationName || seedCoach.school || route.params?.coachSchool || route.params?.schoolName || route.params?.athleteSchool || '',
   };
 
   const [draft, setDraft] = useState<LetterDraft>(() => ({
     ...DEFAULT_DRAFT,
     ...seededFromCoach,
     ...seed,
+    letterType: normalizeLetterType(seed.letterType || prefill.letterType || route.params?.letterType),
   }));
   const [generated, setGenerated] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -199,9 +228,9 @@ export default function LetterComposerScreen() {
 
           <Text style={s.label}>Letter type</Text>
           <View style={s.chipRow}>
-            {(['recruiting', 'intro', 'thank_you', 'update', 'endorsement'] as const).map((t) => (
+            {(['initial-interest', 'follow-up', 'camp-invitation', 'thank-you', 'introduction', 'scholarship-offer'] as const).map((t) => (
               <Pressable key={t} onPress={() => setField('letterType', t)}>
-                <Badge variant={draft.letterType === t ? 'secondary' : 'outline'}>{t}</Badge>
+                <Badge variant={draft.letterType === t ? 'secondary' : 'outline'}>{LETTER_TYPE_LABELS[t]}</Badge>
               </Pressable>
             ))}
           </View>

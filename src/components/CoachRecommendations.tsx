@@ -128,12 +128,13 @@ export function CoachRecommendations() {
   const handleContact = (coachId: string) => {
     const coach = getCoachById(coachId);
     if (coach) {
-      navigation.navigate('Letters', {
-        coach: {
-          name: coach.name,
-          school: coach.school,
-          email: coach.email,
+      navigation.navigate('LetterComposer', {
+        seed: {
+          recipientName: coach.name,
+          schoolName: coach.school,
         },
+        coachName: coach.name,
+        coachSchool: coach.school,
       });
     }
   };

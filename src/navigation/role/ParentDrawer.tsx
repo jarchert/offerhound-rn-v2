@@ -7,6 +7,7 @@ import { colors } from '@/lib/theme';
 
 import ParentDashboard from '@/screens/parent/ParentDashboard';
 import ParentTrustSafetyScreen from '@/screens/parent/ParentTrustSafetyScreen';
+import CampsScreen from '@/screens/shared/CampsScreen';
 
 const Drawer = createDrawerNavigator();
 
@@ -22,6 +23,7 @@ export default function ParentDrawer() {
     >
       <Drawer.Screen name="Dashboard" component={ParentDashboard} />
       <Drawer.Screen name="TrustSafety" component={ParentTrustSafetyScreen} />
+      <Drawer.Screen name="Camps" component={CampsScreen} />
     </Drawer.Navigator>
   );
 }

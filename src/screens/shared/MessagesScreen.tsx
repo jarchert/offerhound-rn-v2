@@ -40,21 +40,62 @@ export default function MessagesScreen() {
       const { data } = await supabase
         .from('conversations')
         .select('*')
-        .or(`user_a_id.eq.${user.id},user_b_id.eq.${user.id}`)
+        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
         .order('last_message_at', { ascending: false });
-      // Shape into Conversation[]
-      return (data || []).map((c: any): Conversation => {
-        const mine = c.user_a_id === user.id;
-        return {
-          id: c.id,
-          other_user_id: mine ? c.user_b_id : c.user_a_id,
-          other_user_name: mine ? (c.user_b_name ?? 'User') : (c.user_a_name ?? 'User'),
-          other_user_image: mine ? c.user_b_image : c.user_a_image,
-          last_message: c.last_message,
-          last_message_at: c.last_message_at,
-          unread_count: c.unread_count ?? 0,
-        };
-      });
+      // Enrich each conversation with the other participant's name and last message
+      const enriched = await Promise.all(
+        (data || []).map(async (c: any): Promise<Conversation> => {
+          const mine = c.participant_1 === user.id;
+          const otherId = mine ? c.participant_2 : c.participant_1;
+          // Resolve other user's name — try player_profiles first, then coach_profiles
+          let otherName = 'User';
+          let otherImage: string | null = null;
+          const { data: player } = await supabase
+            .from('player_profiles')
+            .select('full_name, avatar_url')
+            .eq('user_id', otherId)
+            .maybeSingle();
+          if ((player as any)?.full_name) {
+            otherName = (player as any).full_name;
+            otherImage = (player as any).avatar_url || null;
+          } else {
+            const { data: coach } = await supabase
+              .from('coach_profiles')
+              .select('name, avatar_url')
+              .eq('user_id', otherId)
+              .maybeSingle();
+            if ((coach as any)?.name) {
+              otherName = (coach as any).name;
+              otherImage = (coach as any).avatar_url || null;
+            }
+          }
+          // Get last message
+          const { data: lastMsg } = await supabase
+            .from('messages')
+            .select('content')
+            .eq('conversation_id', c.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          // Count unread messages from the other user
+          const { count } = await supabase
+            .from('messages')
+            .select('id', { count: 'exact', head: true })
+            .eq('conversation_id', c.id)
+            .eq('is_read', false)
+            .neq('sender_id', user.id);
+          return {
+            id: c.id,
+            other_user_id: otherId,
+            other_user_name: otherName,
+            other_user_image: otherImage,
+            last_message: (lastMsg as any)?.content || null,
+            last_message_at: c.last_message_at,
+            unread_count: count || 0,
+          };
+        })
+      );
+      return enriched;
     },
     enabled: !!user,
   });
@@ -68,7 +109,7 @@ export default function MessagesScreen() {
         .from('conversations')
         .select('id')
         .or(
-          `and(user_a_id.eq.${user.id},user_b_id.eq.${targetId}),and(user_a_id.eq.${targetId},user_b_id.eq.${user.id})`
+          `and(participant_1.eq.${user.id},participant_2.eq.${targetId}),and(participant_1.eq.${targetId},participant_2.eq.${user.id})`
         )
         .maybeSingle();
       if (existing) return existing.id;
@@ -76,10 +117,8 @@ export default function MessagesScreen() {
       const { data: newConv, error } = await supabase
         .from('conversations')
         .insert({
-          user_a_id: user.id,
-          user_b_id: targetId,
-          user_a_name: user.user_metadata?.full_name || user.email || 'User',
-          user_b_name: targetName || 'User',
+          participant_1: user.id,
+          participant_2: targetId,
         })
         .select('id')
         .single();

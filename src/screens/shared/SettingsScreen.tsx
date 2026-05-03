@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, SafeAreaView, Pressable, Switch } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-import { Bell, Moon, Shield, FileText, Trash2, LogOut, ChevronRight, Users, Cookie, Eye } from 'lucide-react-native';
+import { Bell, Moon, Shield, FileText, Trash2, LogOut, ChevronRight, Users, Cookie, Eye, User, UserCog, Building2, Heart } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navbar } from '@/components/Navbar';
 import { BackButton } from '@/components/BackButton';
@@ -20,6 +20,19 @@ export default function SettingsScreen() {
         <Text style={s.title}>Settings</Text>
         <Text style={s.email}>{user?.email}</Text>
 
+        <SettingsGroup title="Account">
+          <SettingsRow
+            icon={UserCog}
+            label="Account settings"
+            onPress={() => nav.navigate('AccountSettings' as any)}
+          />
+          <SettingsRow
+            icon={Building2}
+            label="Organization"
+            onPress={() => nav.navigate('OrganizationSettings' as any)}
+          />
+        </SettingsGroup>
+
         <SettingsGroup title="Preferences">
           <SettingsRow
             icon={Moon}
@@ -34,7 +47,17 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={Bell}
             label="Notifications"
-            onPress={() => nav.navigate('Notifications')}
+            onPress={() => nav.navigate('NotificationSettings' as any)}
+          />
+          <SettingsRow
+            icon={Heart}
+            label="Following"
+            onPress={() => nav.navigate('FollowingSettings' as any)}
+          />
+          <SettingsRow
+            icon={Shield}
+            label="Privacy settings"
+            onPress={() => nav.navigate('CookieSettings' as any)}
           />
         </SettingsGroup>
 
@@ -47,7 +70,7 @@ export default function SettingsScreen() {
           <SettingsRow icon={Eye} label="Accessibility" onPress={() => nav.navigate('LegalStack' as any, { screen: 'Accessibility' })} />
         </SettingsGroup>
 
-        <SettingsGroup title="Account">
+        <SettingsGroup title="Danger zone">
           <SettingsRow icon={Trash2} label="Delete account" onPress={() => nav.navigate('DeleteAccount' as any)} destructive />
           <SettingsRow icon={LogOut} label="Sign out" onPress={signOut} destructive />
         </SettingsGroup>

@@ -67,7 +67,7 @@ export function PublishPaywallDialog({ open, onOpenChange }: PublishPaywallDialo
           <Button
             onPress={() => {
               onOpenChange(false);
-              navigation.navigate('SettingsStack', { screen: 'Pricing' });
+              navigation.navigate('Pricing' as never);
             }}
             style={s.fullWidth}
             leftIcon={<Crown size={16} color={colors.primaryForeground} />}

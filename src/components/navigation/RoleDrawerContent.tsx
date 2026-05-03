@@ -77,6 +77,7 @@ const MENU_ITEMS: Record<DrawerRole, MenuItem[]> = {
     { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, screen: 'Dashboard' },
     { key: 'athletes', label: 'Find Athletes', icon: Search, screen: 'FindAthletes' },
     { key: 'letters', label: 'Letters', icon: Mail, screen: 'Letters' },
+    { key: 'camps', label: 'Camps', icon: CalendarDays, screen: 'Camps' },
     { key: 'directory', label: 'Coach Directory', icon: Users, rootScreen: 'CoachDirectory' },
     { key: 'messages', label: 'Messages', icon: MessageCircle, rootScreen: 'Messages' },
     { key: 'settings', label: 'Settings', icon: Settings, rootScreen: 'SettingsStack' },
@@ -100,6 +101,7 @@ const MENU_ITEMS: Record<DrawerRole, MenuItem[]> = {
   ],
   parent: [
     { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, screen: 'Dashboard' },
+    { key: 'camps', label: 'Camps', icon: CalendarDays, screen: 'Camps' },
     { key: 'messages', label: 'Messages', icon: MessageCircle, rootScreen: 'Messages' },
     { key: 'inbox', label: 'Inbox', icon: Mail, rootScreen: 'Inbox' },
     { key: 'safety', label: 'Trust & Safety', icon: Shield, screen: 'TrustSafety' },

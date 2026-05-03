@@ -11,6 +11,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
 import * as TrackingTransparency from 'expo-tracking-transparency';
 import { Navbar } from '@/components/Navbar';
 import { BackButton } from '@/components/BackButton';
@@ -18,6 +19,7 @@ import { Card } from '@/components/ui/Card';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
 export default function PrivacySettingsScreen() {
+  const nav = useNavigation<NavigationProp<any>>();
   const [attStatus, setAttStatus] = useState<string>('undetermined');
   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
   const [crashReportsEnabled, setCrashReportsEnabled] = useState(true);
@@ -100,7 +102,7 @@ export default function PrivacySettingsScreen() {
           <Text style={s.desc}>
             You can request a copy of your data or delete your account at any time.
           </Text>
-          <Text style={s.link}>Request data export →</Text>
+          <Text style={s.link} onPress={() => nav.navigate('Support' as any)}>Request data export →</Text>
         </Card>
       </ScrollView>
     </SafeAreaView>

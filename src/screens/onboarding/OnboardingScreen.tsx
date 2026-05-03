@@ -32,7 +32,33 @@ export default function OnboardingScreen() {
     setLoading(true);
     await supabase.from('user_roles').upsert({ user_id: user.id, role: selectedRole });
     setLoading(false);
-    nav.navigate('AthleteTabs' as any);
+    // Navigate to the appropriate role-specific navigator
+    switch (selectedRole) {
+      case 'athlete':
+      case 'parent':
+        nav.navigate('AthleteTabs' as any);
+        break;
+      case 'coach':
+        nav.navigate('CoachDrawer' as any);
+        break;
+      case 'scout':
+        nav.navigate('ScoutDrawer' as any);
+        break;
+      case 'influencer':
+        nav.navigate('InfluencerDrawer' as any);
+        break;
+      case 'high_school_coach':
+        nav.navigate('HSCoachDrawer' as any);
+        break;
+      case 'club_coach':
+        nav.navigate('ClubCoachDrawer' as any);
+        break;
+      case 'agency' as AppRole:
+        nav.navigate('AgencyDrawer' as any);
+        break;
+      default:
+        nav.navigate('AthleteTabs' as any);
+    }
   };
 
   return (
