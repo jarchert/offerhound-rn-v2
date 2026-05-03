@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, SafeAreaView, RefreshControl, Pressable } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-import { Users, Trophy, Mail, Share2, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { Users, Trophy, Mail, Share2, ChevronDown, ChevronUp, Target, BarChart3, MessageSquare } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCoachAthleteMatches } from '@/hooks/useAthleteMatches';
 import { useCoachDashboardStats } from '@/hooks/useCoachDashboardStats';
@@ -20,10 +20,14 @@ import { StaffManager } from '@/components/StaffManager';
 import { StaffMessaging } from '@/components/StaffMessaging';
 import { SocialLinksManager } from '@/components/SocialLinksManager';
 import { SocialSyndicationCenter } from '@/components/SocialSyndicationCenter';
+import { PositionNeedsBoard } from '@/components/PositionNeedsBoard';
+import { RecruitingPipeline } from '@/components/RecruitingPipeline';
+import { RecruitingAnalyticsDashboard } from '@/components/RecruitingAnalyticsDashboard';
+import { BulkMessageComposer } from '@/components/BulkMessageComposer';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 
-type SectionKey = 'matches' | 'transfer' | 'camps' | 'staff' | 'social';
+type SectionKey = 'matches' | 'positions' | 'pipeline' | 'transfer' | 'camps' | 'staff' | 'messaging' | 'analytics' | 'social';
 
 function Accordion({ title, sectionKey, openKey, setOpenKey, children }: any) {
   const open = openKey === sectionKey;
@@ -124,6 +128,16 @@ export default function CoachDashboard() {
           <CoachMatchSuggestionFeed />
         </Accordion>
 
+        {/* Positions tab — Team & Position Needs (Lovable parity restore, Build 48) */}
+        <Accordion title="Team & Position Needs" sectionKey="positions" openKey={openKey} setOpenKey={setOpenKey}>
+          <PositionNeedsBoard sport={coachProfile?.sport || 'football'} />
+        </Accordion>
+
+        {/* Recruiting Pipeline */}
+        <Accordion title="Recruiting Pipeline" sectionKey="pipeline" openKey={openKey} setOpenKey={setOpenKey}>
+          <RecruitingPipeline />
+        </Accordion>
+
         {/* Transfer Portal */}
         <Accordion title="Transfer Portal Feed" sectionKey="transfer" openKey={openKey} setOpenKey={setOpenKey}>
           <TransferPortalFeed />
@@ -141,6 +155,16 @@ export default function CoachDashboard() {
           <StaffManager onMessageStaff={() => setOpenKey('staff')} />
           <View style={{ height: spacing.md }} />
           <StaffMessaging />
+        </Accordion>
+
+        {/* Bulk Messaging */}
+        <Accordion title="Bulk Messaging" sectionKey="messaging" openKey={openKey} setOpenKey={setOpenKey}>
+          <BulkMessageComposer />
+        </Accordion>
+
+        {/* Analytics */}
+        <Accordion title="Recruiting Analytics" sectionKey="analytics" openKey={openKey} setOpenKey={setOpenKey}>
+          <RecruitingAnalyticsDashboard />
         </Accordion>
 
         {/* Social */}
