@@ -41,7 +41,8 @@ import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/use-toast';
 import { Share2, Globe, ExternalLink } from 'lucide-react-native';
 import { ProfileCardGenerator } from '@/components/ProfileCardGenerator';
-import { CardShareActions } from '@/components/CardShareActions';
+// CardShareActions no longer used here — ProfileCardGenerator renders its own
+// action bar internally (see parity/2026-04-29 #4/#5 fix).
 import { colors, typography, spacing } from '@/lib/theme';
 
 const SOCIAL_PLATFORMS = [
@@ -98,7 +99,7 @@ export function SocialLinksManager({
   const [links, setLinks] = useState<Record<string, string>>(initialLinks || {});
   const [showQR, setShowQR] = useState(false);
   const [showFullCard, setShowFullCard] = useState(role === 'athlete');
-  const cardCaptureRef = useRef<View>(null);
+  // cardCaptureRef removed (parity/2026-04-29 #4/#5) — ProfileCardGenerator owns its own capture.
 
   useEffect(() => {
     if (initialLinks) setLinks(initialLinks);
@@ -269,14 +270,12 @@ export function SocialLinksManager({
           </CardHeader>
           {showFullCard && (
             <CardContent style={s.contentSpacingLg}>
-              <View ref={cardCaptureRef} style={s.cardCapture}>
-                <ProfileCardGenerator />
-              </View>
-              <CardShareActions
-                targetRef={cardCaptureRef}
-                senderName={displayName}
-                fileBaseName={`${displayName.replace(/[^a-z0-9-_]/gi, '-').toLowerCase()}-offerhound-card`}
-              />
+              {/* ProfileCardGenerator renders its own CardShareActions (PNG/JPEG/Send)
+                  with the correct inner capture ref. A previous version wrapped it in
+                  a second <View ref={cardCaptureRef}> + CardShareActions, causing the
+                  duplicate PNG/JPEG/Send block and the "no view found with react tag"
+                  captureRef error on Profile tab. — parity/2026-04-29 #4/#5 fix */}
+              <ProfileCardGenerator />
             </CardContent>
           )}
         </Card>

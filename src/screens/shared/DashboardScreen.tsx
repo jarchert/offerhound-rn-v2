@@ -11,6 +11,8 @@ import {
   ActivityIndicator,
   TextInput,
   SafeAreaView,
+  Linking,
+  Platform,
 } from 'react-native';
 import {
   useNavigation,
@@ -1091,7 +1093,14 @@ export default function DashboardScreen() {
                   <Button
                     variant="outline"
                     onPress={() => {
-                      nav.navigate('CampDiscovery' as never);
+                      // parity/2026-04-29 #8 — Leave a Review should go to the
+                      // App Store / Play Store listing, not CampDiscovery.
+                      const url = Platform.select({
+                        ios: 'itms-apps://itunes.apple.com/app/id6762979687?action=write-review',
+                        android: 'market://details?id=com.offerhound.v2',
+                        default: 'https://apps.apple.com/app/id6762979687',
+                      });
+                      if (url) Linking.openURL(url).catch(() => {});
                       setMobileMenuOpen(false);
                     }}
                   >

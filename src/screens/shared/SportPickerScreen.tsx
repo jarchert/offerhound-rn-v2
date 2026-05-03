@@ -32,7 +32,9 @@ export default function SportPickerScreen() {
     <ScrollView style={s.root} contentContainerStyle={s.content}>
       <BackButton />
       <View style={s.header}>
-        <Image source={require('../../../assets/logo-wordmark.png')} style={s.logo} resizeMode="contain" />
+        {/* parity/2026-04-29 #12 — use square transparent mark (was wordmark,
+            which rendered cropped + haloed on the Discover picker). */}
+        <Image source={require('../../../assets/logo-mark.png')} style={s.logo} resizeMode="contain" />
         <Text style={s.eyebrow}>DISCOVER</Text>
         <Text style={s.title}>Pick your sport</Text>
         <Text style={s.subtitle}>
@@ -60,7 +62,7 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   header: { alignItems: 'center', marginBottom: spacing.xl },
-  logo: { width: 220, height: 70, marginBottom: spacing.md },
+  logo: { width: 96, height: 96, marginBottom: spacing.md, backgroundColor: 'transparent' },
   eyebrow: {
     fontFamily: typography.fontFamily.bodyMedium,
     fontSize: 11,

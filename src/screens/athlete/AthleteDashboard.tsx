@@ -75,7 +75,12 @@ export default function AthleteDashboard() {
                     coach={c}
                     matchScore={m.match_score}
                     showActions
-                    onPress={() => nav.navigate('PublicProfileStack' as any, { screen: 'PublicProfile', params: { id: c?.id } })}
+                    onPress={() =>
+                      nav.navigate('PublicProfileStack' as any, {
+                        screen: 'PublicCoachProfile',
+                        params: { coachId: c?.id || c?.user_id },
+                      })
+                    }
                     onContact={() => nav.navigate('Messages', { recipientId: c?.user_id || c?.id, recipientName: c?.name } as any)}
                     onLetter={() => nav.navigate('LetterComposer', { seed: { recipientName: c?.name, recipientRole: c?.title, schoolName: c?.school } })}
                   />

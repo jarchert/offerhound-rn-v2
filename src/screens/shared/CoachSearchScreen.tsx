@@ -56,7 +56,12 @@ export default function CoachSearchScreen() {
           <CoachCard
             coach={item}
             showActions
-            onPress={() => nav.navigate('PublicProfileStack' as any, { screen: 'PublicProfile', params: { id: item.id } })}
+            onPress={() =>
+              nav.navigate('PublicProfileStack' as any, {
+                screen: 'PublicCoachProfile',
+                params: { coachId: item.id || item.user_id },
+              })
+            }
             onContact={() => nav.navigate('Messages', { recipientId: item.user_id || item.id, recipientName: item.name } as any)}
             onLetter={() => nav.navigate('LetterComposer', { seed: { recipientName: item.name, recipientRole: item.title, schoolName: item.school } })}
           />

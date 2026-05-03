@@ -8,6 +8,7 @@ import { colors } from '@/lib/theme';
 
 import PublicProfileScreen from '@/screens/public/PublicProfileScreen';
 import PublicScoutProfileScreen from '@/screens/public/PublicScoutProfileScreen';
+import PublicCoachProfileScreen from '@/screens/public/PublicCoachProfileScreen';
 import InfluencerProfileScreen from '@/screens/public/InfluencerProfileScreen';
 import InfluencerBlogPostScreen from '@/screens/public/InfluencerBlogPostScreen';
 import InviteShareCardScreen from '@/screens/public/InviteShareCardScreen';
@@ -24,6 +25,7 @@ export type PublicProfileStackParamList = {
   AthleteProfileByUrl: { customUrl: string };
   ProfileLegacy: { customUrl: string };
   PublicScoutProfile: { scoutId: string };
+  PublicCoachProfile: { coachId: string };
   InfluencerProfile: { handle: string };
   InfluencerBlogPost: { handle: string; slug: string };
   InviteShareCard: { token?: string; from?: string; role?: string } | undefined;
@@ -49,6 +51,7 @@ export default function PublicProfileStack() {
       <Stack.Screen name="AthleteProfileByUrl" component={PublicProfileScreen} />
       <Stack.Screen name="ProfileLegacy" component={PublicProfileScreen} />
       <Stack.Screen name="PublicScoutProfile" component={PublicScoutProfileScreen} />
+      <Stack.Screen name="PublicCoachProfile" component={PublicCoachProfileScreen} />
       <Stack.Screen name="InfluencerProfile" component={InfluencerProfileScreen} />
       <Stack.Screen name="InfluencerBlogPost" component={InfluencerBlogPostScreen} />
       <Stack.Screen name="InviteShareCard" component={InviteShareCardScreen} />
