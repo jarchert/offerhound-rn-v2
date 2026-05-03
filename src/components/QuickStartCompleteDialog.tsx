@@ -169,9 +169,18 @@ const getConfig = (userType: UserType): UserTypeConfig => {
 
 // NAV_MAP — Lovable path → RN route (best effort; AthleteTabs is fallback)
 function navTargetFor(path: string): keyof RootStackParamList {
-  // Web routes don't all exist as named RN screens yet. Route to AthleteTabs
-  // as a safe landing for any unknown destination; refine in follow-up nav pass.
-  return "AthleteTabs" as keyof RootStackParamList;
+  const map: Record<string, keyof RootStackParamList> = {
+    '/dashboard': 'AthleteTabs',
+    '/onboarding': 'OnboardingStack',
+    '/coach/dashboard': 'CoachDrawer',
+    '/coach/onboarding': 'OnboardingStack',
+    '/scout/dashboard': 'ScoutDrawer',
+    '/scout/onboarding': 'OnboardingStack',
+    '/organization/settings': 'SettingsStack',
+    '/influencers': 'InfluencerDrawer',
+    '/influencers/onboarding': 'OnboardingStack',
+  };
+  return map[path] ?? 'AthleteTabs';
 }
 
 export function QuickStartCompleteDialog({

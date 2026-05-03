@@ -10,14 +10,12 @@
 //   - sonner toasts                  → showToast helper from @/lib/toast (best-effort)
 //   - AthleteMatchCard               → existing RN port (compact variant)
 //
-// PORT-PENDING gaps (kept as no-op stubs so this screen compiles + ships):
-//   - LetterButton (recruiter inline letter CTA)        → omitted (letterSlot undefined)
-//   - useLetterCenter()                                  → omitted (handleSendLetter no-ops)
+// PORT-PENDING gaps:
+//   - useLetterCenter()                                  → bypassed; letter CTA navigates directly to LetterComposer
 //   - useScoutProfile / useCoachProfile / useHSCoachProfile sport sorting →
 //     viewerSports filter is bypassed when those hooks are not wired in RN
 //     (we only consume useScoutProfile + useScoutSavedAthletes today;
 //     other recruiter detection falls back to "athlete viewer" mode).
-//   - Messages route navigation       → uses RootStackParamList "Messages" with no params
 //
 // Verbatim filter logic preserved: position aliases, doesPositionMatch,
 // proximity sort via stateProximityScore, name-presence sort, fromNeed
@@ -197,9 +195,7 @@ export default function AthleteSearchScreen() {
     );
   };
 
-  // PORT-PENDING: useLetterCenter() — handleSendLetter is a no-op stub.
-  // Once useLetterCenter ships in RN, route to the LetterComposer with
-  // { surface: 'athlete-search', athlete } seed.
+  // Letter CTA navigates directly to LetterComposer with athlete seed.
 
   return (
     <SafeAreaView style={s.root}>

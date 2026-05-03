@@ -4,9 +4,7 @@
 // Distinct from CoachDirectoryScreen — this lists verified scouts from
 // `scout_profiles`, with role-aware "Send Letter" CTA that branches by
 // viewer role (athlete → /letters, scout → initial-interest, coach → scout-
-// introduction). Tap a card to open a public scout profile (PORT-PENDING:
-// no PublicScoutProfile route yet in RN, so we fall back to the inline
-// LetterComposer for now).
+// introduction). Tap a card to open the public scout profile.
 //
 // Adaptations (web → RN):
 //   - <div>/<h1>/<p>           → <View>/<Text>
@@ -78,6 +76,7 @@ export default function ScoutDirectoryScreen() {
         seed: {
           coach: {
             name: scout.name || '',
+            title: scout.title || '',
             school: scout.company || scout.title || 'Scout',
             email: scout.email || '',
           },
@@ -87,21 +86,16 @@ export default function ScoutDirectoryScreen() {
     }
     nav.navigate('LetterComposer', {
       seed: {
-        recipientCategory: 'scout',
-        recipientType: 'coach',
         recipientName: scout.name || '',
-        recipientEmail: scout.email || '',
-        organizationName: scout.company || scout.title || '',
-        recipientTitle: scout.title || '',
+        recipientRole: scout.title || '',
+        schoolName: scout.company || scout.title || '',
         letterType: isScout ? 'initial-interest' : 'scout-introduction',
       },
     });
   };
 
-  // PORT-PENDING: no PublicScoutProfile route in RN yet.
-  // Tapping a card currently opens the LetterComposer instead.
   const handleOpenProfile = (scout: any) => {
-    handleSendLetter(scout);
+    nav.navigate('PublicProfileStack', { screen: 'PublicScoutProfile', params: { scoutId: scout.id } } as any);
   };
 
   const viewerRole: 'athlete' | 'coach' | 'club-coach' | 'hs-coach' | 'scout' =

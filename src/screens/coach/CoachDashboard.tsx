@@ -4,7 +4,7 @@ import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Users, Trophy, Mail, Share2, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCoachAthleteMatches } from '@/hooks/useAthleteMatches';
-import { useCoachActivity } from '@/hooks/useCoachActivity';
+import { useCoachDashboardStats } from '@/hooks/useCoachDashboardStats';
 import { useCoachProfile } from '@/hooks/useCoachProfile';
 import { Navbar } from '@/components/Navbar';
 import { StatTile } from '@/components/StatTile';
@@ -42,7 +42,7 @@ export default function CoachDashboard() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
   const { user } = useAuth();
   const { data: matches = [], isLoading, refetch } = useCoachAthleteMatches();
-  const { data: activity } = useCoachActivity();
+  const { data: dashStats } = useCoachDashboardStats();
   const { data: coachProfile } = useCoachProfile();
 
   const topMatches = matches.slice(0, 5);
@@ -74,10 +74,10 @@ export default function CoachDashboard() {
 
         <View style={s.statsRow}>
           <StatTile label="Athlete Matches" value={matches.length} icon={Trophy} />
-          <StatTile label="Saved" value={(activity as any)?.savedCount ?? 0} icon={Users} />
+          <StatTile label="Saved" value={dashStats?.savedCount ?? 0} icon={Users} />
         </View>
         <View style={s.statsRow}>
-          <StatTile label="Letters Sent" value={(activity as any)?.lettersSent ?? 0} icon={Mail} />
+          <StatTile label="Letters Sent" value={dashStats?.lettersSent ?? 0} icon={Mail} />
           <StatTile label="Active" value="—" icon={Users} />
         </View>
 

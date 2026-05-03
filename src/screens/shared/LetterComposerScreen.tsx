@@ -83,8 +83,8 @@ export default function LetterComposerScreen() {
   const seedCoach = seed.coach ?? {};
   const seededFromCoach = {
     recipientName: seed.recipientName || prefill.recipientName || seedCoach.name || route.params?.coachName || route.params?.recipientName || route.params?.athleteName || '',
-    recipientRole: seed.recipientRole || prefill.recipientTitle || seedCoach.title || route.params?.coachRole || route.params?.recipientRole || route.params?.athletePosition || '',
-    schoolName: seed.schoolName || prefill.organizationName || seedCoach.school || route.params?.coachSchool || route.params?.schoolName || route.params?.athleteSchool || '',
+    recipientRole: seed.recipientRole || seed.recipientTitle || prefill.recipientTitle || seedCoach.title || route.params?.coachRole || route.params?.recipientRole || route.params?.athletePosition || '',
+    schoolName: seed.schoolName || seed.organizationName || prefill.organizationName || seedCoach.school || route.params?.coachSchool || route.params?.schoolName || route.params?.athleteSchool || '',
   };
 
   const [draft, setDraft] = useState<LetterDraft>(() => ({

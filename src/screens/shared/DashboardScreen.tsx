@@ -869,6 +869,7 @@ export default function DashboardScreen() {
                           seed: {
                             coach: {
                               name: saved.coach?.name || '',
+                              title: saved.coach?.title || '',
                               school: saved.coach?.school || '',
                               email: saved.coach?.email || '',
                             },

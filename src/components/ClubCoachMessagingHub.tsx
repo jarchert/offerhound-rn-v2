@@ -189,26 +189,29 @@ export function ClubCoachMessagingHub() {
       return;
     }
     navigation.navigate("LetterComposer" as never, {
-      recipientCategory: inferRecipientCategory(contact),
-      recipientType: "coach",
+      seed: {
+        recipientName: contact.contact_name || "",
+        recipientRole: contact.title || contact.contact_type || "",
+        schoolName: contact.organization || "",
+      },
       recipientName: contact.contact_name || "",
-      recipientEmail: contact.email,
-      organizationName: contact.organization || "",
-      recipientTitle: contact.title || contact.contact_type || "",
+      recipientRole: contact.title || contact.contact_type || "",
+      schoolName: contact.organization || "",
     } as never);
   };
 
   const handleRecommendAthlete = (contact: any, athlete: any) => {
     if (!contact.email) return;
     navigation.navigate("LetterComposer" as never, {
-      recipientCategory: inferRecipientCategory(contact),
-      recipientType: "coach",
+      seed: {
+        recipientName: contact.contact_name || "",
+        recipientRole: contact.title || "",
+        schoolName: contact.organization || "",
+        letterType: "player-pitch",
+      },
       recipientName: contact.contact_name || "",
-      recipientEmail: contact.email,
-      organizationName: contact.organization || "",
-      recipientTitle: contact.title || "",
-      letterType: "player-pitch",
-      recommendAthlete: athlete.athlete_name || "",
+      recipientRole: contact.title || "",
+      schoolName: contact.organization || "",
     } as never);
   };
 

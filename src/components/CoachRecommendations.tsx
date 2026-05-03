@@ -131,9 +131,11 @@ export function CoachRecommendations() {
       navigation.navigate('LetterComposer', {
         seed: {
           recipientName: coach.name,
+          recipientRole: coach.title || '',
           schoolName: coach.school,
         },
         coachName: coach.name,
+        coachRole: coach.title || '',
         coachSchool: coach.school,
       });
     }

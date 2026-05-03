@@ -68,15 +68,13 @@ export function HSCoachReferralPanel() {
       case 'letters':
         nav.navigate('LetterComposer', {
           seed: {
-            athleteName: target.athlete,
-            athleteId: target.athlete_id,
+            recipientName: target.athlete || '',
             letterType: 'recruiting',
           },
+          athleteName: target.athlete,
         });
         return;
       case 'athletes':
-        // TODO: 'AthleteSearch' is not yet a top-level Stack.Screen in
-        // src/navigation/RootNavigator.tsx — register AthleteSearchScreen there.
         nav.navigate('AthleteSearch');
         return;
       case 'profile':

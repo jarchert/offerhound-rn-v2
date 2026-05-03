@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, SafeAreaView, RefreshControl, Press
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Users, Trophy, FileText, Share2, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { useScoutPipelineAthletes } from '@/hooks/useScoutPipeline';
-import { useScoutActivity } from '@/hooks/useScoutActivity';
+import { useScoutDashboardStats } from '@/hooks/useScoutDashboardStats';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navbar } from '@/components/Navbar';
 import { StatTile } from '@/components/StatTile';
@@ -36,7 +36,7 @@ export default function ScoutDashboard() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
   const { user } = useAuth();
   const { data: pipeline = [], isLoading, refetch } = useScoutPipelineAthletes();
-  const { data: activity } = useScoutActivity();
+  const { data: dashStats } = useScoutDashboardStats();
   const [shareOpen, setShareOpen] = useState(false);
   const [openKey, setOpenKey] = useState<Sec | null>('pipeline');
 
@@ -62,11 +62,11 @@ export default function ScoutDashboard() {
 
         <View style={s.statsRow}>
           <StatTile label="Pipeline" value={pipeline.length} icon={Trophy} />
-          <StatTile label="Saved" value={(activity as any)?.savedCount ?? 0} icon={Users} />
+          <StatTile label="Saved" value={dashStats?.savedCount ?? 0} icon={Users} />
         </View>
         <View style={s.statsRow}>
-          <StatTile label="Letters Sent" value={(activity as any)?.lettersSent ?? 0} icon={FileText} />
-          <StatTile label="Searches" value={(activity as any)?.searchesCount ?? 0} icon={Users} />
+          <StatTile label="Letters Sent" value={dashStats?.lettersSent ?? 0} icon={FileText} />
+          <StatTile label="Searches" value={dashStats?.searchesCount ?? 0} icon={Users} />
         </View>
 
         <View style={s.section}>

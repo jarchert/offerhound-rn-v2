@@ -72,6 +72,13 @@ export default function AdminUsersScreen() {
         keyExtractor={(u) => u.id}
         contentContainerStyle={s.list}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />}
+        ListEmptyComponent={
+          <View style={s.emptyContainer}>
+            <Text style={s.emptyText}>
+              {isLoading ? 'Loading users…' : 'No users found'}
+            </Text>
+          </View>
+        }
         renderItem={({ item }) => (
           <Card style={s.card}>
             <View style={s.row}>
@@ -129,5 +136,15 @@ const s = StyleSheet.create({
     fontFamily: typography.fontFamily.body,
     fontSize: typography.size.sm,
     color: colors.foregroundSubtle,
+  },
+  emptyContainer: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.size.base,
+    color: colors.foregroundSubtle,
+    textAlign: 'center',
   },
 });

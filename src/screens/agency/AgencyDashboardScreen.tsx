@@ -130,9 +130,6 @@ export default function AgencyDashboardScreen() {
               variant="outline" size="sm"
               leftIcon={<Search size={14} color={colors.primary} />}
               onPress={() => nav.navigate('AthleteSearch' as never)}
-              // TODO: 'AthleteSearch' screen exists at src/screens/shared/AthleteSearchScreen.tsx
-              // but is not registered as a top-level route in src/navigation/RootNavigator.tsx.
-              // Other call sites already use this route name; register the screen there.
             >
               Search Athletes
             </Button>
@@ -295,9 +292,9 @@ export default function AgencyDashboardScreen() {
                             leftIcon={<Mail size={14} color={colors.primary} />}
                             onPress={() => nav.navigate('LetterComposer', {
                               seed: {
-                                recipientCategory: 'athlete',
                                 recipientName: item.athlete?.full_name || '',
-                                organizationName: item.athlete?.school || '',
+                                recipientRole: item.athlete?.position || '',
+                                schoolName: item.athlete?.school || '',
                                 letterType: 'initial-interest',
                               },
                             })}
