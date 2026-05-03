@@ -319,7 +319,7 @@ function CoachCard({ coach }: { coach: CoachRow }) {
   };
 
   return (
-    <Pressable style={s.coachCard} onPress={() => (nav as any).navigate('PublicProfileStack', { screen: 'PublicProfile', params: { id: coach.id } })}>
+    <Pressable style={s.coachCard} onPress={() => (nav as any).navigate('PublicProfileStack', { screen: 'PublicCoachProfile', params: { coachId: coach.id || coach.user_id } })}>
       <View style={s.coachHeader}>
         {coach.image_url ? (
           <Image source={{ uri: coach.image_url }} style={s.avatar} />
