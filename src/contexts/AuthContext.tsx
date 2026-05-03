@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Toast from 'react-native-toast-message';
 import { supabase } from '@/integrations/supabase/client';
 import type { AppRole } from '@/integrations/supabase/types';
 import type { User, Session } from '@supabase/supabase-js';
@@ -38,12 +39,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchUserRole(session.user.id);
         registerForPushNotifications(session.user.id).catch(e => console.warn('[push] register failed', e));
+        // Build 51 A5: one-shot "Signed in with Google/Apple" toast on SIGNED_IN.
+        if (event === 'SIGNED_IN') {
+          const provider = (session.user.app_metadata as any)?.provider;
+          if (provider === 'google' || provider === 'apple') {
+            const flagKey = `oauth-toast-shown:${session.user.id}`;
+            AsyncStorage.getItem(flagKey).then((seen) => {
+              if (!seen) {
+                AsyncStorage.setItem(flagKey, '1').catch(() => {});
+                const label = provider === 'google' ? 'Google' : 'Apple';
+                Toast.show({
+                  type: 'success',
+                  text1: `Signed in with ${label}`,
+                  text2: session.user.email || undefined,
+                });
+              }
+            }).catch(() => {});
+          }
+        }
       } else setUserRole(null);
     });
 

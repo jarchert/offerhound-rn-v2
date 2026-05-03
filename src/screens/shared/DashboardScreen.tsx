@@ -1098,14 +1098,9 @@ export default function DashboardScreen() {
                   <Button
                     variant="outline"
                     onPress={() => {
-                      // parity/2026-04-29 #8 — Leave a Review should go to the
-                      // App Store / Play Store listing, not CampDiscovery.
-                      const url = Platform.select({
-                        ios: 'itms-apps://itunes.apple.com/app/id6762979687?action=write-review',
-                        android: 'market://details?id=com.offerhound.v2',
-                        default: 'https://apps.apple.com/app/id6762979687',
-                      });
-                      if (url) Linking.openURL(url).catch(() => {});
+                      // Build 51 A7: Leave a Review now navigates to the
+                      // in-app form (writes to app_reviews), not the store URL.
+                      nav.navigate('LeaveReview' as never);
                       setMobileMenuOpen(false);
                     }}
                   >

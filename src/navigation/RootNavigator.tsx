@@ -59,6 +59,7 @@ import ReferralTrackingScreen from '@/screens/shared/ReferralTrackingScreen';
 import InfluencerBoardScreen from '@/screens/influencer/InfluencerBoardScreen';
 
 import PasswordResetScreen from '@/screens/auth/PasswordResetScreen';
+import LeaveReviewScreen from '@/screens/LeaveReviewScreen';
 import FloatingAICoach from '@/components/FloatingAICoach';
 
 export type RootStackParamList = {
@@ -107,6 +108,7 @@ export type RootStackParamList = {
   ReferralTracking: undefined;
   InfluencerBoard: undefined;
   PasswordReset: undefined;
+  LeaveReview: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -160,6 +162,7 @@ export default function RootNavigator() {
           <Stack.Screen name="Pricing" component={PricingScreen} />
           <Stack.Screen name="Support" component={SupportScreen} />
           <Stack.Screen name="CoachCommunicationRules" component={CoachCommunicationRulesScreen} />
+          <Stack.Screen name="LeaveReview" component={LeaveReviewScreen} />
         </>
       ) : (
         <>
