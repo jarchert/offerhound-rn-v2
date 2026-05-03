@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, RefreshControl, SafeAreaView } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-import { Users, Trophy, Mail, Calendar } from 'lucide-react-native';
+import { Users, Trophy, Mail, Calendar, DollarSign, ChevronRight } from 'lucide-react-native';
+import { Pressable } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { useAthleteMatches } from '@/hooks/useAthleteMatches';
@@ -49,6 +50,22 @@ export default function AthleteDashboard() {
           <StatTile label="Letters Sent" value={stats?.lettersSent ?? 0} icon={Mail} />
           <StatTile label="Saved" value={stats?.savedCoaches ?? 0} icon={Calendar} />
         </View>
+
+        <Pressable
+          onPress={() => nav.navigate('NILIntelligence' as never)}
+          style={s.nilCard}
+          accessibilityRole="button"
+          accessibilityLabel="Open NIL Intelligence"
+        >
+          <View style={s.nilIcon}>
+            <DollarSign size={22} color="#34d399" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.nilTitle}>NIL Intelligence</Text>
+            <Text style={s.nilSubtitle}>Valuation, school comparison, tax analysis + advisor</Text>
+          </View>
+          <ChevronRight size={18} color="rgba(52,211,153,0.7)" />
+        </Pressable>
 
         <View style={s.section}>
           <SectionHeader
@@ -105,4 +122,22 @@ const s = StyleSheet.create({
   list: { gap: spacing.sm },
   empty: { padding: spacing.lg, backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
   emptyText: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.sm, color: colors.mutedForeground, textAlign: 'center' },
+  nilCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(52,211,153,0.30)',
+    backgroundColor: 'rgba(52,211,153,0.08)',
+  },
+  nilIcon: {
+    width: 40, height: 40, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(52,211,153,0.15)',
+    borderWidth: 1, borderColor: 'rgba(52,211,153,0.30)',
+  },
+  nilTitle: { fontFamily: typography.fontFamily.heading, fontSize: typography.fontSize.lg, color: '#34d399', letterSpacing: typography.letterSpacing.heading },
+  nilSubtitle: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.xs, color: 'rgba(52,211,153,0.75)' },
 });

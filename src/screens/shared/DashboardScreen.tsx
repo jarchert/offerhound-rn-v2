@@ -448,9 +448,14 @@ export default function DashboardScreen() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onPress={() => nav.navigate('NILAdvisor' as never)}>
-              Explore NIL Education
-            </Button>
+            <View style={{ gap: 8 }}>
+              <Button onPress={() => nav.navigate('NILIntelligence' as never)}>
+                Open NIL Intelligence
+              </Button>
+              <Button variant="outline" onPress={() => nav.navigate('NILAdvisor' as never)}>
+                Ask NIL Advisor
+              </Button>
+            </View>
           </CardContent>
         </Card>
       </View>
