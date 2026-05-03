@@ -2,28 +2,33 @@ import React from 'react';
 import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { colors, typography, spacing } from '@/lib/theme';
 
-export function Card({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
-  return <View style={[s.card, style]}>{children}</View>;
+// Build 51 C1: make `children` optional so callers that pass content via
+// JSX children inference compile cleanly under TS strict.
+type ViewWrap = { children?: React.ReactNode; style?: ViewStyle | ViewStyle[] };
+type TextWrap = { children?: React.ReactNode; style?: TextStyle | TextStyle[] };
+
+export function Card({ children, style }: ViewWrap) {
+  return <View style={[s.card, style as any]}>{children}</View>;
 }
 
-export function CardHeader({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
-  return <View style={[s.header, style]}>{children}</View>;
+export function CardHeader({ children, style }: ViewWrap) {
+  return <View style={[s.header, style as any]}>{children}</View>;
 }
 
-export function CardTitle({ children, style }: { children: React.ReactNode; style?: TextStyle }) {
-  return <Text style={[s.title, style]}>{children}</Text>;
+export function CardTitle({ children, style }: TextWrap) {
+  return <Text style={[s.title, style as any]}>{children}</Text>;
 }
 
-export function CardDescription({ children, style }: { children: React.ReactNode; style?: TextStyle }) {
-  return <Text style={[s.description, style]}>{children}</Text>;
+export function CardDescription({ children, style }: TextWrap) {
+  return <Text style={[s.description, style as any]}>{children}</Text>;
 }
 
-export function CardContent({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
-  return <View style={[s.content, style]}>{children}</View>;
+export function CardContent({ children, style }: ViewWrap) {
+  return <View style={[s.content, style as any]}>{children}</View>;
 }
 
-export function CardFooter({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
-  return <View style={[s.footer, style]}>{children}</View>;
+export function CardFooter({ children, style }: ViewWrap) {
+  return <View style={[s.footer, style as any]}>{children}</View>;
 }
 
 const s = StyleSheet.create({

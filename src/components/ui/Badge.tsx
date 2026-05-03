@@ -5,17 +5,24 @@ import { colors, typography, spacing } from '@/lib/theme';
 export type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning';
 
 interface BadgeProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   variant?: BadgeVariant;
-  style?: ViewStyle;
+  style?: ViewStyle | ViewStyle[];
 }
 
 export function Badge({ children, variant = 'default', style }: BadgeProps) {
   const variantStyle = variantStyles[variant];
   const textColor = variantTextColors[variant];
+  // Build 51 C1: accept both string/number (wrap in Text) and already-
+  // composed RN nodes (render as-is, so callers can embed icons/views).
+  const isTextish = typeof children === 'string' || typeof children === 'number';
   return (
-    <View style={[s.badge, variantStyle, style]}>
-      <Text style={[s.text, { color: textColor }]}>{children}</Text>
+    <View style={[s.badge, variantStyle, style as any]}>
+      {isTextish ? (
+        <Text style={[s.text, { color: textColor }]}>{children}</Text>
+      ) : (
+        children
+      )}
     </View>
   );
 }
