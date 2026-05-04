@@ -35,8 +35,8 @@ export default function AuthStack() {
         headerShown: false,
         contentStyle: { backgroundColor: colors.background },
       }}>
-      <Stack.Screen name="Landing" component={LandingScreen} />
       <Stack.Screen name="Auth" component={AuthScreen} />
+      <Stack.Screen name="Landing" component={LandingScreen} />
       <Stack.Screen name="SignIn" component={SignInScreen} />
       <Stack.Screen name="SignUp" component={SignUpScreen} />
       <Stack.Screen name="BetaRegister" component={BetaRegisterScreen} />

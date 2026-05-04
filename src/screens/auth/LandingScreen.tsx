@@ -97,7 +97,7 @@ export default function LandingScreen() {
               <Menu size={22} color={colors.foreground} />
             </Pressable>
           ) : (
-            <Pressable onPress={() => nav.navigate('AuthStack' as any)} style={s.topNavSignIn}>
+            <Pressable onPress={() => nav.navigate('Auth' as any, { mode: 'signin' })} style={s.topNavSignIn}>
               <Text style={s.topNavSignInText}>Sign In</Text>
             </Pressable>
           )}
@@ -318,7 +318,7 @@ function HowItWorksSection({
       </View>
 
       {!isAuthenticated && (
-        <Pressable style={s.ctaBtn} onPress={() => onCta('AuthStack')}>
+        <Pressable style={s.ctaBtn} onPress={() => onCta('SignUp')}>
           <Text style={s.ctaBtnText}>{ctaLabel}</Text>
         </Pressable>
       )}
