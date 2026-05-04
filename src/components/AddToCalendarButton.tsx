@@ -1,24 +1,19 @@
-// One-click .ics calendar share button for a camp.
-// Parity port from Lovable src/components/AddToCalendarButton.tsx.
-// Web→RN mapping: shadcn Button → src/components/ui/Button; lucide-react → lucide-react-native;
-// downloadCampIcs writes .ics to cache and invokes the native share sheet.
+// One-click "Add to calendar" button for a camp.
+// Parity/2026-04-29 calendar-native fix: writes the event directly to the user's
+// native device calendar via expo-calendar instead of generating a .ics file.
+// Web parity: Lovable's AddToCalendarButton downloads .ics; in RN the native
+// equivalent is Calendar.createEventAsync.
 import React from 'react';
 import { Button, ButtonVariant, ButtonSize } from '@/components/ui/Button';
 import { CalendarPlus } from 'lucide-react-native';
-import { downloadCampIcs } from '@/lib/campIcs';
-import { useToast } from '@/hooks/use-toast';
+import { addCampToDeviceCalendar, type CollegeCamp } from '@/hooks/useCollegeCamps';
+import { toast } from '@/hooks/use-toast';
 import { colors } from '@/lib/theme';
 
 interface Props {
-  camp: {
-    id: string;
-    name: string;
+  camp: CollegeCamp & {
     description?: string | null;
     location?: string | null;
-    city?: string | null;
-    state?: string | null;
-    start_date: string;
-    end_date?: string | null;
     start_time?: string | null;
     end_time?: string | null;
   };
@@ -28,16 +23,18 @@ interface Props {
 }
 
 export function AddToCalendarButton({ camp, variant = 'outline', size = 'sm', label = 'Add to calendar' }: Props) {
-  const { toast } = useToast();
   const handle = async () => {
-    try {
-      await downloadCampIcs(camp);
-      toast({
-        title: 'Calendar file ready',
-        description: 'Open it to add the event to Apple/Google/Outlook.',
-      });
-    } catch {
-      toast({ title: 'Download failed', variant: 'destructive' });
+    const result = await addCampToDeviceCalendar(camp as CollegeCamp);
+    if (result.ok) {
+      toast({ title: 'Added to calendar', description: camp.name });
+      return;
+    }
+    if (result.reason === 'permission-denied') {
+      toast({ title: 'Enable calendar adds on your device', variant: 'destructive' });
+    } else if (result.reason === 'missing-date') {
+      toast({ title: 'Missing camp date', variant: 'destructive' });
+    } else {
+      toast({ title: "Couldn't add to calendar", variant: 'destructive' });
     }
   };
   return (

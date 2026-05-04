@@ -3,12 +3,13 @@
 // - Search + sport/division filters
 // - Card: name, school, date, location, proximity badge, sport/division badges
 // - Actions: emerald "Register / Details" (deep-links registration_url), Save bookmark,
-//   .ics (adds to device calendar via expo-calendar), Google Calendar (Linking).
+//   and a single "Add to Calendar" that writes directly to the native device calendar
+//   via expo-calendar (parity/2026-04-29 calendar-native fix).
 import React, { useMemo, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, SafeAreaView, Pressable, RefreshControl, Alert, Linking } from 'react-native';
+import { View, Text, FlatList, StyleSheet, SafeAreaView, Pressable, RefreshControl, Alert } from 'react-native';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import {
-  Calendar as CalendarIcon, MapPin, ExternalLink, Search, Bookmark, BookmarkCheck,
+  Calendar as CalendarIcon, MapPin, ExternalLink, Search, Bookmark, BookmarkCheck, CalendarPlus,
 } from 'lucide-react-native';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,7 +20,8 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/Tabs';
-import { addCampToDeviceCalendar, getGoogleCalendarUrl, type CollegeCamp } from '@/hooks/useCollegeCamps';
+import { toast } from '@/hooks/use-toast';
+import { addCampToDeviceCalendar, type CollegeCamp } from '@/hooks/useCollegeCamps';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
 const STATE_NEIGHBORS: Record<string, string[]> = {
@@ -145,26 +147,23 @@ export default function CampsScreen() {
     onError: (e: any) => Alert.alert('Save failed', e?.message || 'Please try again.'),
   });
 
-  const handleICS = async (camp: CollegeCamp) => {
-    const id = await addCampToDeviceCalendar(camp);
-    if (id) {
-      // Also mark as saved
+  const handleAddToCalendar = async (camp: CollegeCamp) => {
+    const result = await addCampToDeviceCalendar(camp);
+    if (result.ok) {
       if (user && !savedSet.has(camp.id)) {
         try { await supabase.from('saved_camps' as any).insert({ user_id: user.id, camp_id: camp.id } as any); } catch {}
         qc.invalidateQueries({ queryKey: ['saved-camp-ids', user?.id] });
       }
-      Alert.alert('Added to calendar', `${camp.name} has been added to your device calendar.`);
+      toast({ title: 'Added to calendar', description: camp.name });
+      return;
+    }
+    if (result.reason === 'permission-denied') {
+      toast({ title: 'Enable calendar adds on your device', variant: 'destructive' });
+    } else if (result.reason === 'missing-date') {
+      toast({ title: 'Missing camp date', variant: 'destructive' });
     } else {
-      Alert.alert('Calendar permission required', 'Please grant calendar access in Settings.');
+      toast({ title: "Couldn't add to calendar", variant: 'destructive' });
     }
-  };
-
-  const handleGoogle = async (camp: CollegeCamp) => {
-    if (user && !savedSet.has(camp.id)) {
-      try { await supabase.from('saved_camps' as any).insert({ user_id: user.id, camp_id: camp.id } as any); } catch {}
-      qc.invalidateQueries({ queryKey: ['saved-camp-ids', user?.id] });
-    }
-    Linking.openURL(getGoogleCalendarUrl(camp));
   };
 
   const renderCamp = ({ item: camp }: { item: CollegeCamp }) => {
@@ -224,11 +223,14 @@ export default function CampsScreen() {
           ) : (
             <Text style={[s.metaText, { fontStyle: 'italic', flex: 1 }]}>No registration link available</Text>
           )}
-          <Pressable onPress={() => handleICS(camp)} style={s.ghostBtn} hitSlop={6}>
-            <Text style={s.ghostBtnText}>📅 .ics</Text>
-          </Pressable>
-          <Pressable onPress={() => handleGoogle(camp)} style={s.ghostBtn} hitSlop={6}>
-            <Text style={s.ghostBtnText}>📆 Google</Text>
+          <Pressable
+            onPress={() => handleAddToCalendar(camp)}
+            style={s.ghostBtn}
+            hitSlop={6}
+            accessibilityLabel="Add camp to device calendar"
+          >
+            <CalendarPlus size={14} color={colors.foreground} />
+            <Text style={s.ghostBtnText}>Add to Calendar</Text>
           </Pressable>
         </View>
       </Card>
@@ -314,7 +316,7 @@ const s = StyleSheet.create({
     borderRadius: radius.md,
   },
   registerBtnText: { fontFamily: typography.fontFamily.bodySemiBold, fontSize: typography.fontSize.xs, color: '#fff' },
-  ghostBtn: { paddingVertical: 6, paddingHorizontal: 8, borderRadius: radius.sm },
+  ghostBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 8, borderRadius: radius.sm },
   ghostBtnText: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.xs, color: colors.foreground },
   empty: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.base, color: colors.mutedForeground, textAlign: 'center', padding: spacing.xl },
 });

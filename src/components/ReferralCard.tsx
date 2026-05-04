@@ -1,496 +1,421 @@
-// Verbatim port of Lovable's src/components/ReferralCard.tsx
-// React Native adaptations:
-//   - lucide-react              → lucide-react-native
-//   - react-router-dom navigate → @react-navigation/native useNavigation
-//   - sonner toast              → @/components/ui/toast wrapper
-//   - navigator.clipboard       → expo-clipboard
-//   - navigator.share           → React Native Share API
-//   - HTML/CSS classNames       → RN View/Text/Pressable + StyleSheet (theme tokens)
-// useReferrals: inline local stub (real hook lives in Lovable repo only;
-// session4 ports use minimal stubs until the data layer is wired in v2).
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, Pressable, ActivityIndicator, Share, StyleSheet, ViewStyle, Platform } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
-import * as Clipboard from 'expo-clipboard';
+// Athlete dashboard "Invite Friends" card.
+// Build 53 parity port of web src/components/ReferralCard.tsx.
+//
+// Changes vs Build 52:
+//   - Canonical referral URL is now `https://offer-hound.com/?ref=athlete` and
+//     is built via `buildCanonicalUrl('/?ref=athlete')` so preview origins
+//     (lovable.app, vercel.app, localhost, Expo dev URLs) can never leak.
+//     We never call Linking.getInitialURL() or use a runtime origin.
+//   - The "Share with Teammates" button no longer opens the native share
+//     sheet. It opens a custom modal styled like the coach card message
+//     modal (Dialog + tabs) with Email and SMS tabs only — no In-app tab.
+//     Each tab has a pre-filled 2-line message, a recipient field, and a
+//     primary button that toggles between "Open in Email" and
+//     "Open in Messages".
+//
+// Send behavior (matches web's Linking.openURL semantics):
+//   - Email: mailto:{recipient}?subject={subject}&body={message}
+//   - SMS:   sms:{recipient}{sep}body={message}
+//            sep = "&" on iOS/macOS, "?" everywhere else.
+//   - Empty message → destructive toast "Empty message" and abort.
+//   - Success closes the modal.
+
+import React, { useState } from 'react';
 import {
-  Gift,
-  Copy,
-  Share2,
-  CheckCircle,
-  Users,
-  Percent,
-  ExternalLink,
-  ArrowRight,
-  Star,
-  Crown,
-} from 'lucide-react-native';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
+  View,
+  Text,
+  Pressable,
+  Modal,
+  StyleSheet,
+  ViewStyle,
+  Platform,
+  Linking,
+} from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { Gift, Copy, Share2, Mail, Phone, X } from 'lucide-react-native';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Textarea';
 import { toast } from '@/components/ui/toast';
-import { useSubscription } from '@/hooks/useSubscription';
+import { buildCanonicalUrl } from '@/lib/canonicalDomain';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
-// --- Inline useReferrals stub (replace once src/hooks/useReferrals.ts exists) ---
-function useReferrals() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [referralCode, setReferralCode] = useState<string | null>(null);
-  const [successfulReferrals, setSuccessfulReferrals] = useState<number>(0);
-  const [rewardsEarned, setRewardsEarned] = useState<number>(0);
+type Channel = 'email' | 'sms';
 
-  useEffect(() => {
-    const t = setTimeout(() => setIsLoading(false), 0);
-    return () => clearTimeout(t);
-  }, []);
+// Exact two-line body used by web's Share with Teammates modal.
+const DEFAULT_MESSAGE =
+  'Try OfferHound and get recruited\n' +
+  'offer-hound.com or visit the app store and search for OfferHound.';
 
-  const copyToClipboard = useCallback(async (text: string): Promise<boolean> => {
-    try {
-      await Clipboard.setStringAsync(text);
-      return true;
-    } catch {
-      return false;
-    }
-  }, []);
-
-  const shareReferralLink = useCallback(async (): Promise<'shared' | 'copied' | 'failed'> => {
-    const productionUrl = 'https://offer-hound.com';
-    const link = referralCode ? `${productionUrl}/pricing?ref=${referralCode}` : '';
-    if (!link) return 'failed';
-    try {
-      const result = await Share.share({
-        message: `Join me on OfferHound: ${link}`,
-        url: link,
-      });
-      if (result.action === Share.sharedAction) return 'shared';
-      const ok = await Clipboard.setStringAsync(link).then(() => true).catch(() => false);
-      return ok ? 'copied' : 'failed';
-    } catch {
-      const ok = await Clipboard.setStringAsync(link).then(() => true).catch(() => false);
-      return ok ? 'copied' : 'failed';
-    }
-  }, [referralCode]);
-
-  void setReferralCode;
-  void setSuccessfulReferrals;
-  void setRewardsEarned;
-
-  return { referralCode, isLoading, successfulReferrals, rewardsEarned, shareReferralLink, copyToClipboard };
-}
-
-// Tier configuration
-const REFERRAL_TIERS = [
-  { name: 'Standard', minReferrals: 1, discount: 50, icon: Star },
-  { name: 'Gold', minReferrals: 5, discount: 75, icon: Crown },
-];
-
-const getCurrentTier = (successfulReferrals: number) => {
-  for (let i = REFERRAL_TIERS.length - 1; i >= 0; i--) {
-    if (successfulReferrals >= REFERRAL_TIERS[i].minReferrals) {
-      return REFERRAL_TIERS[i];
-    }
-  }
-  return REFERRAL_TIERS[0];
-};
-
-const getNextTier = (successfulReferrals: number) => {
-  for (const tier of REFERRAL_TIERS) {
-    if (successfulReferrals < tier.minReferrals) {
-      return tier;
-    }
-  }
-  return null;
-};
+const DEFAULT_SUBJECT = 'Try OfferHound and get recruited';
 
 export function ReferralCard() {
-  const navigation = useNavigation<any>();
-  const { isSubscribed, isCoachOrScout } = useSubscription();
-  const {
-    referralCode,
-    isLoading,
-    successfulReferrals,
-    rewardsEarned,
-    shareReferralLink,
-    copyToClipboard,
-  } = useReferrals();
-  const [copied, setCopied] = useState(false);
+  // Canonical athlete referral link. Never derived from a runtime origin.
+  const referralLink = buildCanonicalUrl('/?ref=athlete');
 
-  // Coaches and scouts can participate in the referral program
-  const canRefer = isSubscribed || isCoachOrScout;
-
-  if (!canRefer) {
-    return (
-      <Card style={s.lockedCard}>
-        <CardHeader>
-          <View style={s.titleRow}>
-            <Gift size={20} color={colors.primary} />
-            <CardTitle style={s.lockedTitle}>Referral Program</CardTitle>
-          </View>
-          <CardDescription>
-            Subscribe to unlock our referral program and earn 50% off for 3 months!
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <View style={s.lockedBadgeWrap}>
-            <Badge variant="secondary" style={s.subscribersBadge}>
-              <Text style={s.subscribersBadgeText}>Subscribers Only</Text>
-            </Badge>
-          </View>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent style={s.loaderContent}>
-          <ActivityIndicator size="small" color={colors.primary} />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const productionUrl = 'https://offer-hound.com';
-  const referralLink = referralCode ? `${productionUrl}/pricing?ref=${referralCode}` : '';
+  const [modalOpen, setModalOpen] = useState(false);
+  const [channel, setChannel] = useState<Channel>('email');
+  const [recipientEmail, setRecipientEmail] = useState('');
+  const [recipientPhone, setRecipientPhone] = useState('');
+  const [subject, setSubject] = useState(DEFAULT_SUBJECT);
+  const [message, setMessage] = useState(DEFAULT_MESSAGE);
 
   const handleCopy = async () => {
-    if (referralLink) {
-      const success = await copyToClipboard(referralLink);
-      if (success) {
-        setCopied(true);
-        toast.success('Referral link copied to clipboard!');
-        setTimeout(() => setCopied(false), 2000);
+    try {
+      await Clipboard.setStringAsync(referralLink);
+      toast.success('Referral link copied!');
+    } catch {
+      toast.error('Could not copy link');
+    }
+  };
+
+  const openShareModal = () => {
+    // Reset to defaults on each open so the body always shows the
+    // canonical 2-line copy.
+    setChannel('email');
+    setRecipientEmail('');
+    setRecipientPhone('');
+    setSubject(DEFAULT_SUBJECT);
+    setMessage(DEFAULT_MESSAGE);
+    setModalOpen(true);
+  };
+
+  const handleSend = async () => {
+    const trimmed = message.trim();
+    if (!trimmed) {
+      toast.error('Empty message', 'Please enter a message');
+      return;
+    }
+
+    try {
+      if (channel === 'email') {
+        const url =
+          `mailto:${encodeURIComponent(recipientEmail)}` +
+          `?subject=${encodeURIComponent(subject)}` +
+          `&body=${encodeURIComponent(trimmed)}`;
+        await Linking.openURL(url);
+      } else {
+        // Web parity: iOS/macOS require "&body=", everywhere else "?body=".
+        const isApple = Platform.OS === 'ios' || Platform.OS === 'macos';
+        const sep = isApple ? '&' : '?';
+        const url =
+          `sms:${encodeURIComponent(recipientPhone)}` +
+          `${sep}body=${encodeURIComponent(trimmed)}`;
+        await Linking.openURL(url);
       }
+      setModalOpen(false);
+    } catch (e: any) {
+      toast.error('Could not open', e?.message || 'Please try again.');
     }
   };
 
-  const handleShare = async () => {
-    const result = await shareReferralLink();
-    if (result === 'copied') {
-      toast.success('Referral link copied to clipboard!');
-    } else if (result === 'shared') {
-      toast.success('Referral link shared!');
-    } else {
-      toast.error('Could not share referral link. Please try copying it instead.');
-    }
-  };
-
-  const currentTier = getCurrentTier(successfulReferrals);
-  const nextTier = getNextTier(successfulReferrals);
-  const referralsToNextTier = nextTier ? nextTier.minReferrals - successfulReferrals : 0;
-  const TierIcon = currentTier.icon;
-  const isGold = currentTier.name === 'Gold';
+  const primaryLabel =
+    channel === 'email' ? 'Open in Email' : 'Open in Messages';
 
   return (
-    <Card style={s.cardOuter}>
-      {/* Decorative primary orb (top-right) */}
-      <View style={s.decorOrb} pointerEvents="none" />
+    <Card>
+      <CardHeader>
+        <View style={s.titleRow}>
+          <Gift size={20} color={colors.primary} />
+          <CardTitle style={s.titleText}>Invite Friends</CardTitle>
+        </View>
+      </CardHeader>
+      <CardContent style={s.contentSpacing}>
+        <Text style={s.bodyText}>
+          Share OfferHound™ with teammates and friends. Help them get recruited!
+        </Text>
 
-      <CardHeader style={s.headerRel}>
-        <View style={s.headerRow}>
-          <View style={s.titleRow}>
-            <Gift size={24} color={colors.primary} />
-            <CardTitle style={s.titleText}>Invite Friends & Earn Rewards</CardTitle>
+        <View style={s.linkRow}>
+          <View style={s.inputWrap}>
+            <Input
+              value={referralLink}
+              editable={false}
+              selectTextOnFocus
+              style={s.inputMono}
+            />
           </View>
-          <View style={s.badgeRow}>
-            {successfulReferrals > 0 && (
-              <Badge
-                variant="outline"
-                style={isGold ? s.goldTierBadge : s.primaryTierBadge}
-              >
-                <View style={s.tierBadgeInner}>
-                  <TierIcon size={12} color={isGold ? YELLOW_600 : colors.primary} />
-                  <Text style={isGold ? s.goldTierBadgeText : s.primaryTierBadgeText}>
-                    {' '}{currentTier.name}
-                  </Text>
-                </View>
-              </Badge>
-            )}
-            <Badge variant="outline" style={s.primaryTierBadge}>
-              <View style={s.tierBadgeInner}>
-                <Percent size={12} color={colors.primary} />
-                <Text style={s.primaryTierBadgeText}>
-                  {' '}{successfulReferrals >= 5 ? '75%' : '50%'} Off
+          <Pressable
+            onPress={handleCopy}
+            style={s.iconButton}
+            accessibilityRole="button"
+            accessibilityLabel="Copy referral link"
+          >
+            <Copy size={16} color={colors.foreground} />
+          </Pressable>
+        </View>
+
+        <Pressable
+          onPress={openShareModal}
+          style={s.primaryButton}
+          accessibilityRole="button"
+          accessibilityLabel="Share with Teammates"
+        >
+          <Share2 size={16} color={colors.primaryForeground} />
+          <Text style={s.primaryButtonText}>Share with Teammates</Text>
+        </Pressable>
+      </CardContent>
+
+      {/* Share with Teammates modal */}
+      <Modal
+        visible={modalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalOpen(false)}
+      >
+        <Pressable style={s.backdrop} onPress={() => setModalOpen(false)}>
+          <Pressable style={s.sheet} onPress={(e: any) => e.stopPropagation()}>
+            <View style={s.modalHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.modalTitle}>Share with Teammates</Text>
+                <Text style={s.modalDesc}>
+                  Invite teammates by email or text message.
                 </Text>
               </View>
-            </Badge>
-          </View>
-        </View>
-        <CardDescription style={s.descriptionText}>
-          Share your referral link. When a friend subscribes, you get{' '}
-          <Text style={s.descStrongPrimary}>
-            {successfulReferrals >= 5 ? '75%' : '50%'} off for 3 months!
-          </Text>
-        </CardDescription>
-      </CardHeader>
+              <Pressable onPress={() => setModalOpen(false)} hitSlop={8}>
+                <X size={18} color={colors.mutedForeground} />
+              </Pressable>
+            </View>
 
-      <CardContent style={s.contentSpacing}>
-        {/* Referral Link Section */}
-        <View style={s.section}>
-          <Text style={s.label}>Your Referral Link</Text>
-          <View style={s.row}>
-            <View style={s.inputWrap}>
-              <Input value={referralLink} editable={false} style={s.inputMono} />
+            {/* Tabs — Email / SMS only */}
+            <View style={s.tabs}>
+              <Pressable
+                style={[s.tab, channel === 'email' && s.tabActive]}
+                onPress={() => setChannel('email')}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: channel === 'email' }}
+              >
+                <Mail
+                  size={14}
+                  color={channel === 'email' ? colors.foreground : colors.mutedForeground}
+                />
+                <Text
+                  style={[s.tabText, channel === 'email' && s.tabTextActive]}
+                >
+                  Email
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[s.tab, channel === 'sms' && s.tabActive]}
+                onPress={() => setChannel('sms')}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: channel === 'sms' }}
+              >
+                <Phone
+                  size={14}
+                  color={channel === 'sms' ? colors.foreground : colors.mutedForeground}
+                />
+                <Text style={[s.tabText, channel === 'sms' && s.tabTextActive]}>
+                  SMS
+                </Text>
+              </Pressable>
             </View>
-            <Pressable onPress={handleCopy} style={s.iconButton}>
-              {copied ? (
-                <CheckCircle size={16} color={GREEN_500} />
-              ) : (
-                <Copy size={16} color={colors.foreground} />
-              )}
-            </Pressable>
-            <Pressable onPress={handleShare} style={s.iconButtonPrimary}>
-              <Share2 size={16} color={colors.primaryForeground} />
-            </Pressable>
-          </View>
-        </View>
 
-        {/* Stats Section */}
-        <View style={s.statsGrid}>
-          <View style={s.statCard}>
-            <View style={s.statHeaderRow}>
-              <Users size={16} color={colors.mutedForeground} />
-              <Text style={s.statLabel}>Friends Referred</Text>
-            </View>
-            <Text style={s.statValue}>{successfulReferrals}</Text>
-          </View>
-          <View style={[s.statCard, s.statCardPrimary]}>
-            <View style={s.statHeaderRow}>
-              <Gift size={16} color={colors.primary} />
-              <Text style={s.statLabelPrimary}>Rewards Earned</Text>
-            </View>
-            <Text style={s.statValuePrimary}>{rewardsEarned}</Text>
-          </View>
-        </View>
+            {channel === 'email' ? (
+              <View style={s.fields}>
+                <Input
+                  value={recipientEmail}
+                  onChangeText={setRecipientEmail}
+                  placeholder="teammate@example.com"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <Input
+                  value={subject}
+                  onChangeText={setSubject}
+                  placeholder="Subject"
+                />
+              </View>
+            ) : (
+              <View style={s.fields}>
+                <Input
+                  value={recipientPhone}
+                  onChangeText={setRecipientPhone}
+                  placeholder="Phone number"
+                  keyboardType="phone-pad"
+                />
+              </View>
+            )}
 
-        {/* Tier Progress */}
-        {nextTier && (
-          <View style={s.tierProgressCard}>
-            <View style={s.tierProgressHeader}>
-              <Crown size={16} color={YELLOW_600} />
-              <Text style={s.tierProgressTitle}>Unlock Gold Tier</Text>
-            </View>
-            <Text style={s.tierProgressText}>
-              Refer{' '}
-              <Text style={s.strongFg}>
-                {referralsToNextTier} more friend{referralsToNextTier !== 1 ? 's' : ''}
-              </Text>{' '}
-              to unlock <Text style={s.strongYellow}>75% off</Text> rewards!
-            </Text>
-            <View style={s.progressTrack}>
-              <LinearGradient
-                colors={[YELLOW_500, AMBER_500]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={[
-                  s.progressFill,
-                  { width: `${Math.min(100, (successfulReferrals / nextTier.minReferrals) * 100)}%` },
-                ]}
-              />
-            </View>
-            <Text style={s.progressCount}>
-              {successfulReferrals}/{nextTier.minReferrals} referrals
-            </Text>
-          </View>
-        )}
+            {/* Shared pre-populated message. 5 rows, resize disabled. */}
+            <Textarea
+              value={message}
+              onChangeText={setMessage}
+              rows={5}
+              style={s.messageBox}
+              placeholder="Your message"
+            />
 
-        {successfulReferrals >= 5 && (
-          <View style={s.goldUnlockCard}>
-            <View style={s.goldUnlockHeader}>
-              <Crown size={20} color={YELLOW_600} />
-              <Text style={s.goldUnlockTitle}>Gold Tier Unlocked!</Text>
+            <View style={s.actions}>
+              <Pressable style={s.btnOutline} onPress={() => setModalOpen(false)}>
+                <Text style={s.btnOutlineText}>Cancel</Text>
+              </Pressable>
+              <Pressable style={s.btnSend} onPress={handleSend}>
+                {channel === 'email' ? (
+                  <Mail size={14} color={colors.primaryForeground} />
+                ) : (
+                  <Phone size={14} color={colors.primaryForeground} />
+                )}
+                <Text style={s.btnSendText}>{primaryLabel}</Text>
+              </Pressable>
             </View>
-            <Text style={s.goldUnlockText}>
-              You're earning maximum rewards - 75% off for 3 months per referral!
-            </Text>
-          </View>
-        )}
-
-        {/* Track Referrals Link */}
-        <View style={s.trackSection}>
-          <Button
-            variant="outline"
-            style={s.trackButton}
-            leftIcon={<ExternalLink size={16} color={colors.foreground} />}
-            rightIcon={<ArrowRight size={16} color={colors.foreground} />}
-            onPress={() => {
-              try {
-                navigation.navigate('ReferralTracking' as never);
-              } catch {
-                /* navigator may not be present in all hosts */
-              }
-            }}
-          >
-            View Detailed Referral Tracking
-          </Button>
-        </View>
-      </CardContent>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </Card>
   );
 }
 
 export default ReferralCard;
 
-// --- Local color constants (parity with Tailwind yellow/amber/green palette) ---
-const YELLOW_500 = '#eab308';
-const YELLOW_600 = '#ca8a04';
-const YELLOW_700 = '#a16207';
-const AMBER_500 = '#f59e0b';
-const GREEN_500 = '#22c55e';
-
 const s = StyleSheet.create({
-  // Locked (non-subscriber) state
-  lockedCard: {
-    borderStyle: 'dashed',
-    borderWidth: 2,
-    borderColor: 'rgba(231,175,8,0.20)',
-    backgroundColor: colors.card,
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   } as ViewStyle,
-  lockedTitle: { fontSize: typography.fontSize.lg, color: colors.foreground, flexShrink: 1 },
-  lockedBadgeWrap: { alignItems: 'center', paddingVertical: spacing.md },
-  subscribersBadge: {
-    backgroundColor: 'rgba(231,175,8,0.10)',
-    borderWidth: 0,
+  titleText: {
+    fontSize: typography.fontSize.lg,
+    color: colors.foreground,
+    flexShrink: 1,
   },
-  subscribersBadgeText: { color: colors.primary, fontSize: typography.fontSize.xs },
-
-  // Loader
-  loaderContent: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.lg } as ViewStyle,
-
-  // Card outer
-  cardOuter: {
-    borderColor: 'rgba(231,175,8,0.20)',
-    backgroundColor: colors.card,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  decorOrb: {
-    position: 'absolute',
-    top: -64,
-    right: -64,
-    width: 128,
-    height: 128,
-    borderRadius: 64,
-    backgroundColor: 'rgba(231,175,8,0.10)',
-  },
-
-  // Header
-  headerRel: { position: 'relative' },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 },
-  titleText: { fontSize: typography.fontSize.xl, color: colors.foreground, flexShrink: 1 },
-  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  tierBadgeInner: { flexDirection: 'row', alignItems: 'center' },
-  primaryTierBadge: {
-    borderWidth: 1,
-    borderColor: colors.primary,
-    backgroundColor: 'transparent',
-  },
-  primaryTierBadgeText: { color: colors.primary, fontSize: typography.fontSize.xs, fontFamily: typography.fontFamily.bodySemiBold },
-  goldTierBadge: {
-    borderWidth: 1,
-    borderColor: YELLOW_500,
-    backgroundColor: 'rgba(234,179,8,0.10)',
-  },
-  goldTierBadgeText: { color: YELLOW_600, fontSize: typography.fontSize.xs, fontFamily: typography.fontFamily.bodySemiBold },
-
-  descriptionText: { fontSize: typography.fontSize.base, color: colors.mutedForeground },
-  descStrongPrimary: { color: colors.primary, fontFamily: typography.fontFamily.bodyBold },
-
-  // Content
-  contentSpacing: { gap: spacing.lg, position: 'relative' },
-
-  // Sections
-  section: { gap: spacing.xs },
-  label: { fontSize: typography.fontSize.sm, color: colors.mutedForeground, fontFamily: typography.fontFamily.bodySemiBold },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  inputWrap: { flex: 1 },
-  inputMono: {
-    backgroundColor: 'rgba(32,36,43,0.50)',
-    fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
+  contentSpacing: { gap: spacing.md } as ViewStyle,
+  bodyText: {
     fontSize: typography.fontSize.sm,
+    color: colors.mutedForeground,
+    fontFamily: typography.fontFamily.body,
+  },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  } as ViewStyle,
+  inputWrap: { flex: 1 } as ViewStyle,
+  inputMono: {
+    fontFamily: Platform.select({
+      ios: 'Menlo',
+      android: 'monospace',
+      default: 'monospace',
+    }),
+    fontSize: typography.fontSize.xs,
   },
   iconButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
     backgroundColor: 'transparent',
-  },
-  iconButtonPrimary: {
-    width: 40,
-    height: 40,
+  } as ViewStyle,
+  primaryButton: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.md,
+    gap: spacing.xs,
     backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  } as ViewStyle,
+  primaryButtonText: {
+    color: colors.primaryForeground,
+    fontFamily: typography.fontFamily.bodySemiBold,
+    fontSize: typography.fontSize.sm,
   },
 
-  // Stats
-  statsGrid: { flexDirection: 'row', gap: spacing.md },
-  statCard: {
+  // Modal
+  backdrop: {
     flex: 1,
-    padding: spacing.md,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  } as ViewStyle,
+  sheet: {
+    width: '100%',
+    maxWidth: 440,
+    backgroundColor: colors.card,
     borderRadius: radius.lg,
-    backgroundColor: 'rgba(32,36,43,0.50)',
+    padding: spacing.lg,
     borderWidth: 1,
-    borderColor: 'rgba(43,48,58,0.50)',
+    borderColor: colors.border,
+    gap: spacing.sm,
+  } as ViewStyle,
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  } as ViewStyle,
+  modalTitle: {
+    fontFamily: typography.fontFamily.heading,
+    fontSize: typography.fontSize.lg,
+    color: colors.foreground,
   },
-  statCardPrimary: {
-    backgroundColor: 'rgba(231,175,8,0.10)',
-    borderColor: 'rgba(231,175,8,0.20)',
+  modalDesc: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.xs,
+    color: colors.mutedForeground,
+    marginTop: 2,
   },
-  statHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: 4 },
-  statLabel: { fontSize: typography.fontSize.sm, color: colors.mutedForeground },
-  statLabelPrimary: { fontSize: typography.fontSize.sm, color: colors.primary },
-  statValue: { fontSize: typography.fontSize['2xl'], fontFamily: typography.fontFamily.bodyBold, color: colors.foreground },
-  statValuePrimary: { fontSize: typography.fontSize['2xl'], fontFamily: typography.fontFamily.bodyBold, color: colors.primary },
-
-  // Tier progress (gold unlock nudge)
-  tierProgressCard: {
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    backgroundColor: 'rgba(234,179,8,0.10)',
-    borderWidth: 1,
-    borderColor: 'rgba(234,179,8,0.20)',
-  },
-  tierProgressHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
-  tierProgressTitle: { fontSize: typography.fontSize.sm, color: YELLOW_700, fontFamily: typography.fontFamily.bodySemiBold },
-  tierProgressText: { fontSize: typography.fontSize.sm, color: colors.mutedForeground },
-  strongFg: { color: colors.foreground, fontFamily: typography.fontFamily.bodyBold },
-  strongYellow: { color: YELLOW_600, fontFamily: typography.fontFamily.bodyBold },
-  progressTrack: {
-    marginTop: spacing.xs,
-    height: 8,
+  tabs: {
+    flexDirection: 'row',
     backgroundColor: colors.muted,
-    borderRadius: 999,
-    overflow: 'hidden',
+    borderRadius: radius.md,
+    padding: 4,
+  } as ViewStyle,
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: radius.sm,
+  } as ViewStyle,
+  tabActive: { backgroundColor: colors.card } as ViewStyle,
+  tabText: {
+    fontFamily: typography.fontFamily.bodySemiBold,
+    color: colors.mutedForeground,
+    fontSize: typography.fontSize.xs,
   },
-  progressFill: { height: '100%' },
-  progressCount: { fontSize: typography.fontSize.xs, color: colors.mutedForeground, marginTop: 4 },
-
-  // Gold unlocked (post-threshold)
-  goldUnlockCard: {
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    backgroundColor: 'rgba(234,179,8,0.20)',
+  tabTextActive: { color: colors.foreground },
+  fields: { gap: spacing.sm } as ViewStyle,
+  messageBox: {
+    minHeight: 120,
+  },
+  actions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  } as ViewStyle,
+  btnOutline: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: 'rgba(234,179,8,0.30)',
+    borderColor: colors.border,
+  } as ViewStyle,
+  btnOutlineText: {
+    fontFamily: typography.fontFamily.bodySemiBold,
+    color: colors.foreground,
+    fontSize: typography.fontSize.sm,
   },
-  goldUnlockHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  goldUnlockTitle: { color: YELLOW_700, fontFamily: typography.fontFamily.bodySemiBold },
-  goldUnlockText: { fontSize: typography.fontSize.sm, color: colors.mutedForeground, marginTop: 4 },
-
-  // Track section
-  trackSection: {
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(43,48,58,0.50)',
+  btnSend: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.md,
+  } as ViewStyle,
+  btnSendText: {
+    fontFamily: typography.fontFamily.bodySemiBold,
+    color: colors.primaryForeground,
+    fontSize: typography.fontSize.sm,
   },
-  trackButton: { width: '100%' },
 });

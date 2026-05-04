@@ -21,6 +21,7 @@ import { Navbar } from '@/components/Navbar';
 import { BackButton } from '@/components/BackButton';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { toast } from '@/hooks/use-toast';
 import { addCampToDeviceCalendar, type CollegeCamp } from '@/hooks/useCollegeCamps';
 import { useSport } from '@/contexts/SportContext';
 import { colors, typography, spacing, radius } from '@/lib/theme';
@@ -73,15 +74,17 @@ export default function CampDiscoveryScreen() {
   };
 
   const addToCalendar = async (camp: CollegeCamp) => {
-    try {
-      const eventId = await addCampToDeviceCalendar(camp);
-      if (eventId) {
-        Alert.alert('Added to calendar', `${camp.name} saved to your device calendar.`);
-      } else {
-        Alert.alert('Calendar permission required', 'Enable calendar access in Settings.');
-      }
-    } catch (e: any) {
-      Alert.alert('Could not add', e?.message ?? 'Unknown error');
+    const result = await addCampToDeviceCalendar(camp);
+    if (result.ok) {
+      toast({ title: 'Added to calendar', description: camp.name });
+      return;
+    }
+    if (result.reason === 'permission-denied') {
+      toast({ title: 'Enable calendar adds on your device', variant: 'destructive' });
+    } else if (result.reason === 'missing-date') {
+      toast({ title: 'Missing camp date', variant: 'destructive' });
+    } else {
+      toast({ title: "Couldn't add to calendar", variant: 'destructive' });
     }
   };
 
