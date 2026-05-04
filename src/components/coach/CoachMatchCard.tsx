@@ -21,11 +21,15 @@ import {
   Mail,
   Bookmark,
   BookmarkCheck,
+  Eye,
+  FileText,
 } from 'lucide-react-native';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Progress } from '@/components/ui/Progress';
+import { MessageButton } from '@/components/MessageButton';
+import { navigateToProfile, type UserKind } from '@/lib/openUserProfile';
 import { useRecordContactEvent } from '@/hooks/useRecordContactEvent';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
@@ -122,11 +126,11 @@ export function CoachMatchCard({
   const isDesktop = width >= 640;
 
   // Build 50: tap-card-anywhere → public profile, route by audience.
+  // Build 52: routed through navigateToProfile() helper (web parity).
   const handleCardPress = () => {
     if (!coach?.id) return;
-    const screen = coachAudience === 'hs-coach' ? 'PublicHSCoachProfile' : 'PublicCoachProfile';
-    const params = coachAudience === 'hs-coach' ? { id: coach.id } : { coachId: coach.id, id: coach.id };
-    navigation.navigate('PublicProfileStack' as any, { screen, params });
+    const kind: UserKind = coachAudience === 'hs-coach' ? 'hs_coach' : 'college_coach';
+    navigateToProfile(navigation, { kind, id: coach.id });
   };
 
   const priorityKey = (scores?.priority as string) || '';
@@ -169,10 +173,15 @@ export function CoachMatchCard({
         schoolName: coach.school || '',
       },
       coachName:   coach.name || '',
+      coachEmail:  coach.email || '',
       coachSchool: coach.school || '',
+      coachTitle:  coach.title || '',
+      // legacy alias
       coachRole:   coach.title || '',
     });
   };
+
+  const isAthleteViewer = viewerRole === 'athlete';
 
   const PriorityBadge = () =>
     priorityCfg && scores?.priority ? (
@@ -293,14 +302,48 @@ export function CoachMatchCard({
         <FullScores />
 
         <View style={s.actionsRow}>
-          <Button
-            size="sm"
-            variant="outline"
-            onPress={handleContact}
-            style={{ flex: 1 }}
-          >
-            Contact
-          </Button>
+          {isAthleteViewer ? (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onPress={handleCardPress}
+                leftIcon={<Eye size={12} color={colors.foreground} />}
+                style={s.flexBtn}
+              >
+                View
+              </Button>
+              <MessageButton
+                recipientName={coach.name || 'Coach'}
+                recipientType="coach"
+                recipientRole={coachAudience === 'hs-coach' ? undefined : 'coach'}
+                coachProfileId={coach.id}
+                recipientEmail={coach.email}
+                variant="outline"
+                size="sm"
+                label="Message"
+                style={s.flexBtn}
+              />
+              <Button
+                size="sm"
+                variant="default"
+                onPress={handleContact}
+                leftIcon={<FileText size={12} color={colors.primaryForeground} />}
+                style={s.flexBtn}
+              >
+                Letter
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onPress={handleContact}
+              style={{ flex: 1 }}
+            >
+              Contact
+            </Button>
+          )}
           {onToggleSave && hasScore ? (
             <Pressable onPress={() => onToggleSave(coach.id)} style={s.iconBtn} hitSlop={8}>
               {isSaved ? (
@@ -348,14 +391,45 @@ export function CoachMatchCard({
             </View>
           ) : null}
           <View style={s.desktopActions}>
-            <Button
-              size="sm"
-              variant="ghost"
-              onPress={handleContact}
-              leftIcon={<Mail size={12} color={colors.foreground} />}
-            >
-              Contact
-            </Button>
+            {isAthleteViewer ? (
+              <>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onPress={handleCardPress}
+                  leftIcon={<Eye size={12} color={colors.foreground} />}
+                >
+                  View
+                </Button>
+                <MessageButton
+                  recipientName={coach.name || 'Coach'}
+                  recipientType="coach"
+                  recipientRole={coachAudience === 'hs-coach' ? undefined : 'coach'}
+                  coachProfileId={coach.id}
+                  recipientEmail={coach.email}
+                  variant="ghost"
+                  size="sm"
+                  label="Message"
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onPress={handleContact}
+                  leftIcon={<FileText size={12} color={colors.foreground} />}
+                >
+                  Letter
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="sm"
+                variant="ghost"
+                onPress={handleContact}
+                leftIcon={<Mail size={12} color={colors.foreground} />}
+              >
+                Contact
+              </Button>
+            )}
             {onToggleSave ? (
               <Pressable onPress={() => onToggleSave(coach.id)} style={s.iconBtnSm} hitSlop={8}>
                 {isSaved ? (
@@ -429,7 +503,8 @@ const s = StyleSheet.create({
   },
   scoresGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -spacing.xs / 2 },
   scoreCell: { width: '50%', paddingHorizontal: spacing.xs / 2, paddingVertical: spacing.xs / 2 },
-  actionsRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  actionsRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
+  flexBtn: { flex: 1, minWidth: 80 },
   // Desktop
   desktopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   desktopMain: { flex: 1, minWidth: 0, gap: 2 },

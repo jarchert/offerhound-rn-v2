@@ -27,6 +27,8 @@ import { MessageCircle, Phone, Mail, Send, X } from 'lucide-react-native';
 import { colors, typography, spacing } from '@/lib/theme';
 
 type Channel = 'app' | 'sms' | 'email';
+type TriggerVariant = 'default' | 'outline' | 'ghost';
+type TriggerSize = 'default' | 'sm';
 
 interface Props {
   recipientId?: string;
@@ -39,6 +41,17 @@ interface Props {
   body?: string;
   /** legacy: some call-sites pass raw id */
   recipientUserId?: string;
+  /** Web parity — recipient classification (coach, athlete, etc). */
+  recipientType?: string;
+  /** Web parity — recipient role used by send-direct-message edge fn. */
+  recipientRole?: string;
+  /** Web parity — coach_profile id passed to send-direct-message. */
+  coachProfileId?: string;
+  /** Trigger button styling. */
+  variant?: TriggerVariant;
+  size?: TriggerSize;
+  /** Optional style override for the trigger button. */
+  style?: any;
 }
 
 export function MessageButton({
@@ -51,6 +64,12 @@ export function MessageButton({
   compact = false,
   subject,
   body,
+  recipientType: _recipientType,
+  recipientRole: _recipientRole,
+  coachProfileId: _coachProfileId,
+  variant = 'default',
+  size = 'default',
+  style,
 }: Props) {
   const nav = useNavigation<any>();
   const [open, setOpen] = useState(false);
@@ -128,9 +147,30 @@ export function MessageButton({
 
   return (
     <>
-      <Pressable style={[s.btn, compact && s.compact]} onPress={() => setOpen(true)}>
-        <MessageCircle size={compact ? 14 : 16} color={colors.primaryForeground} />
-        {!compact && <Text style={s.btnText}>{label}</Text>}
+      <Pressable
+        style={[
+          s.btn,
+          variant === 'outline' && s.btnOutlineTrigger,
+          variant === 'ghost' && s.btnGhostTrigger,
+          (size === 'sm' || compact) && s.compact,
+          style,
+        ]}
+        onPress={() => setOpen(true)}
+      >
+        <MessageCircle
+          size={(size === 'sm' || compact) ? 14 : 16}
+          color={variant === 'default' ? colors.primaryForeground : colors.foreground}
+        />
+        {!compact && (
+          <Text
+            style={[
+              s.btnText,
+              variant !== 'default' && { color: colors.foreground },
+            ]}
+          >
+            {label}
+          </Text>
+        )}
       </Pressable>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
@@ -212,7 +252,9 @@ export function MessageButton({
 export default MessageButton;
 
 const s = StyleSheet.create({
-  btn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.primary, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: 8 },
+  btn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.primary, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: 8 },
+  btnOutlineTrigger: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border },
+  btnGhostTrigger: { backgroundColor: 'transparent' },
   compact: { paddingHorizontal: spacing.sm, paddingVertical: 6 },
   btnText: { fontFamily: typography.fontFamily.bodySemiBold, fontSize: typography.fontSize.sm, color: colors.primaryForeground, marginLeft: 6 },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg },

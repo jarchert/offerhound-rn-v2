@@ -81,9 +81,11 @@ export default function LetterComposerScreen() {
   const prefill = route.params?.prefill ?? {};
   // Support nested coach object from DashboardScreen: { seed: { coach: { name, school } } }
   const seedCoach = seed.coach ?? {};
+  // Note: recipientEmail isn't part of LetterDraft today (no email field in the
+  // RN composer UI). We accept the route param for parity but don't seed it.
   const seededFromCoach = {
     recipientName: seed.recipientName || prefill.recipientName || seedCoach.name || route.params?.coachName || route.params?.recipientName || route.params?.athleteName || '',
-    recipientRole: seed.recipientRole || seed.recipientTitle || prefill.recipientTitle || seedCoach.title || route.params?.coachRole || route.params?.recipientRole || route.params?.athletePosition || '',
+    recipientRole: seed.recipientRole || seed.recipientTitle || prefill.recipientTitle || seedCoach.title || route.params?.coachTitle || route.params?.coachRole || route.params?.recipientRole || route.params?.athletePosition || '',
     schoolName: seed.schoolName || seed.organizationName || prefill.organizationName || seedCoach.school || route.params?.coachSchool || route.params?.schoolName || route.params?.athleteSchool || '',
   };
 
