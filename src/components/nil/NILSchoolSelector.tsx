@@ -186,6 +186,32 @@ export function NILSchoolSelector({ selectedSchools, onToggleSchool, maxSelectio
               <Checkbox checked={taxFriendlyOnly} onCheckedChange={v => setTaxFriendlyOnly(!!v)} />
               <Text style={styles.filterLabel}>No state income tax only</Text>
             </Pressable>
+            {/* Apply / Reset row — filters auto-apply on change (mirrors web),
+                but mobile users need an explicit affordance to (a) reset and
+                (b) collapse the filter panel so the updated list is visible. */}
+            <View style={styles.filterActionRow}>
+              <Button
+                variant="outline"
+                size="sm"
+                onPress={() => {
+                  setConferenceFilter('All');
+                  setDivisionFilter('All');
+                  setStateFilter('All');
+                  setTaxFriendlyOnly(false);
+                }}
+                style={{ flex: 1 }}
+                disabled={!hasActiveFilter}
+              >
+                Reset
+              </Button>
+              <Button
+                size="sm"
+                onPress={() => setShowFilters(false)}
+                style={{ flex: 1 }}
+              >
+                Apply Filters{hasActiveFilter ? ` (${filteredSchools.length})` : ''}
+              </Button>
+            </View>
           </View>
         )}
 
@@ -306,6 +332,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   filterCell: { gap: 4 },
+  filterActionRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
   filterLabel: { fontSize: typography.fontSize.xs, color: colors.mutedForeground, fontFamily: typography.fontFamily.body },
   taxFriendlyRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   colHeader: {
