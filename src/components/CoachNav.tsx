@@ -6,6 +6,13 @@
 //   - lucide-react → lucide-react-native
 //   - Desktop sidebar shown on wide (≥1024) screens; phones/narrow → bottom nav.
 // Mirrors OwnerNav.tsx pattern exactly.
+//
+// Role awareness:
+//   College coaches live under CoachDrawer (CoachDashboardScreen, PipelineTab, etc.).
+//   Club coaches live under ClubCoachDrawer (ClubCoachDashboardScreen with its own
+//   inner tab structure). CoachNav is used by BOTH roles — club coaches must not see
+//   Dashboard/Matches/Directory items that route to CoachDrawer screens which don't
+//   exist in their navigator tree. The role prop lets us filter items accordingly.
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
@@ -43,7 +50,7 @@ type NavItem = {
   description: string;
 };
 
-const coachNavItems: NavItem[] = [
+const ALL_NAV_ITEMS: NavItem[] = [
   { path: '/coach/dashboard',      route: 'CoachDrawer',     label: 'Dashboard',  icon: LayoutDashboard, description: 'Your coaching dashboard' },
   { path: '/club-coach/dashboard', route: 'ClubCoachDrawer', label: 'Club Coach', icon: Shield,          description: 'Manage club teams & rosters' },
   { path: '/coach/matches',        route: 'CoachDrawer',     label: 'Matches',    icon: UserCheck,       description: 'View matched athletes' },
@@ -58,10 +65,29 @@ const NAV_COLLAPSED_KEY = 'coachNavCollapsed';
 // Breakpoint matches Tailwind `lg:` = 1024px.
 const LG_BREAKPOINT = 1024;
 
-export function CoachNav() {
+// role: 'coach' = college coach (CoachDrawer); 'club_coach' = club coach (ClubCoachDrawer).
+// CoachDrawer screens: Dashboard, Pipeline, FindAthletes, Letters, Camps, Directory, Messages.
+// ClubCoachDrawer screens: Dashboard, Camps, FindAthletes, Letters (no Pipeline/Directory).
+// Messages, SettingsStack, AthleteSearch are always valid root screens for both roles.
+function filterItems(role: 'coach' | 'club_coach'): NavItem[] {
+  if (role === 'club_coach') {
+    // ClubCoachDrawer has no Dashboard/Pipeline/Matches/Directory — filter those out.
+    // Dashboard → ClubCoachDrawer.Dashboard is valid; strip CoachDrawer-only items.
+    return ALL_NAV_ITEMS.filter((item) => {
+      // CoachDrawer routes that don't exist in ClubCoachDrawer.
+      if (item.route === 'CoachDrawer') return false;
+      return true;
+    });
+  }
+  return ALL_NAV_ITEMS;
+}
+
+export function CoachNav({ role = 'coach' }: { role?: 'coach' | 'club_coach' }) {
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+
+  const availableItems = filterItems(role);
 
   // Current route name — RN analogue of useLocation().pathname.
   const currentRouteName = useNavigationState((state) => {
@@ -109,13 +135,14 @@ export function CoachNav() {
     return () => document.removeEventListener('keydown', handler);
   }, [toggle]);
 
-  const homeItem = coachNavItems[0];
+  const homeItem = availableItems[0];
 
   const go = (item: NavItem) => {
     try {
       navigation.navigate(item.route as never, item.params as never);
     } catch {
-      // If the target route is not registered in the current nav tree, silently no-op.
+      // Route doesn't exist in the current nav tree (e.g. CoachDrawer from ClubCoachDrawer
+      // context) — silently ignore rather than crashing.
     }
   };
 
@@ -159,7 +186,7 @@ export function CoachNav() {
                 <Text style={styles.collapseText}>Collapse</Text>
               </Pressable>
               <View style={styles.collapseDivider} />
-              {coachNavItems.map((item) => {
+              {availableItems.map((item) => {
                 const active = isItemActive(item);
                 const Icon = item.icon;
                 return (
@@ -187,7 +214,7 @@ export function CoachNav() {
   return (
     <View style={[styles.bottomWrap, { paddingBottom: insets.bottom > 0 ? insets.bottom : spacing.sm }]}>
       <View style={styles.bottomList}>
-        {coachNavItems.slice(0, 5).map((item) => {
+        {availableItems.slice(0, 5).map((item) => {
           const active = isItemActive(item);
           const Icon = item.icon;
           return (

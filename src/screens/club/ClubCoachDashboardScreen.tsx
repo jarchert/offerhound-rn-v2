@@ -203,7 +203,7 @@ export default function ClubCoachDashboardScreen() {
 
   return (
     <TermsAcceptanceGate>
-      <CoachNav />
+      <CoachNav role="club_coach" />
       <ScrollView style={s.root} contentContainerStyle={s.scroll}>
         {/* Header */}
         <View style={s.header}>
