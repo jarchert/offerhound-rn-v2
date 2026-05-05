@@ -15,6 +15,7 @@ import {
   GraduationCap,
   Globe,
   Trophy,
+  Share2,
 } from 'lucide-react-native';
 
 import { supabase } from '@/integrations/supabase/client';
@@ -27,6 +28,7 @@ import { NotRegisteredUser } from '@/components/NotRegisteredUser';
 
 import { colors, typography, spacing, radius } from '@/lib/theme';
 import type { PublicProfileStackParamList } from '@/navigation/stacks/PublicProfileStack';
+import { ShareRoleCardDialog } from '@/components/ShareRoleCardDialog';
 
 type R = RouteProp<PublicProfileStackParamList, 'PublicHSCoachProfile'>;
 
@@ -61,6 +63,7 @@ export default function PublicHSCoachProfileScreen() {
     return <NotRegisteredUser />;
   }
 
+  const [shareCardOpen, setShareCardOpen] = React.useState(false);
   const location = [coach.city, coach.state].filter(Boolean).join(', ');
   const secondary: string[] = Array.isArray(coach.secondary_sports) ? coach.secondary_sports : [];
   const social: Record<string, any> = (coach.social_links as any) || {};
@@ -139,6 +142,12 @@ export default function PublicHSCoachProfileScreen() {
                 <LinkBtn primary icon={<Phone size={14} color={colors.primaryForeground} />} label="Call" onPress={() => { Linking.openURL(`tel:${coach.phone}`); }} />
               )}
             </View>
+            <ShareRoleCardDialog role="hs_coach" open={shareCardOpen} onOpenChange={setShareCardOpen}>
+              <Pressable style={s.shareBtn} onPress={() => setShareCardOpen(true)} accessibilityRole="button" accessibilityLabel="Share HS Coach Card">
+                <Share2 size={14} color={colors.foreground} />
+                <Text style={s.shareBtnText}>Share Card</Text>
+              </Pressable>
+            </ShareRoleCardDialog>
           </CardContent>
         </Card>
       </ScrollView>
@@ -187,4 +196,6 @@ const s = StyleSheet.create({
   linkBtnPrimary: { backgroundColor: colors.primary, borderColor: colors.primary },
   linkBtnText: { color: colors.foreground, fontFamily: typography.fontFamily.body, fontSize: 13 },
   linkBtnTextPrimary: { color: colors.primaryForeground, fontFamily: typography.fontFamily.bodySemiBold },
+  shareBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: colors.border, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.md, marginTop: spacing.sm },
+  shareBtnText: { fontFamily: typography.fontFamily.bodySemiBold, fontSize: 13, color: colors.foreground },
 });

@@ -9,7 +9,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
-import { Award, MapPin, Mail } from 'lucide-react-native';
+import { Award, MapPin, Mail, Share2 } from 'lucide-react-native';
 
 import { supabase } from '@/integrations/supabase/client';
 import { BackButton } from '@/components/BackButton';
@@ -27,6 +27,7 @@ import { useHSCoachProfile } from '@/hooks/useHSCoachProfile';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 import type { PublicProfileStackParamList } from '@/navigation/stacks/PublicProfileStack';
 import { NotRegisteredUser } from '@/components/NotRegisteredUser';
+import { ShareRoleCardDialog } from '@/components/ShareRoleCardDialog';
 
 type R = RouteProp<PublicProfileStackParamList, 'PublicScoutProfile'>;
 
@@ -60,6 +61,8 @@ export default function PublicScoutProfileScreen() {
     },
     enabled: !!id,
   });
+
+  const [shareCardOpen, setShareCardOpen] = React.useState(false);
 
   const handleSendLetter = () => {
     if (!scout) return;
@@ -149,6 +152,12 @@ export default function PublicScoutProfileScreen() {
                 </Text>
               </View>
             )}
+            <ShareRoleCardDialog role="scout" open={shareCardOpen} onOpenChange={setShareCardOpen}>
+              <Pressable style={s.shareBtn} onPress={() => setShareCardOpen(true)} accessibilityRole="button" accessibilityLabel="Share Scout Card">
+                <Share2 size={14} color={colors.foreground} />
+                <Text style={s.shareBtnText}>Share Card</Text>
+              </Pressable>
+            </ShareRoleCardDialog>
           </CardContent>
         </Card>
       </ScrollView>
@@ -176,4 +185,6 @@ const s = StyleSheet.create({
   bio: { color: colors.mutedForeground, marginBottom: spacing.lg, fontFamily: typography.fontFamily.body, lineHeight: 20 },
   ctaWrap: { paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
   ctaHint: { color: colors.mutedForeground, fontSize: 12, marginTop: spacing.sm, fontFamily: typography.fontFamily.body },
+  shareBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: colors.border, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.md, marginTop: spacing.sm },
+  shareBtnText: { fontFamily: typography.fontFamily.bodySemiBold, fontSize: 13, color: colors.foreground },
 });

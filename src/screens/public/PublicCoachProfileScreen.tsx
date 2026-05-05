@@ -6,7 +6,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
-import { Award, MapPin, Mail, GraduationCap } from 'lucide-react-native';
+import { Award, MapPin, Mail, GraduationCap, Share2 } from 'lucide-react-native';
 
 import { supabase } from '@/integrations/supabase/client';
 import { BackButton } from '@/components/BackButton';
@@ -19,6 +19,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { NotRegisteredUser } from '@/components/NotRegisteredUser';
 
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
+import { ShareRoleCardDialog } from '@/components/ShareRoleCardDialog';
 import { useCoachProfile } from '@/hooks/useCoachProfile';
 import { useScoutProfile } from '@/hooks/useScoutProfile';
 import { useHSCoachProfile } from '@/hooks/useHSCoachProfile';
@@ -65,6 +66,8 @@ export default function PublicCoachProfileScreen() {
     },
     enabled: !!id,
   });
+
+  const [shareCardOpen, setShareCardOpen] = React.useState(false);
 
   const handleSendLetter = () => {
     if (!coach) return;
@@ -152,6 +155,12 @@ export default function PublicCoachProfileScreen() {
                 </Text>
               </View>
             )}
+            <ShareRoleCardDialog role="coach" open={shareCardOpen} onOpenChange={setShareCardOpen}>
+              <Pressable style={s.shareBtn} onPress={() => setShareCardOpen(true)} accessibilityRole="button" accessibilityLabel="Share Coach Card">
+                <Share2 size={14} color={colors.foreground} />
+                <Text style={s.shareBtnText}>Share Card</Text>
+              </Pressable>
+            </ShareRoleCardDialog>
           </CardContent>
         </Card>
       </ScrollView>
@@ -178,5 +187,11 @@ const s = StyleSheet.create({
   locText: { color: colors.mutedForeground, fontSize: 13, fontFamily: typography.fontFamily.body },
   bio: { color: colors.mutedForeground, marginBottom: spacing.lg, marginTop: spacing.sm, fontFamily: typography.fontFamily.body, lineHeight: 20 },
   ctaWrap: { paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
-  ctaHint: { color: colors.mutedForeground, fontSize: 12, marginTop: spacing.sm, fontFamily: typography.fontFamily.body },
+  shareBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderWidth: 1, borderColor: colors.border,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+    borderRadius: radius.md, marginTop: spacing.sm,
+  },
+  shareBtnText: { fontFamily: typography.fontFamily.bodySemiBold, fontSize: 13, color: colors.foreground },
 });

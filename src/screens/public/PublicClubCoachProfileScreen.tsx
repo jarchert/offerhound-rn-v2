@@ -7,7 +7,8 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Linking, Pressable } from 'react-native';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
-import { MapPin, Mail, Phone, Globe, Users } from 'lucide-react-native';
+import { MapPin, Mail, Phone, Globe, Users, Share2 } from 'lucide-react-native';
+import { ShareRoleCardDialog } from '@/components/ShareRoleCardDialog';
 
 import { supabase } from '@/integrations/supabase/client';
 import { BackButton } from '@/components/BackButton';
@@ -65,6 +66,7 @@ export default function PublicClubCoachProfileScreen() {
     return <NotRegisteredUser />;
   }
 
+  const [shareCardOpen, setShareCardOpen] = React.useState(false);
   const location = [coach.city, coach.state].filter(Boolean).join(', ');
   const social: Record<string, any> = (coach.social_links as any) || {};
   const secondary: string[] = Array.isArray(coach.secondary_sports) ? coach.secondary_sports : [];
@@ -138,6 +140,12 @@ export default function PublicClubCoachProfileScreen() {
                 <LinkBtn primary icon={<Phone size={14} color={colors.primaryForeground} />} label="Call" onPress={() => { Linking.openURL(`tel:${coach.phone}`); }} />
               )}
             </View>
+            <ShareRoleCardDialog role="club_coach" open={shareCardOpen} onOpenChange={setShareCardOpen}>
+              <Pressable style={s.shareBtn} onPress={() => setShareCardOpen(true)} accessibilityRole="button" accessibilityLabel="Share Club Coach Card">
+                <Share2 size={14} color={colors.foreground} />
+                <Text style={s.shareBtnText}>Share Club Coach Card</Text>
+              </Pressable>
+            </ShareRoleCardDialog>
           </CardContent>
         </Card>
       </ScrollView>
@@ -181,4 +189,6 @@ const s = StyleSheet.create({
   linkBtnPrimary: { backgroundColor: colors.primary, borderColor: colors.primary },
   linkBtnText: { color: colors.foreground, fontFamily: typography.fontFamily.body, fontSize: 13 },
   linkBtnTextPrimary: { color: colors.primaryForeground, fontFamily: typography.fontFamily.bodySemiBold },
+  shareBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: colors.border, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.md, marginTop: spacing.sm },
+  shareBtnText: { fontFamily: typography.fontFamily.bodySemiBold, fontSize: 13, color: colors.foreground },
 });
