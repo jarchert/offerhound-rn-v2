@@ -136,7 +136,7 @@ export function ScoutNav() {
       // Mirror Lovable: navigate("/") after sign-out.
       try {
         navigation.dispatch(
-          CommonActions.reset({ index: 0, routes: [{ name: 'Landing' as never }] })
+          CommonActions.reset({ index: 0, routes: [{ name: 'PublicTabs' as never }] })
         );
       } catch {
         // No-op if Landing route isn't registered.
