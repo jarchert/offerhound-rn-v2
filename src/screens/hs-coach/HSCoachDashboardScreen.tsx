@@ -516,12 +516,15 @@ export default function HSCoachDashboardScreen() {
                           </View>
                           <Button
                             variant="outline" size="sm" style={{ marginTop: spacing.sm }}
-                            onPress={() =>
-                              nav.navigate('PublicProfileStack' as any, {
-                                screen: 'PublicProfile',
-                                params: { userId: saved.athlete_user_id || saved.athlete?.id },
-                              })
-                            }
+                            onPress={() => {
+                              const customUrl = saved.athlete?.custom_url || saved.athlete?.id;
+                              if (customUrl) {
+                                nav.navigate('PublicProfileStack' as any, {
+                                  screen: 'PublicProfile',
+                                  params: { customUrl },
+                                });
+                              }
+                            }}
                           >
                             View Profile
                           </Button>
@@ -549,7 +552,7 @@ export default function HSCoachDashboardScreen() {
           </Tabs>
 
           <View style={{ marginTop: spacing.lg }}>
-            <TransferPortalFeed sport={profileAny.sport} />
+            <TransferPortalFeed sport={profileAny.sport || 'football'} />
           </View>
         </ScrollView>
       </SafeAreaView>
