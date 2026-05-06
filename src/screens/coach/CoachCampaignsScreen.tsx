@@ -35,7 +35,6 @@ const STATUS_CONFIG: Record<
   completed: { label: 'Completed', bg: colors.secondary,         fg: colors.secondaryForeground, icon: XCircle },
 };
 
-import { colors, typography, spacing, radius } from '@/lib/theme';
 import { SPORTS_CONFIG } from '@/lib/data/sports';
 
 const SPORTS = Object.values(SPORTS_CONFIG).map(s => s.name);

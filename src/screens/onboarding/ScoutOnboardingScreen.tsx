@@ -23,7 +23,6 @@ import type { RootStackParamList } from '@/navigation/RootNavigator';
 type Nav = NativeStackNavigationProp<OnboardingStackParamList & RootStackParamList>;
 
 const STEPS = ['Personal Info', 'Specialization', 'Review'];
-import { colors, typography, spacing } from '@/lib/theme';
 import { SPORTS_CONFIG } from '@/lib/data/sports';
 
 const SPORTS = Object.values(SPORTS_CONFIG).map(s => s.id);
