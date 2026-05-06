@@ -5,11 +5,11 @@ import { colors, typography, spacing } from '@/lib/theme';
 interface TabsCtx { value: string; onValueChange: (v: string) => void; }
 const Ctx = createContext<TabsCtx>({ value: '', onValueChange: () => {} });
 
-export function Tabs({ value, onValueChange, children, style }: { value: string; onValueChange: (v: string) => void; children: React.ReactNode; style?: ViewStyle }) {
+export function Tabs({ value, onValueChange, children, style }: { value: string; onValueChange: (v: string) => void; children?: React.ReactNode; style?: ViewStyle }) {
   return <Ctx.Provider value={{ value, onValueChange }}><View style={[s.root, style]}>{children}</View></Ctx.Provider>;
 }
 
-export function TabsList({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
+export function TabsList({ children, style }: { children?: React.ReactNode; style?: ViewStyle }) {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.listScroll}>
       <View style={[s.list, style]}>{children}</View>
@@ -17,7 +17,7 @@ export function TabsList({ children, style }: { children: React.ReactNode; style
   );
 }
 
-export function TabsTrigger({ value, children, style, textStyle }: { value: string; children: React.ReactNode; style?: ViewStyle; textStyle?: TextStyle }) {
+export function TabsTrigger({ value, children, style, textStyle }: { value: string; children?: React.ReactNode; style?: ViewStyle; textStyle?: TextStyle }) {
   const ctx = useContext(Ctx);
   const active = ctx.value === value;
   return (
@@ -27,7 +27,7 @@ export function TabsTrigger({ value, children, style, textStyle }: { value: stri
   );
 }
 
-export function TabsContent({ value, children, style }: { value: string; children: React.ReactNode; style?: ViewStyle }) {
+export function TabsContent({ value, children, style }: { value: string; children?: React.ReactNode; style?: ViewStyle }) {
   const ctx = useContext(Ctx);
   if (ctx.value !== value) return null;
   return <View style={[s.content, style]}>{children}</View>;

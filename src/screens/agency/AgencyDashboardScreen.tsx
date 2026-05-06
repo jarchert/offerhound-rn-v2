@@ -6,7 +6,7 @@
 // type-checks and remains navigable.
 import React, { useEffect } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, SafeAreaView, Pressable,
+  View, Text, ScrollView, StyleSheet, SafeAreaView,
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
@@ -164,15 +164,15 @@ export default function AgencyDashboardScreen() {
         {/* Main Tabs */}
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList>
-            <TabsTrigger value="overview"><TabLabel icon={LayoutDashboard} label="Overview" /></TabsTrigger>
-            <TabsTrigger value="team"><TabLabel icon={Users} label="Team" /></TabsTrigger>
-            {isOwner && <TabsTrigger value="staff"><TabLabel icon={Users} label="Manage Staff" /></TabsTrigger>}
-            <TabsTrigger value="pipeline"><TabLabel icon={Building2} label="Pipeline" /></TabsTrigger>
-            <TabsTrigger value="saved"><TabLabel icon={Heart} label="Saved" /></TabsTrigger>
-            <TabsTrigger value="messaging"><TabLabel icon={MessageCircle} label="Messaging" /></TabsTrigger>
-            <TabsTrigger value="analytics"><TabLabel icon={TrendingUp} label="Analytics" /></TabsTrigger>
-            {isOwner && <TabsTrigger value="org"><TabLabel icon={Building2} label="Organization" /></TabsTrigger>}
-            <TabsTrigger value="social"><TabLabel icon={Globe} label="Social" /></TabsTrigger>
+            <TabsTrigger value="overview"><LayoutDashboard size={14} color={colors.primary} /><Text style={s.tabLabel}>Overview</Text></TabsTrigger>
+            <TabsTrigger value="team"><Users size={14} color={colors.primary} /><Text style={s.tabLabel}>Team</Text></TabsTrigger>
+            {isOwner && <TabsTrigger value="staff"><Users size={14} color={colors.primary} /><Text style={s.tabLabel}>Manage Staff</Text></TabsTrigger>}
+            <TabsTrigger value="pipeline"><Building2 size={14} color={colors.primary} /><Text style={s.tabLabel}>Pipeline</Text></TabsTrigger>
+            <TabsTrigger value="saved"><Heart size={14} color={colors.primary} /><Text style={s.tabLabel}>Saved</Text></TabsTrigger>
+            <TabsTrigger value="messaging"><MessageCircle size={14} color={colors.primary} /><Text style={s.tabLabel}>Messaging</Text></TabsTrigger>
+            <TabsTrigger value="analytics"><TrendingUp size={14} color={colors.primary} /><Text style={s.tabLabel}>Analytics</Text></TabsTrigger>
+            {isOwner && <TabsTrigger value="org"><Building2 size={14} color={colors.primary} /><Text style={s.tabLabel}>Organization</Text></TabsTrigger>}
+            <TabsTrigger value="social"><Globe size={14} color={colors.primary} /><Text style={s.tabLabel}>Social</Text></TabsTrigger>
           </TabsList>
 
           {/* Overview */}
@@ -288,7 +288,7 @@ export default function AgencyDashboardScreen() {
                         <View style={s.savedActions}>
                           {item.priority ? <Badge variant="outline">{item.priority}</Badge> : null}
                           <Button variant="ghost" size="sm"
-                            onPress={() => nav.navigate('PublicProfileStack' as never, { screen: 'PublicProfile', params: { customUrl: item.athlete?.custom_url, id: item.athlete?.id } } as never)}>View</Button>
+                            onPress={() => nav.navigate('PublicProfileStack' as any, { screen: 'PublicProfile', params: { customUrl: item.athlete?.custom_url || item.athlete?.id } })}>View</Button>
                           <Button
                             variant="outline" size="sm"
                             leftIcon={<Mail size={14} color={colors.primary} />}
@@ -435,4 +435,5 @@ const s = StyleSheet.create({
   orgGrid: { gap: spacing.sm },
   orgItem: { flexDirection: 'row', flexWrap: 'wrap' },
   orgValue: { color: colors.foreground, fontFamily: typography.fontFamily.bodyMedium, fontSize: typography.size.sm },
+  tabLabel: { fontSize: 11, color: colors.primary, fontFamily: typography.fontFamily.bodyMedium },
 });
