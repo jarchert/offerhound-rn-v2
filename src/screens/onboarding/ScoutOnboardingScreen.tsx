@@ -23,7 +23,10 @@ import type { RootStackParamList } from '@/navigation/RootNavigator';
 type Nav = NativeStackNavigationProp<OnboardingStackParamList & RootStackParamList>;
 
 const STEPS = ['Personal Info', 'Specialization', 'Review'];
-const SPORTS = ['football', 'basketball', 'baseball', 'soccer', 'softball', 'volleyball', 'track', 'swimming', 'tennis', 'golf', 'lacrosse', 'wrestling'];
+import { colors, typography, spacing } from '@/lib/theme';
+import { SPORTS_CONFIG } from '@/lib/data/sports';
+
+const SPORTS = Object.values(SPORTS_CONFIG).map(s => s.id);
 
 export default function ScoutOnboardingScreen() {
   const nav = useNavigation<Nav>();

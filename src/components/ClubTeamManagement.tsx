@@ -27,7 +27,9 @@ interface ClubTeamManagementProps {
   userId: string;
 }
 
-const SPORTS = ["football","basketball","baseball","soccer","softball","volleyball","track","swimming","tennis","golf","lacrosse","wrestling","hockey"];
+import { SPORTS_CONFIG } from '@/lib/data/sports';
+
+const SPORTS = Object.values(SPORTS_CONFIG).map(s => s.id);
 const GENDERS = ["male", "female", "coed"];
 const LEVELS = ["recreational", "competitive", "elite", "academy", "select", "travel", "premier"];
 

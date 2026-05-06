@@ -29,7 +29,10 @@ type Nav = NativeStackNavigationProp<OnboardingStackParamList & RootStackParamLi
 type CoachType = 'college' | 'club' | 'highschool';
 
 const DIVISIONS = ['D1', 'D2', 'D3', 'NAIA', 'JUCO', 'NJCAA'];
-const SPORTS = ['football', 'basketball', 'baseball', 'soccer', 'softball', 'volleyball', 'track', 'swimming', 'tennis', 'golf', 'lacrosse', 'wrestling', 'hockey'];
+import { colors, typography, spacing } from '@/lib/theme';
+import { SPORTS_CONFIG } from '@/lib/data/sports';
+
+const SPORTS = Object.values(SPORTS_CONFIG).map(s => s.id);
 const CLUB_TYPES = ['club', 'little_league', 'amateur', 'recreational', 'travel', 'academy', 'aau', 'private'];
 const TEAM_LEVELS = ['recreational', 'competitive', 'elite', 'academy', 'select', 'travel', 'premier'];
 

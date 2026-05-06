@@ -29,10 +29,9 @@ interface Props {
   compact?: boolean;
 }
 
-const SPORTS = [
-  'all', 'football', 'basketball', 'baseball', 'soccer', 'lacrosse', 'wrestling',
-  'track', 'softball', 'volleyball', 'swimming', 'tennis', 'golf', 'hockey',
-];
+import { SPORTS_CONFIG } from '@/lib/data/sports';
+
+const SPORTS = ['all', ...Object.values(SPORTS_CONFIG).map(s => s.name)];
 
 function capitalize(s: string) { return s.length ? s[0].toUpperCase() + s.slice(1) : s; }
 

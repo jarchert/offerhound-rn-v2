@@ -6,25 +6,32 @@ import React from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors, typography, spacing, radius } from '@/lib/theme';
+import { SPORTS_CONFIG } from '@/lib/data/sports';
 
 import { BackButton } from '@/components/BackButton';
-// The 13 sports Lovable supports. Hero backgrounds are stubbed to the Lovable
-// hero for now; Session 6/8 can swap to per-sport assets.
-const SPORTS = [
-  { id: 'football',   label: 'Football',   emoji: '🏈' },
-  { id: 'basketball', label: 'Basketball', emoji: '🏀' },
-  { id: 'baseball',   label: 'Baseball',   emoji: '⚾' },
-  { id: 'softball',   label: 'Softball',   emoji: '🥎' },
-  { id: 'soccer',     label: 'Soccer',     emoji: '⚽' },
-  { id: 'volleyball', label: 'Volleyball', emoji: '🏐' },
-  { id: 'lacrosse',   label: 'Lacrosse',   emoji: '🥍' },
-  { id: 'track',      label: 'Track & Field', emoji: '🏃' },
-  { id: 'wrestling',  label: 'Wrestling',  emoji: '🤼' },
-  { id: 'swimming',   label: 'Swimming',   emoji: '🏊' },
-  { id: 'tennis',     label: 'Tennis',     emoji: '🎾' },
-  { id: 'golf',       label: 'Golf',       emoji: '⛳' },
-  { id: 'hockey',     label: 'Hockey',     emoji: '🏒' },
-];
+// Build picker list from SPORTS_CONFIG — the single source of truth for all 13 sports.
+const SPORTS = Object.values(SPORTS_CONFIG).map(s => ({
+  id: s.id,
+  label: s.name,
+  emoji: EMOJI_MAP[s.id] ?? '🏃',
+}));
+
+const EMOJI_MAP: Record<string, string> = {
+  football: '🏈',
+  basketball: '🏀',
+  baseball: '⚾',
+  softball: '🥎',
+  soccer: '⚽',
+  volleyball: '🏐',
+  lacrosse: '🥍',
+  'track-field': '🏃',
+  wrestling: '🤼',
+  swimming: '🏊',
+  tennis: '🎾',
+  golf: '⛳',
+  hockey: '🏒',
+  cheerleading: '💃',
+};
 
 export default function SportPickerScreen() {
   const navigation = useNavigation<any>();
