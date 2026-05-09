@@ -16,6 +16,7 @@ import { Users, ArrowRight, Mail } from 'lucide-react-native';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { AthleteMatchCard } from '@/components/athlete/AthleteMatchCard';
+import { MessageButton } from '@/components/MessageButton';
 import { useLetterCenter } from '@/hooks/useLetterCenter';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
@@ -178,6 +179,18 @@ export function CoachMatchSuggestionFeed({
                 recipientId: match.athlete?.user_id || match.athlete?.id,
                 recipientName: match.athlete?.full_name || '',
               })
+            }
+            messageSlot={
+              <MessageButton
+                recipientId={match.athlete?.user_id || match.athlete?.id}
+                recipientName={match.athlete?.full_name || 'Athlete'}
+                recipientEmail={(match.athlete as any)?.email ?? undefined}
+                recipientPhone={(match.athlete as any)?.phone ?? undefined}
+                recipientType="athlete"
+                recipientRole="athlete"
+                variant="outline"
+                size="sm"
+              />
             }
           />
         ))}

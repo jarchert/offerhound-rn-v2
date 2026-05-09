@@ -23,10 +23,10 @@ import {
 import * as SMS from 'expo-sms';
 import * as MailComposer from 'expo-mail-composer';
 import { useNavigation } from '@react-navigation/native';
-import { MessageCircle, Phone, Mail, Send, X } from 'lucide-react-native';
+import { MessageCircle, Phone, PhoneCall, Mail, Send, X } from 'lucide-react-native';
 import { colors, typography, spacing } from '@/lib/theme';
 
-type Channel = 'app' | 'sms' | 'email';
+type Channel = 'app' | 'sms' | 'email' | 'phone';
 type TriggerVariant = 'default' | 'outline' | 'ghost';
 type TriggerSize = 'default' | 'sm';
 
@@ -84,6 +84,7 @@ export function MessageButton({
       { id: 'app', icon: MessageCircle, label: 'In-app' },
       { id: 'sms', icon: Phone, label: 'SMS' },
       { id: 'email', icon: Mail, label: 'Email' },
+      { id: 'phone', icon: PhoneCall, label: 'Call' },
     ],
     []
   );
@@ -135,6 +136,15 @@ export function MessageButton({
         setOpen(false);
         return;
       }
+      if (channel === 'phone') {
+        if (!recipientPhone) {
+          Alert.alert('No phone on file', `${recipientName || 'This user'} hasn't shared a phone number.`);
+          return;
+        }
+        await Linking.openURL(`tel:${recipientPhone}`);
+        setOpen(false);
+        return;
+      }
     } catch (e: any) {
       Alert.alert('Could not send', e?.message || 'Please try again.');
     } finally {
@@ -144,6 +154,11 @@ export function MessageButton({
 
   const smsDisabled = channel === 'sms' && !recipientPhone;
   const emailDisabled = channel === 'email' && !recipientEmail;
+  const phoneDisabled = channel === 'phone' && !recipientPhone;
+  const sendDisabled =
+    channel === 'phone'
+      ? phoneDisabled || sending
+      : sending || !message.trim() || smsDisabled || emailDisabled;
 
   return (
     <>
@@ -208,7 +223,11 @@ export function MessageButton({
                   ? recipientPhone
                     ? `Opens your phone's messaging app to text ${recipientPhone}.`
                     : `${recipientName || 'They'} hasn't shared a phone number — SMS isn't available.`
-                  : recipientEmail
+                  : channel === 'phone'
+                    ? recipientPhone
+                      ? `Opens your phone dialer to call ${recipientPhone}.`
+                      : `${recipientName || 'They'} hasn't shared a phone number — calling isn't available.`
+                    : recipientEmail
                     ? `Opens your email client to write ${recipientEmail}.`
                     : `${recipientName || 'They'} hasn't shared an email — Email isn't available.`}
             </Text>
@@ -216,10 +235,11 @@ export function MessageButton({
             <TextInput
               value={message}
               onChangeText={setMessage}
-              placeholder="Type your message here…"
+              placeholder={channel === 'phone' ? 'Optional note before you call…' : 'Type your message here…'}
               placeholderTextColor={colors.mutedForeground}
               multiline
-              style={s.input}
+              style={[s.input, channel === 'phone' && { opacity: 0.5 }]}
+              editable={channel !== 'phone'}
             />
 
             <View style={s.actions}>
@@ -227,9 +247,9 @@ export function MessageButton({
                 <Text style={s.btnOutlineText}>Cancel</Text>
               </Pressable>
               <Pressable
-                style={[s.btnSend, (sending || !message.trim() || smsDisabled || emailDisabled) && s.btnDisabled]}
+                style={[s.btnSend, sendDisabled && s.btnDisabled]}
                 onPress={send}
-                disabled={sending || !message.trim() || smsDisabled || emailDisabled}
+                disabled={sendDisabled}
               >
                 {sending ? (
                   <ActivityIndicator size="small" color={colors.primaryForeground} />
@@ -237,6 +257,8 @@ export function MessageButton({
                   <><Phone size={14} color={colors.primaryForeground} /><Text style={s.btnText}>Send SMS</Text></>
                 ) : channel === 'email' ? (
                   <><Mail size={14} color={colors.primaryForeground} /><Text style={s.btnText}>Send Email</Text></>
+                ) : channel === 'phone' ? (
+                  <><PhoneCall size={14} color={colors.primaryForeground} /><Text style={s.btnText}>Call</Text></>
                 ) : (
                   <><Send size={14} color={colors.primaryForeground} /><Text style={s.btnText}>Send Message</Text></>
                 )}

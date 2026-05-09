@@ -49,6 +49,7 @@ import { useScoutSavedAthletes, useScoutSaveAthlete } from '@/hooks/useScoutSave
 import { compareByFullNamePresence } from '@/lib/utils/nameSorting';
 import { stateProximityScore, proximityLabel as proxLabelFn } from '@/lib/utils/stateProximity';
 import { AthleteMatchCard } from '@/components/athlete/AthleteMatchCard';
+import { MessageButton } from '@/components/MessageButton';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 
@@ -305,6 +306,20 @@ export default function AthleteSearchScreen() {
                           recipientName: athlete.full_name || 'Athlete',
                         } as any)
                       : undefined
+                  }
+                  messageSlot={
+                    isRecruiter ? (
+                      <MessageButton
+                        recipientId={athlete.user_id || athlete.id}
+                        recipientName={athlete.full_name || 'Athlete'}
+                        recipientEmail={(athlete as any)?.email ?? undefined}
+                        recipientPhone={(athlete as any)?.phone ?? undefined}
+                        recipientType="athlete"
+                        recipientRole="athlete"
+                        variant="outline"
+                        size="sm"
+                      />
+                    ) : undefined
                   }
                 />
               );

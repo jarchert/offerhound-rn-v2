@@ -47,6 +47,18 @@ export default function AthleteMatchesScreen() {
                   })
                 }
                 onContact={() => nav.navigate('Messages', { recipientId: c?.user_id || c?.id, recipientName: c?.name } as any)}
+                messageSlot={
+                  <MessageButton
+                    recipientId={c?.user_id || c?.id}
+                    recipientName={c?.name || 'Coach'}
+                    recipientEmail={c?.email ?? undefined}
+                    recipientPhone={c?.phone ?? undefined}
+                    recipientType="coach"
+                    recipientRole="coach"
+                    variant="default"
+                    size="sm"
+                  />
+                }
                 onLetter={() => nav.navigate('LetterComposer', { seed: { recipientName: c?.name, recipientRole: c?.title, schoolName: c?.school } })}
                 rightSlot={
                   <Pressable onPress={() => dismiss.mutate(item.id)} hitSlop={8} style={s.dismiss}>

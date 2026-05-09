@@ -32,6 +32,7 @@ import { Footer } from '@/components/Footer';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { AthleteMatchCard } from '@/components/athlete/AthleteMatchCard';
+import { MessageButton } from '@/components/MessageButton';
 import { useCoachAthleteMatches } from '@/hooks/useCoachAthleteMatches';
 import { useRefreshCoachAthleteMatches } from '@/hooks/useRefreshCoachAthleteMatches';
 import { useLetterCenter } from '@/hooks/useLetterCenter';
@@ -125,6 +126,18 @@ export default function CoachAthleteMatchesScreen() {
                   </Pressable>
                 }
                 onMessage={() => goToMessages(match.athlete)}
+                messageSlot={
+                  <MessageButton
+                    recipientId={match.athlete?.user_id || match.athlete?.id}
+                    recipientName={match.athlete?.full_name || 'Athlete'}
+                    recipientEmail={match.athlete?.email ?? undefined}
+                    recipientPhone={match.athlete?.phone ?? undefined}
+                    recipientType="athlete"
+                    recipientRole="athlete"
+                    variant="outline"
+                    size="sm"
+                  />
+                }
               />
             ))}
           </View>

@@ -275,6 +275,9 @@ export function TeamRosterAthleteCard({
               <MessageButton
                 recipientId={roster.athlete_profile_id}
                 recipientName={displayName}
+                recipientEmail={roster.athlete_email ?? undefined}
+                recipientType="athlete"
+                recipientRole="athlete"
               />
             </View>
           ) : null}

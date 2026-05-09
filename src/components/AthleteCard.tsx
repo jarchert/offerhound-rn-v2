@@ -9,6 +9,7 @@ import { colors, typography, spacing, radius } from '@/lib/theme';
 
 export interface AthleteCardData {
   id: string;
+  user_id?: string | null;
   full_name: string;
   position?: string | null;
   positions?: string[] | null;
@@ -21,6 +22,9 @@ export interface AthleteCardData {
   profile_image_url?: string | null;
   gpa?: string | null;
   sport?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  custom_url?: string | null;
 }
 
 interface Props {
@@ -32,6 +36,12 @@ interface Props {
   showActions?: boolean;
   /** Called when the Message button is tapped */
   onMessage?: () => void;
+  /**
+   * Optional custom Message CTA slot. When provided it replaces the default
+   * inline Message button — use this to render `<MessageButton />` with full
+   * in-app / SMS / email / phone channel options.
+   */
+  messageSlot?: React.ReactNode;
   /** Called when the Letter button is tapped */
   onLetter?: () => void;
   /** AI matching score details for coach/scout views */
@@ -43,7 +53,7 @@ interface Props {
   } | null;
 }
 
-export function AthleteCard({ athlete, onPress, matchScore, rightSlot, showActions, onMessage, onLetter, matchScores }: Props) {
+export function AthleteCard({ athlete, onPress, matchScore, rightSlot, showActions, onMessage, messageSlot, onLetter, matchScores }: Props) {
   const location = [athlete.city, athlete.state].filter(Boolean).join(', ');
   const position = athlete.position || athlete.positions?.[0];
 
@@ -88,9 +98,11 @@ export function AthleteCard({ athlete, onPress, matchScore, rightSlot, showActio
       ) : null}
 
       {/* Action buttons for coach/scout views */}
-      {showActions && (onMessage || onLetter) ? (
+      {showActions && (onMessage || messageSlot || onLetter) ? (
         <View style={s.actionsRow}>
-          {onMessage ? (
+          {messageSlot ? (
+            <View style={{ flex: 1 }}>{messageSlot}</View>
+          ) : onMessage ? (
             <Pressable style={s.actionBtn} onPress={() => { onMessage(); }}>
               <MessageSquare size={14} color={colors.primaryForeground} />
               <Text style={s.actionBtnText}>Message</Text>

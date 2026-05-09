@@ -1,23 +1,48 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, SafeAreaView, Pressable, Switch } from 'react-native';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
-import { Bell, Moon, Shield, FileText, Trash2, LogOut, ChevronRight, Users, Cookie, Eye, User, UserCog, Building2, Heart } from 'lucide-react-native';
+import { useNavigation, NavigationProp, DrawerActions } from '@react-navigation/native';
+import { Bell, Moon, Shield, FileText, Trash2, LogOut, ChevronRight, Users, Cookie, Eye, User, UserCog, Building2, Heart, Menu } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navbar } from '@/components/Navbar';
 import { BackButton } from '@/components/BackButton';
+import { ImpersonationBanner } from '@/components/ImpersonationBanner';
 import { colors, typography, spacing } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 
 export default function SettingsScreen() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
-  const { signOut, user } = useAuth();
+  const { signOut, user, userRole } = useAuth() as any;
+
+  // Drawer-based roles route hamburger to their drawer root; other roles
+  // fall back to their role home screen (or simply pop back).
+  const goToRoleHome = () => {
+    switch (userRole) {
+      case 'coach': nav.navigate('CoachDrawer' as any); break;
+      case 'scout': nav.navigate('ScoutDrawer' as any); break;
+      case 'parent': nav.navigate('ParentDrawer' as any); break;
+      case 'influencer': nav.navigate('InfluencerDrawer' as any); break;
+      case 'high_school_coach': nav.navigate('HSCoachDrawer' as any); break;
+      case 'club_coach': nav.navigate('ClubCoachDrawer' as any); break;
+      case 'agency': nav.navigate('AgencyDrawer' as any); break;
+      case 'admin':
+      case 'moderator': nav.navigate('AdminTabs' as any); break;
+      default: nav.navigate('AthleteTabs' as any);
+    }
+  };
 
   return (
     <SafeAreaView style={s.container}>
-      <Navbar />
+      <ImpersonationBanner />
+      <View style={s.header}>
+        <Pressable onPress={goToRoleHome} hitSlop={12} style={s.iconBtn} accessibilityRole="button" accessibilityLabel="Open menu">
+          <Menu size={22} color={colors.foreground} />
+        </Pressable>
+        <Text style={s.headerTitle}>Settings</Text>
+        <Pressable onPress={() => nav.navigate('Notifications' as any)} hitSlop={12} style={s.iconBtn} accessibilityRole="button" accessibilityLabel="Notifications">
+          <Bell size={20} color={colors.foreground} />
+        </Pressable>
+      </View>
       <ScrollView contentContainerStyle={s.content}>
         <BackButton label="Back" />
-        <Text style={s.title}>Settings</Text>
         <Text style={s.email}>{user?.email}</Text>
 
         <SettingsGroup title="Account">
@@ -85,7 +110,7 @@ export default function SettingsScreen() {
   );
 }
 
-function SettingsGroup({ title, children }: { title: string; children: React.ReactNode }) {
+function SettingsGroup({ title, children }: { title: string; children?: React.ReactNode }) {
   return (
     <View style={s.group}>
       <Text style={s.groupTitle}>{title}</Text>
@@ -106,6 +131,9 @@ function SettingsRow({ icon: Icon, label, onPress, right, destructive }: { icon:
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, minHeight: 52 },
+  iconBtn: { padding: 6 },
+  headerTitle: { fontFamily: typography.fontFamily.heading, fontSize: typography.fontSize.lg, color: colors.foreground, letterSpacing: typography.letterSpacing.heading, flex: 1, textAlign: 'center' },
   content: { padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xxl },
   title: { fontFamily: typography.fontFamily.heading, fontSize: typography.fontSize['2xl'], color: colors.foreground, letterSpacing: typography.letterSpacing.heading },
   email: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.sm, color: colors.mutedForeground },

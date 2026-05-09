@@ -39,6 +39,7 @@ import { colors, typography, spacing, radius } from '@/lib/theme';
  */
 export interface AthleteCardData {
   id: string;
+  user_id?: string | null;
   full_name?: string | null;
   position?: string | null;
   school?: string | null;
@@ -48,6 +49,7 @@ export interface AthleteCardData {
   profile_image_url?: string | null;
   custom_url?: string | null;
   email?: string | null;
+  phone?: string | null;
 }
 
 export interface AthleteCardScores {
@@ -71,6 +73,12 @@ export interface AthleteMatchCardProps {
   onContact?: () => void;
   /** Override the message action. Defaults to no-op. */
   onMessage?: () => void;
+  /**
+   * Optional custom Message CTA slot. When provided it replaces the default
+   * inline Message button — use this to render the shared `<MessageButton />`
+   * with full in-app / SMS / email / phone channel options.
+   */
+  messageSlot?: React.ReactNode;
   /** Optional meta-line label (e.g. "Need match", "Saved") */
   proximityLabel?: string | null;
   /** Hide the View Profile click-through (used inside link wrappers). */
@@ -137,6 +145,7 @@ export function AthleteMatchCard({
   onDismiss,
   onContact,
   onMessage,
+  messageSlot,
   proximityLabel,
   disableNavigate,
   letterSlot,
@@ -160,7 +169,7 @@ export function AthleteMatchCard({
   };
 
   const showActionRow =
-    !!letterSlot || !!onContact || !!onMessage || (!!onToggleSave && hasScore) || !!onDismiss;
+    !!letterSlot || !!onContact || !!onMessage || !!messageSlot || (!!onToggleSave && hasScore) || !!onDismiss;
 
   return (
     <Pressable
@@ -300,7 +309,9 @@ export function AthleteMatchCard({
       {/* Action row */}
       {showActionRow ? (
         <View style={s.actionRow}>
-          {onMessage ? (
+          {messageSlot ? (
+            <View style={s.actionBtnFlex}>{messageSlot}</View>
+          ) : onMessage ? (
             <Button
               variant="outline"
               size="sm"

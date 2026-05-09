@@ -8,6 +8,7 @@ import { colors, typography, spacing, radius } from '@/lib/theme';
 
 export interface CoachCardData {
   id: string;
+  user_id?: string | null;
   name: string;
   title?: string | null;
   school?: string | null;
@@ -15,6 +16,7 @@ export interface CoachCardData {
   division?: string | null;
   position_coached?: string | null;
   email?: string | null;
+  phone?: string | null;
   image_url?: string | null;
   city?: string | null;
   state?: string | null;
@@ -29,11 +31,17 @@ interface Props {
   showActions?: boolean;
   /** Called when the Contact/Message button is tapped */
   onContact?: () => void;
+  /**
+   * Optional custom Contact/Message CTA slot. When provided it replaces the
+   * default inline Contact button — use this to render `<MessageButton />`
+   * with full in-app / SMS / email / phone channel options.
+   */
+  messageSlot?: React.ReactNode;
   /** Called when the Letter button is tapped */
   onLetter?: () => void;
 }
 
-export function CoachCard({ coach, onPress, matchScore, rightSlot, showActions, onContact, onLetter }: Props) {
+export function CoachCard({ coach, onPress, matchScore, rightSlot, showActions, onContact, messageSlot, onLetter }: Props) {
   const location = [coach.city, coach.state].filter(Boolean).join(', ');
   return (
     <Pressable style={s.card} onPress={onPress}>
@@ -66,9 +74,11 @@ export function CoachCard({ coach, onPress, matchScore, rightSlot, showActions, 
       </View>
 
       {/* Action buttons for athlete views */}
-      {showActions && (onContact || onLetter) ? (
+      {showActions && (onContact || messageSlot || onLetter) ? (
         <View style={s.actionsRow}>
-          {onContact ? (
+          {messageSlot ? (
+            <View style={{ flex: 1 }}>{messageSlot}</View>
+          ) : onContact ? (
             <Pressable style={s.actionBtn} onPress={() => { onContact(); }}>
               <MessageSquare size={14} color={colors.primaryForeground} />
               <Text style={s.actionBtnText}>Contact</Text>

@@ -10,6 +10,7 @@ import { Navbar } from '@/components/Navbar';
 import { StatTile } from '@/components/StatTile';
 import { SectionHeader } from '@/components/SectionHeader';
 import { AthleteCard } from '@/components/AthleteCard';
+import { MessageButton } from '@/components/MessageButton';
 import { PushNotificationPrompt } from '@/components/PushNotificationPrompt';
 import { ShareRoleCardDialog } from '@/components/ShareRoleCardDialog';
 import { CoachMatchSuggestionFeed } from '@/components/CoachMatchSuggestionFeed';
@@ -115,6 +116,18 @@ export default function CoachDashboard() {
                     showActions
                     onPress={() => nav.navigate('PublicProfileStack' as any, { screen: 'PublicProfile', params: { customUrl: ath?.custom_url || ath?.id } })}
                     onMessage={() => nav.navigate('Messages', { recipientId: ath?.user_id || ath?.id, recipientName: ath?.full_name } as any)}
+                    messageSlot={
+                      <MessageButton
+                        recipientId={ath?.user_id || ath?.id}
+                        recipientName={ath?.full_name || 'Athlete'}
+                        recipientEmail={ath?.email ?? undefined}
+                        recipientPhone={ath?.phone ?? undefined}
+                        recipientType="athlete"
+                        recipientRole="athlete"
+                        variant="default"
+                        size="sm"
+                      />
+                    }
                     onLetter={() => nav.navigate('LetterComposer', { seed: { recipientName: ath?.full_name, recipientRole: ath?.position, schoolName: ath?.school } })}
                   />
                 );

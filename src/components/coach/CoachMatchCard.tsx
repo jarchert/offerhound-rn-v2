@@ -319,6 +319,7 @@ export function CoachMatchCard({
                 recipientRole={coachAudience === 'hs-coach' ? undefined : 'coach'}
                 coachProfileId={coach.id}
                 recipientEmail={coach.email}
+                recipientPhone={(coach as any).phone ?? undefined}
                 variant="outline"
                 size="sm"
                 label="Message"
@@ -407,6 +408,7 @@ export function CoachMatchCard({
                   recipientRole={coachAudience === 'hs-coach' ? undefined : 'coach'}
                   coachProfileId={coach.id}
                   recipientEmail={coach.email}
+                  recipientPhone={(coach as any).phone ?? undefined}
                   variant="ghost"
                   size="sm"
                   label="Message"

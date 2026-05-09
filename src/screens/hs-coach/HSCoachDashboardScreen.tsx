@@ -45,6 +45,7 @@ import { HSCoachTranscriptVerificationTab } from '@/components/hs-coach/HSCoachT
 import { HSCoachFilmVerificationTab } from '@/components/hs-coach/HSCoachFilmVerificationTab';
 import { ShareRoleCardDialog } from '@/components/ShareRoleCardDialog';
 import { AthleteMatchCard } from '@/components/athlete/AthleteMatchCard';
+import { MessageButton } from '@/components/MessageButton';
 
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
@@ -453,6 +454,18 @@ export default function HSCoachDashboardScreen() {
                             />
                           }
                           onMessage={() => nav.navigate('Messages', { recipientId: match.athlete?.user_id || match.athlete?.id, recipientName: match.athlete?.full_name || 'Athlete' } as any)}
+                          messageSlot={
+                            <MessageButton
+                              recipientId={match.athlete?.user_id || match.athlete?.id}
+                              recipientName={match.athlete?.full_name || 'Athlete'}
+                              recipientEmail={(match.athlete as any)?.email ?? undefined}
+                              recipientPhone={(match.athlete as any)?.phone ?? undefined}
+                              recipientType="athlete"
+                              recipientRole="athlete"
+                              variant="outline"
+                              size="sm"
+                            />
+                          }
                         />
                       ))}
                     </View>
