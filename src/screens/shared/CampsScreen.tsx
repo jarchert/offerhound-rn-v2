@@ -14,6 +14,8 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
+import { useCoachProfile } from '@/hooks/useCoachProfile';
+import { useHSCoachProfile } from '@/hooks/useHSCoachProfile';
 import { Navbar } from '@/components/Navbar';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -73,13 +75,28 @@ const PROX_COLOR: Record<number, { bg: string; fg: string }> = {
 export default function CampsScreen() {
   const { user } = useAuth();
   const { profile } = usePlayerProfile() as any;
+  // Build 55 item 9: coach-side camps must be pre-filtered by the coach's
+  // registered sport. If the viewer has an athlete profile we use that sport;
+  // otherwise fall back to the coach / HS coach profile's sport. This keeps
+  // the athlete-centric default behavior while fixing the coach dead-filter.
+  const { data: coachProfile } = useCoachProfile();
+  const { data: hsCoachProfile } = useHSCoachProfile();
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [campTab, setCampTab] = useState('all');
   const [sportFilter, setSportFilter] = useState<string>('all');
 
-  const userState = profile?.state || profile?.home_state || null;
-  const userSport = profile?.sport || null;
+  const userState =
+    profile?.state ||
+    profile?.home_state ||
+    (coachProfile as any)?.state ||
+    (hsCoachProfile as any)?.state ||
+    null;
+  const userSport =
+    profile?.sport ||
+    (coachProfile as any)?.sport ||
+    (hsCoachProfile as any)?.sport ||
+    null;
 
   const { data: allCamps = [], isLoading, refetch } = useQuery({
     queryKey: ['dashboard-camps', userSport],

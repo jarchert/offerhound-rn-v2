@@ -69,7 +69,17 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, paddingBottom: spacing.xxxl },
   header: { alignItems: 'center', marginBottom: spacing.xl },
-  logo: { width: 96, height: 96, marginBottom: spacing.md, backgroundColor: 'transparent' },
+  logo: {
+    width: 120,
+    height: 120,
+    marginBottom: spacing.md,
+    backgroundColor: 'transparent',
+    // Build 55 item 10: guard against any container clipping — the hero
+    // logo reported as cropped was caused by a fixed width but auto height
+    // in an earlier revision. Explicit w/h + resizeMode=contain handled in
+    // the Image prop. alignSelf keeps it centered without stretching.
+    alignSelf: 'center',
+  },
   eyebrow: {
     fontFamily: typography.fontFamily.bodyMedium,
     fontSize: 11,
