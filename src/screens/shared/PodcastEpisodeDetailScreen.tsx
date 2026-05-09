@@ -1,17 +1,18 @@
-// Ported from Lovable web src/pages/PodcastEpisodeDetail.tsx (32 LOC).
+// Portele web src/pages/PodcastEpisodeDetail.tsx.
 // Web → RN translations:
 //   - useParams → useRoute().params.id
-//   - <audio controls> → PORT-PENDING (no expo-av in deps yet); render audio_url as Linking
+//   - <audio controls> → expo-audio useAudioPlayer/useAudioPlayerStatus (Build 54 fix)
 //   - lucide-react → lucide-react-native
 //   - Tailwind → StyleSheet via @/lib/theme
 //   - Footer/SEO removed
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, SafeAreaView, ActivityIndicator, Linking, Pressable,
 } from 'react-native';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
-import { Podcast, ExternalLink } from 'lucide-react-native';
+import { Podcast, Play, Pause, ExternalLink } from 'lucide-react-native';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 
 import { BackButton } from '@/components/BackButton';
 import { Card, CardContent } from '@/components/ui';
@@ -19,18 +20,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
 import { Navbar } from '@/components/Navbar';
-type ParamList = { PodcastEpisodeDetail: { id?: string } };
+type ParamList = { PodcastEpisodeDetail: { id?: string; episodeId?: string } };
 
 interface Episode {
   id: string;
   title: string;
   description?: string | null;
   audio_url?: string | null;
+  thumbnail_url?: string | null;
 }
 
 export default function PodcastEpisodeDetailScreen() {
   const route = useRoute<RouteProp<ParamList, 'PodcastEpisodeDetail'>>();
-  const id = route.params?.id;
+  // Accept both `id` and legacy `episodeId` param names for parity with web.
+  const id = route.params?.id ?? route.params?.episodeId;
 
   const { data: episode, isLoading } = useQuery({
     queryKey: ['podcast-episode', id],
@@ -45,6 +48,33 @@ export default function PodcastEpisodeDetailScreen() {
     },
     enabled: !!id,
   });
+
+  // Always-constructed player — swap source via replace() when episode loads.
+  const player = useAudioPlayer(null);
+  const status = useAudioPlayerStatus(player);
+
+  useEffect(() => {
+    if (episode?.audio_url) {
+      try {
+        player.replace({ uri: episode.audio_url });
+      } catch {}
+    }
+    return () => {
+      try { player.pause(); } catch {}
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [episode?.audio_url]);
+
+  const handlePlayPause = () => {
+    if (!episode?.audio_url) return;
+    try {
+      if (status.playing) {
+        player.pause();
+      } else {
+        player.play();
+      }
+    } catch {}
+  };
 
   if (isLoading) {
     return (
@@ -61,6 +91,8 @@ export default function PodcastEpisodeDetailScreen() {
     );
   }
 
+  const isPlaying = !!status?.playing;
+
   return (
     <SafeAreaView style={s.container}>
       <Navbar />
@@ -72,14 +104,29 @@ export default function PodcastEpisodeDetailScreen() {
               <Podcast size={40} color={colors.primary} />
               <Text style={s.title}>{episode.title}</Text>
             </View>
-            {/* PORT-PENDING: native audio player (expo-av) — link out for now */}
             {episode.audio_url ? (
-              <Pressable
-                onPress={() => Linking.openURL(episode.audio_url!)}
-                style={s.audioBtn}>
-                <ExternalLink size={16} color={colors.primaryForeground} />
-                <Text style={s.audioBtnText}>Listen to episode</Text>
-              </Pressable>
+              <View style={{ gap: spacing.sm }}>
+                <Pressable
+                  onPress={handlePlayPause}
+                  accessibilityRole="button"
+                  accessibilityLabel={isPlaying ? 'Pause episode' : 'Play episode'}
+                  style={s.audioBtn}>
+                  {isPlaying ? (
+                    <Pause size={18} color={colors.primaryForeground} />
+                  ) : (
+                    <Play size={18} color={colors.primaryForeground} />
+                  )}
+                  <Text style={s.audioBtnText}>{isPlaying ? 'Pause' : 'Play'}</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => Linking.openURL(episode.audio_url!)}
+                  style={s.externalBtn}
+                  accessibilityRole="link"
+                  accessibilityLabel="Open audio in external app">
+                  <ExternalLink size={14} color={colors.primary} />
+                  <Text style={s.externalBtnText}>Open in external app</Text>
+                </Pressable>
+              </View>
             ) : null}
             {episode.description ? (
               <Text style={s.desc}>{episode.description}</Text>
@@ -118,6 +165,18 @@ const s = StyleSheet.create({
     color: colors.primaryForeground,
     fontFamily: typography.fontFamily.bodySemiBold,
     fontSize: typography.fontSize.sm,
+  },
+  externalBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 6,
+  },
+  externalBtnText: {
+    color: colors.primary,
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.xs,
   },
   desc: { color: colors.mutedForeground, fontSize: typography.fontSize.sm, lineHeight: 22 },
 });

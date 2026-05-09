@@ -57,7 +57,7 @@ export default function PodcastLibraryScreen() {
             {episodes.map((ep) => (
               <Pressable
                 key={ep.id}
-                onPress={() => nav.navigate('PodcastEpisodeDetail' as any, { episodeId: ep.id })}>
+                onPress={() => nav.navigate('PodcastEpisodeDetail' as any, { id: ep.id })}>
                 <Card style={s.card}>
                   <CardContent style={s.cardBody}>
                     <Podcast size={40} color={colors.primary} />

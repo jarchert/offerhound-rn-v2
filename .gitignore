@@ -8,3 +8,4 @@ web-build/
 .env.local
 dist/
 dist2/
+dist-test/
