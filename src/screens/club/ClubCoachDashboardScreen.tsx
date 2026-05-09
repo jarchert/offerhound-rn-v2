@@ -184,7 +184,24 @@ export default function ClubCoachDashboardScreen() {
     );
   }
 
-  if (!profile || !clubProfile) return null;
+  if (!profile || !clubProfile) {
+    // Build 54 fix: show a friendly empty state instead of returning null,
+    // which previously caused tab-nav crashes ("Cannot read property city of null").
+    return (
+      <TermsAcceptanceGate>
+        <CoachNav role="club_coach" />
+        <View style={[s.loading, { padding: spacing.lg }] }>
+          <Text style={[s.headerTitle, { textAlign: 'center', marginBottom: spacing.sm }]}>Finish setting up your club profile</Text>
+          <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginBottom: spacing.md }}>
+            We couldn’t find your club coach profile yet. Complete onboarding to unlock the dashboard.
+          </Text>
+          <Button onPress={() => nav.navigate('OnboardingStack' as any)}>Complete Onboarding</Button>
+          <View style={{ height: spacing.sm }} />
+          <Button variant="outline" onPress={handleSignOut} leftIcon={<LogOut size={14} color={colors.foreground} />}>Log Out</Button>
+        </View>
+      </TermsAcceptanceGate>
+    );
+  }
 
   const activeTeams = (teams || []).filter((t: any) => t.status !== 'archived');
   const archivedTeams = (teams || []).filter((t: any) => t.status === 'archived');

@@ -102,7 +102,7 @@ export type RootStackParamList = {
   CoachSearch: undefined;
   NILAdvisor: undefined;
   PodcastLibrary: undefined;
-  PodcastEpisodeDetail: { episodeId?: string } | undefined;
+  PodcastEpisodeDetail: { id?: string; episodeId?: string } | undefined;
   NewsAndLearn: undefined;
   SavedCamps: undefined;
   ReferralTracking: undefined;

@@ -209,16 +209,9 @@ function DialogBody({ open, setOpen, tab, setTab, captureRef, profile }: any) {
               <Text style={s.primaryBtnText}>  View Complete Player Profile</Text>
             </Pressable>
 
-            <View style={s.btnRow}>
-              <Pressable style={[s.primaryBtn, { flex: 1 }]} onPress={() => {/* PDF via CardShareActions */}}>
-                <FileText size={16} color={colors.primaryForeground} />
-                <Text style={s.primaryBtnText}>  PDF (with link)</Text>
-              </Pressable>
-              <Pressable style={[s.outlineBtn, { flex: 1 }]} onPress={() => {/* PNG download */}}>
-                <Download size={16} color={colors.primary} />
-                <Text style={s.outlineBtnText}>  PNG</Text>
-              </Pressable>
-            </View>
+            {/* Build 54 fix: removed duplicate no-op PDF/PNG row that caused
+                "no view found with react tag" errors on iOS. The CardShareActions
+                block below is the single source of truth for PNG/JPEG + send. */}
 
             {/* Wire to real CardShareActions for PDF/PNG/Email/Share */}
             <View style={{ marginTop: spacing.sm }}>

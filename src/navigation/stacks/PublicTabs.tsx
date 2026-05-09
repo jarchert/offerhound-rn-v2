@@ -2,6 +2,7 @@
 // 4 tabs: Landing, Discover, Podcasts, Account
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { CommonActions } from '@react-navigation/native';
 import { colors, typography } from '@/lib/theme';
 
 import LandingScreen from '@/screens/auth/LandingScreen';
@@ -38,7 +39,21 @@ export default function PublicTabs() {
       <Tab.Screen name="LandingTab" component={LandingScreen} options={{ title: 'Home' }} />
       <Tab.Screen name="DiscoverTab" component={PublicDiscoverScreen} options={{ title: 'Discover' }} />
       <Tab.Screen name="PodcastsTab" component={PodcastScreen} options={{ title: 'Podcasts' }} />
-      <Tab.Screen name="AccountTab" component={SignInScreen} options={{ title: 'Account' }} />
+      {/* Build 54 fix: Sign In tab now routes straight to the dedicated AuthStack
+          (no embedded footer nav), rather than rendering SignInScreen inside the tab bar. */}
+      <Tab.Screen
+        name="AccountTab"
+        component={SignInScreen}
+        options={{ title: 'Sign In' }}
+        listeners={({ navigation }: any) => ({
+          tabPress: (e: any) => {
+            e.preventDefault();
+            navigation.getParent()?.dispatch(
+              CommonActions.navigate({ name: 'AuthStack' as never })
+            );
+          },
+        })}
+      />
     </Tab.Navigator>
   );
 }
