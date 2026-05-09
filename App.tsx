@@ -1,8 +1,8 @@
 import 'react-native-url-polyfill/auto';
 import 'react-native-gesture-handler';
 
-import React, { useCallback, useEffect } from 'react';
-import { AppState, View, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { AppState, View, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -38,6 +38,12 @@ import { colors } from '@/lib/theme';
 // Keep the native splash visible until fonts + providers are ready.
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
+// Hard safety timeout — if anything hangs during boot (Google Fonts network
+// stall, Supabase getSession never resolving, native module crash…) we force
+// the splash to hide after this many ms so the user sees the UI (using system
+// fonts as a fallback) instead of a frozen splash.
+const BOOT_TIMEOUT_MS = 6000;
+
 // React Query — offline-first + 24h cache.
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,6 +66,15 @@ onlineManager.setEventListener((setOnline) =>
   NetInfo.addEventListener((state) => setOnline(!!state.isConnected)),
 );
 
+// Always-call splash hide helper — safe to call repeatedly.
+async function hideSplashSafe() {
+  try {
+    await SplashScreen.hideAsync();
+  } catch {
+    /* no-op */
+  }
+}
+
 export default function App() {
   const [fontsLoaded, fontError] = useFonts({
     BebasNeue_400Regular,
@@ -69,12 +84,44 @@ export default function App() {
     Inter_700Bold,
   });
 
-  // Hide splash once fonts are ready.
-  const onLayoutRootView = useCallback(async () => {
+  // Safety flag — flips true either when fonts resolve OR the timeout fires.
+  // Guarantees we never sit on the splash indefinitely.
+  const [bootReady, setBootReady] = useState(false);
+
+  // Flip bootReady the moment fonts resolve (success or error).
+  useEffect(() => {
     if (fontsLoaded || fontError) {
-      await SplashScreen.hideAsync().catch(() => {});
+      setBootReady(true);
     }
   }, [fontsLoaded, fontError]);
+
+  // Absolute safety timeout — force boot even if useFonts never settles.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (!bootReady) {
+        console.warn(
+          '[boot] Splash safety timeout fired — forcing UI render with fallback fonts.',
+        );
+        setBootReady(true);
+      }
+    }, BOOT_TIMEOUT_MS);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Once bootReady flips, hide the splash in a finally-safe way.
+  useEffect(() => {
+    if (bootReady) {
+      hideSplashSafe();
+    }
+  }, [bootReady]);
+
+  // Backup: fire the splash hide on first layout too — belt + suspenders.
+  const onLayoutRootView = useCallback(async () => {
+    if (bootReady) {
+      await hideSplashSafe();
+    }
+  }, [bootReady]);
 
   useEffect(() => {
     // Wire AppState → focusManager for React Query background refetch.
@@ -91,8 +138,9 @@ export default function App() {
     };
   }, []);
 
-  if (!fontsLoaded && !fontError) {
-    // Splash is still up — render nothing yet.
+  if (!bootReady) {
+    // Splash is still up — render nothing yet. The safety timeout guarantees
+    // we will eventually render even if useFonts / Expo Font never resolves.
     return null;
   }
 

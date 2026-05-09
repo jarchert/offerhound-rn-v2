@@ -29,15 +29,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userRole, setUserRole] = useState<AppRole | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserRole(session.user.id);
-        registerForPushNotifications(session.user.id).catch(e => console.warn('[push] register failed', e));
-      }
-      setIsLoading(false);
-    });
+    // Safety: if supabase.auth.getSession() hangs (network stall, bad token
+    // cache, etc.) we still flip isLoading=false so the UI renders the
+    // signed-out state instead of a frozen blank screen. Matches the splash
+    // safety timeout in App.tsx.
+    const bootTimeout = setTimeout(() => {
+      setIsLoading((prev: boolean) => {
+        if (prev) {
+          console.warn('[auth] getSession() safety timeout — rendering signed-out UI');
+        }
+        return false;
+      });
+    }, 5000);
+
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchUserRole(session.user.id);
+          registerForPushNotifications(session.user.id).catch((e) =>
+            console.warn('[push] register failed', e),
+          );
+        }
+      })
+      .catch((e) => {
+        console.warn('[auth] getSession() failed', e);
+      })
+      .finally(() => {
+        clearTimeout(bootTimeout);
+        setIsLoading(false);
+      });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
