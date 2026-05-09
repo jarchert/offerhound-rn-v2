@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import { toast } from '@/components/ui/toast';
 import {
   captureCardImage,
+  captureCardPdf,
   shareCapturedCard,
   sendShareCard,
   type ShareFormat,
@@ -70,7 +71,10 @@ export function CardShareActions({
     }
     setBusy(true);
     try {
-      const cap = await captureCardImage(targetRef.current, fmt);
+      // Build 55 item 6: route PDF through expo-print; PNG/JPG use view-shot.
+      const cap = fmt === 'pdf'
+        ? await captureCardPdf(targetRef.current, { fileBaseName: safeName })
+        : await captureCardImage(targetRef.current, fmt);
       return await fn(cap);
     } catch (e: any) {
       console.error(e);
@@ -175,6 +179,18 @@ export function CardShareActions({
               JPEG
             </Button>
           </View>
+          {/* Build 55 item 6: PDF export via expo-print. */}
+          <View style={s.cell}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              leftIcon={<Download size={14} color={colors.foreground} />}
+              onPress={() => handleDownload('pdf')}
+            >
+              PDF
+            </Button>
+          </View>
         </>
       )}
 
@@ -216,7 +232,7 @@ export function CardShareActions({
               <View style={s.field}>
                 <Label>Attachment format</Label>
                 <View style={s.formatRow}>
-                  {(['png', 'jpg'] as ShareFormat[]).map((f) => (
+                  {(['png', 'jpg', 'pdf'] as ShareFormat[]).map((f) => (
                     <Button
                       key={f}
                       variant={format === f ? 'default' : 'outline'}
