@@ -83,7 +83,7 @@ export type RootStackParamList = {
   Messages: { recipientId?: string; recipientName?: string } | undefined;
   Notifications: undefined;
   Inbox: undefined;
-  LetterComposer: { seed?: any; coachName?: string; coachRole?: string; coachSchool?: string; schoolName?: string; recipientName?: string; recipientRole?: string; athleteName?: string; athletePosition?: string; athleteSchool?: string } | undefined;
+  LetterComposer: { seed?: any; athlete?: any; coachName?: string; coachRole?: string; coachSchool?: string; schoolName?: string; recipientName?: string; recipientRole?: string; athleteName?: string; athletePosition?: string; athleteSchool?: string } | undefined;
   AICoach: undefined;
   SmokeTest: undefined;
   Install: undefined;

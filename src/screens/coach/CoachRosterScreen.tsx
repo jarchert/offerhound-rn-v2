@@ -49,7 +49,7 @@ export default function CoachRosterScreen() {
                   size="sm"
                 />
               }
-              onLetter={() => nav.navigate('LetterComposer', { seed: { recipientName: ath?.full_name, recipientRole: ath?.position, schoolName: ath?.school } })}
+              onLetter={() => (nav as any).navigate('LetterComposer', { seed: { recipientName: ath?.full_name, recipientRole: ath?.position, schoolName: ath?.school }, athlete: ath })}
             />
           );
         }}

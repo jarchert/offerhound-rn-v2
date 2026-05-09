@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp, CommonActions } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, AlertCircle, Home, Share2, Check, Mail } from 'lucide-react-native';
+import { Loader2, AlertCircle, Home, Share2, Check, Mail, Star } from 'lucide-react-native';
 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -195,6 +195,27 @@ export default function PublicProfileScreen() {
               recipientId={profile.user_id}
               recipientName={profile.full_name || 'Athlete'}
             />
+          )}
+
+          {/* Build 55 item 4: HS Coach can send an endorsement direct from the
+              athlete's public profile. Routes to the HS coach endorsement
+              composer on their dashboard and prefills via navigation params. */}
+          {isViewerNotOwner && isHSCoach && (
+            <Button
+              variant="default"
+              onPress={() =>
+                nav.navigate('HSCoachDrawer' as any, {
+                  screen: 'Dashboard',
+                  params: {
+                    endorseAthleteId: profile.id,
+                    endorseAthleteName: profile.full_name || '',
+                  },
+                })
+              }
+              leftIcon={<Star size={16} color={colors.primaryForeground} />}
+            >
+              Send Endorsement
+            </Button>
           )}
         </View>
 

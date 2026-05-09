@@ -19,6 +19,7 @@ import {
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { AthletePerformanceRadar } from '@/components/AthletePerformanceRadar';
+import { VerificationBadgesInline } from '@/components/athlete/VerificationBadgesInline';
 import { colors, typography, spacing, gradients } from '@/lib/theme';
 
 // The RN hook (src/hooks/usePlayerProfile.ts) doesn't re-export the
@@ -129,6 +130,12 @@ export function AthleteProfile({ profile }: AthleteProfileProps) {
           {/* Stats Card */}
           <CardGradient style={s.statsCard}>
             <Text style={s.cardHeading}>Season Statistics</Text>
+            {/* Build 55 item 4: compact inline verification badges (transcript + film)
+                driven by transcript_verifications + media_verifications. */}
+            <VerificationBadgesInline
+              athleteProfileId={profile?.id}
+              athleteUserId={profile?.user_id}
+            />
 
             {stats.length > 0 ? (
               <View style={s.statsTableWrap}>

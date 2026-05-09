@@ -31,6 +31,8 @@ export default function CoachLettersScreen() {
     organizationName: routeParams.organizationName,
     recipientTitle: routeParams.recipientTitle,
     letterType: routeParams.letterType,
+    // Build 55 item 5: forward full athlete context to the letter composer.
+    athlete: routeParams.athlete,
   }), [routeParams]);
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { data: profile, isLoading: profileLoading, isFetched: profileFetched } = useCoachProfile();

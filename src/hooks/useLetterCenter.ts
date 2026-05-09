@@ -426,13 +426,17 @@ export function useLetterCenter() {
       try {
         const prefill = buildAthleteLetterPrefill(athlete, opts);
         const route = letterRouteForPath(letterCenter);
+        // Build 55 item 5: also forward the full athlete object so the
+        // letter-center prefill seeder has full context (id, sport,
+        // position, stats, highlights) instead of just name/email/school.
+        const paramsWithAthlete = { ...prefill, athlete: athlete || null };
         // Nested navigation: enter the role-specific tab navigator and land on
         // the LettersTab with the prefill params. `as never` accommodates the
         // generic NavigationProp signature without forcing every parent route
         // to declare nested params.
         (navigation as any).navigate(route.parent, {
           screen: route.screen,
-          params: prefill,
+          params: paramsWithAthlete,
         });
       } finally {
         setTimeout(() => setIsNavigating(false), 600);

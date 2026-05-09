@@ -59,7 +59,7 @@ export default function CoachSearchAthletesScreen() {
                     size="sm"
                   />
                 }
-                onLetter={() => nav.navigate('LetterComposer', { seed: { recipientName: ath?.full_name, recipientRole: ath?.position, schoolName: ath?.school } })}
+                onLetter={() => (nav as any).navigate('LetterComposer', { seed: { recipientName: ath?.full_name, recipientRole: ath?.position, schoolName: ath?.school }, athlete: ath })}
                 rightSlot={
                   <Pressable onPress={() => dismiss.mutate(item.id)} hitSlop={8} style={s.dismiss}>
                     <X size={16} color={colors.mutedForeground} />

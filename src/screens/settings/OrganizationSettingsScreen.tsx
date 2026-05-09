@@ -12,6 +12,7 @@ import { BackButton } from '@/components/BackButton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { OrganizationLogoUpload } from '@/components/OrganizationLogoUpload';
 import { OrganizationMemberManager } from '@/components/OrganizationMemberManager';
+import { OrgBlockEditor } from '@/components/settings/OrgBlockEditor';
 import { TransferPortalFeed } from '@/components/TransferPortalFeed';
 import { useScoutOrganization } from '@/hooks/useScoutOrganization';
 import { colors, typography, spacing } from '@/lib/theme';
@@ -46,23 +47,30 @@ export default function OrganizationSettingsScreen() {
         </View>
 
         {tab === 'general' ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Organization Profile</CardTitle>
-            </CardHeader>
-            <CardContent style={s.cardBody}>
-              {org ? (
-                <OrganizationLogoUpload
-                  organizationId={org.id}
-                  currentLogoUrl={logoUrl}
-                  organizationName={org.name || 'Your Organization'}
-                  onLogoUpdated={setLogoUrl}
-                  isOwner={isOwner}
-                />
-              ) : null}
-              <Text style={s.muted}>{org ? org.name || 'Your Organization' : 'No organization found.'}</Text>
-            </CardContent>
-          </Card>
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle>Organization Profile</CardTitle>
+              </CardHeader>
+              <CardContent style={s.cardBody}>
+                {org ? (
+                  <OrganizationLogoUpload
+                    organizationId={org.id}
+                    currentLogoUrl={logoUrl}
+                    organizationName={org.name || 'Your Organization'}
+                    onLogoUpdated={setLogoUrl}
+                    isOwner={isOwner}
+                  />
+                ) : null}
+                <Text style={s.muted}>{org ? org.name || 'Your Organization' : 'No organization found.'}</Text>
+              </CardContent>
+            </Card>
+
+            {/* Build 55: universal Org block editor — hydrates and saves the
+                role-specific profile table (coach_profiles, scout_profiles,
+                high_school_coach_profiles, scout_organizations). */}
+            <OrgBlockEditor />
+          </>
         ) : (
           <OrganizationMemberManager />
         )}

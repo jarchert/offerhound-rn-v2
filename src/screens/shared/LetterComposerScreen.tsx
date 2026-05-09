@@ -112,7 +112,34 @@ export default function LetterComposerScreen() {
     try {
       // Match Lovable Letters.tsx payload exactly — clean fields only, anon key auth.
       const url = `${SUPABASE_FUNCTIONS_URL}/generate-letter`;
-      const athleteProfile = profile
+      // Build 55 item 5: when a coach taps "Letter" on an athlete card the
+      // card can pass `athlete` (or `seed.athlete`) directly so the AI prompt
+      // has the full athlete context instead of falling back to the signed-in
+      // user's own player profile.
+      const seededAthlete: any =
+        (route.params as any)?.athlete ||
+        seed.athlete ||
+        null;
+      const athleteProfile = seededAthlete
+        ? {
+            name: seededAthlete.full_name || seededAthlete.name,
+            position: seededAthlete.position,
+            height: seededAthlete.height,
+            weight: seededAthlete.weight,
+            classYear: seededAthlete.graduation_year,
+            gpa: seededAthlete.gpa,
+            highSchool: seededAthlete.school,
+            city: seededAthlete.city,
+            state: seededAthlete.state,
+            fortyYard: seededAthlete.forty_yard,
+            vertical: seededAthlete.vertical,
+            email: seededAthlete.email,
+            phone: seededAthlete.phone,
+            highlights: seededAthlete.highlights || [],
+            sport: seededAthlete.sport,
+            stats: seededAthlete.stats || [],
+          }
+        : profile
         ? {
             name: (profile as any).full_name,
             position: (profile as any).position,

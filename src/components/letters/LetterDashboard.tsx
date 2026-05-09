@@ -51,6 +51,8 @@ interface LetterDashboardProps {
     organizationName?: string;
     recipientTitle?: string;
     letterType?: string;
+    /** Build 55 item 5: full athlete context for seeding the AI letter prompt. */
+    athlete?: any;
   };
 }
 
