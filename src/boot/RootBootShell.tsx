@@ -4,13 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
-import {
-  QueryClient,
-  QueryClientProvider,
-  onlineManager,
-  focusManager,
-} from '@tanstack/react-query';
-import NetInfo from '@react-native-community/netinfo';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Toast from 'react-native-toast-message';
 import { useFonts, BebasNeue_400Regular } from '@expo-google-fonts/bebas-neue';
 import {
@@ -63,9 +57,12 @@ const queryClient = new QueryClient({
   },
 });
 
-onlineManager.setEventListener((setOnline) =>
-  NetInfo.addEventListener((state) => setOnline(!!state.isConnected)),
-);
+// NOTE: NetInfo.addEventListener is intentionally NOT called at module-eval
+// time. On iOS 26 + New Architecture, the native RNCNetInfo TurboModule's
+// addListener void method throws an NSException during registration, which
+// triggers the RN 0.83 __cxa_rethrow → std::terminate crash on the
+// turbomodulemanager queue within ~400ms of launch. We wire online/focus
+// managers lazily inside a useEffect instead.
 
 export default function RootBootShell() {
   const [fontsLoaded, fontError] = useFonts({
@@ -102,12 +99,43 @@ export default function RootBootShell() {
     return () => clearTimeout(t);
   }, []);
 
-  // Wire AppState → focusManager for React Query background refetch.
+  // Wire AppState → React Query focusManager for background refetch.
+  // Wire NetInfo → React Query onlineManager for offline-first queries.
+  // Both are deferred to useEffect so no TurboModule void calls fire at
+  // module-eval time (avoids the iOS 26 + New Arch __cxa_rethrow crash).
   useEffect(() => {
-    const sub = AppState.addEventListener('change', (s) =>
-      focusManager.setFocused(s === 'active'),
-    );
-    return () => sub.remove();
+    let netInfoUnsub: (() => void) | undefined;
+
+    // Dynamically import NetInfo so the native module is not touched until
+    // after the first render. If it throws on this iOS version, we catch it
+    // and fall back to always-online so the app still works.
+    import('@react-native-community/netinfo')
+      .then((mod) => {
+        const NetInfo = mod.default;
+        import('@tanstack/react-query').then(({ onlineManager }) => {
+          try {
+            netInfoUnsub = NetInfo.addEventListener((state) =>
+              onlineManager.setOnline(!!state.isConnected),
+            );
+          } catch (e) {
+            console.warn('[boot] NetInfo.addEventListener failed (iOS 26?):', e);
+          }
+        }).catch(() => {});
+      })
+      .catch((e) => console.warn('[boot] NetInfo import failed:', e));
+
+    import('@tanstack/react-query')
+      .then(({ focusManager }) => {
+        const sub = AppState.addEventListener('change', (s) =>
+          focusManager.setFocused(s === 'active'),
+        );
+        return () => sub.remove();
+      })
+      .catch(() => {});
+
+    return () => {
+      netInfoUnsub?.();
+    };
   }, []);
 
   // Lazy IAP init — fire-and-forget, well AFTER the first paint. We do NOT
