@@ -57,6 +57,8 @@ const queryClient = new QueryClient({
   },
 });
 
+import { initNotificationHandler } from '@/lib/push';
+
 // NOTE: NetInfo.addEventListener is intentionally NOT called at module-eval
 // time. On iOS 26 + New Architecture, the native RNCNetInfo TurboModule's
 // addListener void method throws an NSException during registration, which
@@ -97,6 +99,14 @@ export default function RootBootShell() {
       });
     }, 3000);
     return () => clearTimeout(t);
+  }, []);
+
+  // Defer all TurboModule void calls that would otherwise fire at module-eval
+  // time and crash on iOS 26 + New Architecture via __cxa_rethrow.
+  useEffect(() => {
+    // expo-notifications: setNotificationHandler must not be called at module
+    // level — defer it here so it fires after first render.
+    try { initNotificationHandler(); } catch (e) { console.warn('[push] initNotificationHandler failed:', e); }
   }, []);
 
   // Wire AppState → React Query focusManager for background refetch.

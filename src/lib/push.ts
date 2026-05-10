@@ -6,15 +6,26 @@ import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { supabase } from '@/integrations/supabase/client';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+// NOTE: setNotificationHandler is intentionally NOT called at module-eval
+// time. On iOS 26 + New Architecture, calling any void TurboModule method
+// at module-eval scope triggers the __cxa_rethrow -> std::terminate crash
+// on the turbomodulemanager queue. Call initNotificationHandler() from a
+// useEffect after the first render instead.
+export function initNotificationHandler(): void {
+  try {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  } catch (e) {
+    console.warn('[push] setNotificationHandler failed (iOS 26?):', e);
+  }
+}
 
 export async function requestPushPermissions(): Promise<boolean> {
   if (!Device.isDevice) return false;
