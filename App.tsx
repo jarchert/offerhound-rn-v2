@@ -50,7 +50,7 @@ import * as SplashScreen from 'expo-splash-screen';
 //     next step is native-side: xcrun devicectl logs on the frozen launch.
 // -----------------------------------------------------------------------------
 
-console.log('[boot] App module evaluating (Build 58)');
+console.log('[boot] App module evaluating (Build 61)');
 
 // NOTE: we intentionally DO NOT call SplashScreen.preventAutoHideAsync().
 // Letting iOS auto-dismiss the launch storyboard on first RN root layout
@@ -69,7 +69,7 @@ function BootBeacon() {
   return (
     <View style={beaconStyles.fill}>
       <Text style={beaconStyles.title}>OfferHound</Text>
-      <Text style={beaconStyles.subtitle}>Build 58 — JS alive</Text>
+      <Text style={beaconStyles.subtitle}>Build 61 — JS alive</Text>
       <Text style={beaconStyles.note}>Loading your account…</Text>
     </View>
   );
