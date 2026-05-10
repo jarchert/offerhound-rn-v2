@@ -308,6 +308,16 @@ const withMainAppMarker = (config) =>
   });
 
 module.exports = function withAppClip(config) {
+  // Gate: only run when EXPO_INCLUDE_APP_CLIP === 'true'. Production profile
+  // ships with this flag off so the main app boots without any App Clip
+  // target mutations — the previous prebuild left OFHAppClipBundleIdentifier
+  // in Info.plist + associated-domains appclips:* entries on the main app
+  // without actually embedding a target, which is a likely native-launch
+  // hazard on iOS 26.2. No-op by default; flip env var on once the Clip
+  // target is finished in Xcode and actually ships in PlugIns/.
+  if (process.env.EXPO_INCLUDE_APP_CLIP !== 'true') {
+    return config;
+  }
   config = withMainAppMarker(config);
   config = withAppClipFiles(config);
   config = withAppClipXcodeTarget(config);

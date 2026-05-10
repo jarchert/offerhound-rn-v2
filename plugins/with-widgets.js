@@ -165,6 +165,15 @@ const withWidgetXcodeTarget = (config) =>
 
 /* -------------------------------------------------------------------------- */
 module.exports = function withWidgets(config) {
+  // Gate: only run when EXPO_INCLUDE_WIDGETS === 'true'. Skipping this in
+  // production ensures we don't add the App Group entitlement + widget
+  // sources to a build whose Xcode project has no finished widget target,
+  // which otherwise leaves the main app with a provisioning profile that
+  // claims the app-group entitlement but no extension that uses it — a
+  // known cause of iOS launch failures on 17/26.
+  if (process.env.EXPO_INCLUDE_WIDGETS !== 'true') {
+    return config;
+  }
   config = withAppGroupEntitlement(config);
   config = withWidgetSources(config);
   config = withWidgetXcodeTarget(config);

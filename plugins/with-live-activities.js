@@ -23,6 +23,15 @@
 const { withInfoPlist } = require('expo/config-plugins');
 
 function withLiveActivities(config) {
+  // Gate: only run when EXPO_INCLUDE_LIVE_ACTIVITIES === 'true'. Even though
+  // NSSupportsLiveActivities is cheap to add, any Info.plist key that
+  // references a capability without an associated extension/target can
+  // trigger `-[UIApplication _reportAppLaunchFinishedForProcessWithIdentifier:]`
+  // to hang when App Intents enumerate capabilities at cold start on iOS 26.
+  // No-op by default — flip env var on once Live Activities are actually used.
+  if (process.env.EXPO_INCLUDE_LIVE_ACTIVITIES !== 'true') {
+    return config;
+  }
   return withInfoPlist(config, (cfg) => {
     cfg.modResults.NSSupportsLiveActivities = true;
     cfg.modResults.NSSupportsLiveActivitiesFrequentUpdates = true;
