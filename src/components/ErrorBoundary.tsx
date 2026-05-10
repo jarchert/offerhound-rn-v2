@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
 import { colors, typography, spacing } from '@/lib/theme';
 
 interface Props { children: React.ReactNode; fallback?: React.ReactNode }
@@ -13,7 +14,12 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
+    // Always log — visible via `npx react-native log-ios` / device console.
     console.error('[ErrorBoundary]', error, info);
+    // Critical: if the error fires during cold-start we MUST force the native
+    // splash down, otherwise the user sees a frozen splash with the real
+    // fallback UI hidden underneath.
+    SplashScreen.hideAsync().catch(() => {});
   }
 
   reset = () => this.setState({ hasError: false, error: undefined });

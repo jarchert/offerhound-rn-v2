@@ -136,6 +136,12 @@ function roleToInitialRoute(role: UserRole | null | undefined): keyof RootStackP
 export default function RootNavigator() {
   const { user, userRole, isLoading } = useAuth() as any;
 
+  React.useEffect(() => {
+    if (!isLoading) {
+      console.log(`[boot] first screen rendered (user=${!!user}, role=${userRole ?? 'none'})`);
+    }
+  }, [isLoading, user, userRole]);
+
   if (isLoading) return null;
 
   const initialRouteName = user

@@ -29,6 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userRole, setUserRole] = useState<AppRole | null>(null);
 
   useEffect(() => {
+    console.log('[boot] auth bootstrap start');
     // Safety: if supabase.auth.getSession() hangs (network stall, bad token
     // cache, etc.) we still flip isLoading=false so the UI renders the
     // signed-out state instead of a frozen blank screen. Matches the splash
@@ -42,25 +43,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
     }, 5000);
 
-    supabase.auth
-      .getSession()
-      .then(({ data: { session } }) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          fetchUserRole(session.user.id);
-          registerForPushNotifications(session.user.id).catch((e) =>
-            console.warn('[push] register failed', e),
-          );
-        }
-      })
-      .catch((e) => {
-        console.warn('[auth] getSession() failed', e);
-      })
-      .finally(() => {
-        clearTimeout(bootTimeout);
-        setIsLoading(false);
-      });
+    // Wrap the whole pipeline in try/catch so a synchronous throw from
+    // supabase.auth (e.g. corrupted SecureStore entry that raises inside
+    // createClient's internal state machine) never skips the finally.
+    try {
+      supabase.auth
+        .getSession()
+        .then(({ data: { session } }) => {
+          setSession(session);
+          setUser(session?.user ?? null);
+          if (session?.user) {
+            fetchUserRole(session.user.id);
+            registerForPushNotifications(session.user.id).catch((e) =>
+              console.warn('[push] register failed', e),
+            );
+          }
+        })
+        .catch((e) => {
+          console.warn('[auth] getSession() failed', e);
+        })
+        .finally(() => {
+          clearTimeout(bootTimeout);
+          setIsLoading(false);
+          console.log('[boot] auth bootstrap end');
+        });
+    } catch (e) {
+      console.warn('[auth] getSession() threw synchronously', e);
+      clearTimeout(bootTimeout);
+      setIsLoading(false);
+      console.log('[boot] auth bootstrap end (sync error)');
+    }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);

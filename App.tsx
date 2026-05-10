@@ -35,14 +35,55 @@ import ImpersonationBanner from '@/components/ImpersonationBanner';
 import { initIAP, teardownIAP } from '@/lib/iap';
 import { colors } from '@/lib/theme';
 
+// -----------------------------------------------------------------------------
+// Splash-screen hardening (Build 56)
+// -----------------------------------------------------------------------------
+//   * Native iOS splash will NOT dismiss until `SplashScreen.hideAsync()` is
+//     called AFTER the React root has been laid out. If JS hangs anywhere
+//     during boot (Google Fonts fetch stall, Supabase getSession timeout, a
+//     native module throwing synchronously, a corrupted SecureStore entry,
+//     React Navigation linking resolution…) the splash stays up and the app
+//     looks frozen.
+//   * Defense in depth: (1) call preventAutoHideAsync at import-time, (2)
+//     schedule an unconditional 3s hard-hide from the top of the module so
+//     the splash can never outlive that window regardless of what JS does
+//     next, (3) still honor fonts-ready + root-view onLayout as the primary
+//     hide paths when the normal boot path wins, (4) top-level ErrorBoundary
+//     also force-hides the splash on any render-time crash, and (5) emit
+//     console.log boot milestones so the next freeze report lands with
+//     actionable device-log breadcrumbs.
+// -----------------------------------------------------------------------------
+
+console.log('[boot] App module evaluating');
+
 // Keep the native splash visible until fonts + providers are ready.
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-// Hard safety timeout — if anything hangs during boot (Google Fonts network
-// stall, Supabase getSession never resolving, native module crash…) we force
-// the splash to hide after this many ms so the user sees the UI (using system
-// fonts as a fallback) instead of a frozen splash.
+// Hard safety timeout — if anything hangs during boot we force the splash to
+// hide after this many ms so the user sees the UI (using system fonts as a
+// fallback) instead of a frozen splash.
 const BOOT_TIMEOUT_MS = 6000;
+// Absolute ceiling — no matter what boot does, the native splash is force-
+// dismissed within this window. This alone cures the vast majority of
+// "app frozen on splash" reports.
+const HARD_SPLASH_TIMEOUT_MS = 3000;
+
+// Always-call splash hide helper — safe to call repeatedly.
+async function hideSplashSafe(tag: string) {
+  try {
+    await SplashScreen.hideAsync();
+    console.log(`[boot] splash hidden (${tag})`);
+  } catch {
+    /* no-op — hideAsync() is idempotent; a second call can reject. */
+  }
+}
+
+// Fire-and-forget hard timeout. Runs at module-evaluation time so it starts
+// counting the instant the JS bundle is executed, independent of React
+// rendering.
+setTimeout(() => {
+  hideSplashSafe('hard-timeout');
+}, HARD_SPLASH_TIMEOUT_MS);
 
 // React Query — offline-first + 24h cache.
 const queryClient = new QueryClient({
@@ -66,15 +107,6 @@ onlineManager.setEventListener((setOnline) =>
   NetInfo.addEventListener((state) => setOnline(!!state.isConnected)),
 );
 
-// Always-call splash hide helper — safe to call repeatedly.
-async function hideSplashSafe() {
-  try {
-    await SplashScreen.hideAsync();
-  } catch {
-    /* no-op */
-  }
-}
-
 export default function App() {
   const [fontsLoaded, fontError] = useFonts({
     BebasNeue_400Regular,
@@ -88,9 +120,16 @@ export default function App() {
   // Guarantees we never sit on the splash indefinitely.
   const [bootReady, setBootReady] = useState(false);
 
+  useEffect(() => {
+    console.log('[boot] App component mounted');
+  }, []);
+
   // Flip bootReady the moment fonts resolve (success or error).
   useEffect(() => {
     if (fontsLoaded || fontError) {
+      console.log(
+        `[boot] fonts ${fontsLoaded ? 'loaded' : 'errored'}${fontError ? ` (${fontError.message})` : ''}`,
+      );
       setBootReady(true);
     }
   }, [fontsLoaded, fontError]);
@@ -100,7 +139,7 @@ export default function App() {
     const t = setTimeout(() => {
       if (!bootReady) {
         console.warn(
-          '[boot] Splash safety timeout fired — forcing UI render with fallback fonts.',
+          '[boot] splash safety timeout fired — forcing UI render with fallback fonts.',
         );
         setBootReady(true);
       }
@@ -112,14 +151,18 @@ export default function App() {
   // Once bootReady flips, hide the splash in a finally-safe way.
   useEffect(() => {
     if (bootReady) {
-      hideSplashSafe();
+      hideSplashSafe('boot-ready');
     }
   }, [bootReady]);
 
-  // Backup: fire the splash hide on first layout too — belt + suspenders.
+  // Backup: fire the splash hide on first root-view layout. On iOS the native
+  // splash will only dismiss once the RN root view has been laid out by the
+  // native side, so pairing bootReady with onLayout eliminates the "fonts
+  // resolved but splash still up" race.
   const onLayoutRootView = useCallback(async () => {
+    console.log('[boot] root view laid out');
     if (bootReady) {
-      await hideSplashSafe();
+      await hideSplashSafe('root-onLayout');
     }
   }, [bootReady]);
 

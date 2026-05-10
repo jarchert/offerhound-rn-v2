@@ -17,11 +17,33 @@ export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 /** Reliable functions base URL — never relies on private supabase-js fields. */
 export const SUPABASE_FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
 
-// SecureStore adapter for Supabase auth persistence (better than AsyncStorage for auth tokens)
+// SecureStore adapter for Supabase auth persistence (better than AsyncStorage for auth tokens).
+// Every call is wrapped in try/catch + resolved to null on failure so a
+// corrupted keychain entry can never synchronously throw into supabase-js's
+// auth-client init and hang the JS splash.
 const SecureStoreAdapter = {
-  getItem: (key: string) => SecureStore.getItemAsync(key),
-  setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value),
-  removeItem: (key: string) => SecureStore.deleteItemAsync(key),
+  getItem: async (key: string) => {
+    try {
+      return await SecureStore.getItemAsync(key);
+    } catch (e) {
+      console.warn('[supabase/storage] getItem failed', key, e);
+      return null;
+    }
+  },
+  setItem: async (key: string, value: string) => {
+    try {
+      await SecureStore.setItemAsync(key, value);
+    } catch (e) {
+      console.warn('[supabase/storage] setItem failed', key, e);
+    }
+  },
+  removeItem: async (key: string) => {
+    try {
+      await SecureStore.deleteItemAsync(key);
+    } catch (e) {
+      console.warn('[supabase/storage] removeItem failed', key, e);
+    }
+  },
 };
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
