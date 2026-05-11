@@ -24,6 +24,12 @@ import { CookiePreferencesProvider } from '@/contexts/CookiePreferencesContext';
 
 import RootNavigator from '@/navigation/RootNavigator';
 import { linking } from '@/navigation/linking';
+// NOTE: NavigationContainer with `linking` is deferred to a useEffect below.
+// On iOS 26 + New Architecture, the `linking` config immediately calls
+// expo-linking's `createURL()` at render time, which triggers a void TurboModule
+// method on the turbomodulemanager queue → __cxa_rethrow → crash.
+// We render NavigationContainer WITHOUT linking first, then add linking after
+// the first paint.
 import ErrorBoundary from '@/components/ErrorBoundary';
 import OfflineBanner from '@/components/OfflineBanner';
 import ImpersonationBanner from '@/components/ImpersonationBanner';
@@ -167,6 +173,13 @@ export default function RootBootShell() {
     return <View style={styles.root} />;
   }
 
+  // Lazy-load NavigationContainer after first paint so no TurboModule calls
+  // fire at module-eval time (fixes iOS 26 + New Arch __cxa_rethrow crash).
+  const [navReady, setNavReady] = useState(false);
+  useEffect(() => {
+    setNavReady(true);
+  }, []);
+
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={styles.root}>
@@ -179,7 +192,8 @@ export default function RootBootShell() {
                     <ImpersonationProvider>
                       <AthleteProfileProvider>
                         <PodcastPlayerProvider>
-                          <NavigationContainer linking={linking}>
+                          {/* linking is added after first render to avoid iOS 26 TurboModule crash */}
+                          <NavigationContainer linking={navReady ? linking : undefined}>
                             <ImpersonationBanner />
                             <OfflineBanner />
                             <RootNavigator />
