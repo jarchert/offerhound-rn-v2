@@ -180,7 +180,6 @@
       "./plugins/with-app-clip",
       "./plugins/with-widgets",
       "./plugins/with-live-activities",
-      "expo-iap"
     ],
     "extra": {
       "eas": {
