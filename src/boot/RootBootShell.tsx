@@ -166,19 +166,20 @@ export default function RootBootShell() {
     return () => clearTimeout(t);
   }, []);
 
+  // Lazy-load NavigationContainer linking after first paint so no TurboModule
+  // calls fire at module-eval time (fixes iOS 26 + New Arch __cxa_rethrow).
+  // MUST be declared before any early return to satisfy rules-of-hooks.
+  const [navReady, setNavReady] = useState(false);
+  useEffect(() => {
+    setNavReady(true);
+  }, []);
+
   // Render a blank view while fonts are resolving. App.tsx is already
   // showing the boot beacon behind us via Suspense, so a blank View here
   // is safe — it layers on top of the beacon until providers mount.
   if (!fontsReady) {
     return <View style={styles.root} />;
   }
-
-  // Lazy-load NavigationContainer after first paint so no TurboModule calls
-  // fire at module-eval time (fixes iOS 26 + New Arch __cxa_rethrow crash).
-  const [navReady, setNavReady] = useState(false);
-  useEffect(() => {
-    setNavReady(true);
-  }, []);
 
   return (
     <ErrorBoundary>

@@ -50,7 +50,52 @@ import * as SplashScreen from 'expo-splash-screen';
 //     next step is native-side: xcrun devicectl logs on the frozen launch.
 // -----------------------------------------------------------------------------
 
-console.log('[boot] App module evaluating (Build 61)');
+console.log('[boot] App module evaluating (Build 63)');
+
+// -----------------------------------------------------------------------------
+// Build 63 — global JS error handler.
+//
+// Build 94 (= Build 62 source) crashed on iOS 26 with thread 9 in
+// RCTExceptionsManager.reportFatal -> performVoidMethodInvocation +172 ->
+// __cxa_rethrow -> std::terminate. That signature means an unhandled JS
+// exception was reported to the native bridge, and iOS 26's void-TurboModule
+// rethrow bug then turned the report itself into a process abort -- swallowing
+// the original JS error message before anyone can read it.
+//
+// To break that cycle we install a global handler BEFORE any other JS runs.
+// It logs the real error to the native console (visible via
+// `xcrun devicectl device process view` / Console.app) and surfaces it on the
+// boot beacon, instead of letting RN bubble it up to RCTExceptionsManager and
+// trip the iOS 26 rethrow crash. Combined with the rules-of-hooks fix in
+// RootBootShell.tsx, this turns "silent crash on Loading your account..." into
+// a visible error message we can act on.
+// -----------------------------------------------------------------------------
+let __bootFatal: { message: string; stack?: string } | null = null;
+const __bootFatalListeners: Array<(e: { message: string; stack?: string }) => void> = [];
+function setBootFatal(err: any) {
+  const message = err && (err.message || String(err)) || 'Unknown error';
+  const stack = err && err.stack ? String(err.stack) : undefined;
+  __bootFatal = { message, stack };
+  console.error('[boot] FATAL JS ERROR:', message, stack || '');
+  __bootFatalListeners.forEach((fn) => { try { fn(__bootFatal!); } catch {} });
+}
+try {
+  const g: any = global as any;
+  if (g && g.ErrorUtils && typeof g.ErrorUtils.setGlobalHandler === 'function') {
+    const prev = g.ErrorUtils.getGlobalHandler && g.ErrorUtils.getGlobalHandler();
+    g.ErrorUtils.setGlobalHandler((err: any, isFatal?: boolean) => {
+      try { setBootFatal(err); } catch {}
+      // Intentionally do NOT rethrow / call prev() for fatals during the
+      // boot window: doing so re-enters RCTExceptionsManager and triggers the
+      // iOS 26 rethrow crash. A non-fatal warning is fine to forward.
+      if (!isFatal && typeof prev === 'function') {
+        try { prev(err, isFatal); } catch {}
+      }
+    });
+  }
+} catch (e) {
+  console.warn('[boot] failed to install global error handler', e);
+}
 
 // NOTE: we intentionally DO NOT call SplashScreen.preventAutoHideAsync().
 // Letting iOS auto-dismiss the launch storyboard on first RN root layout
@@ -69,8 +114,33 @@ function BootBeacon() {
   return (
     <View style={beaconStyles.fill}>
       <Text style={beaconStyles.title}>OfferHound</Text>
-      <Text style={beaconStyles.subtitle}>Build 61 — JS alive</Text>
+      <Text style={beaconStyles.subtitle}>Build 63 — JS alive</Text>
       <Text style={beaconStyles.note}>Loading your account…</Text>
+      <BootFatalOverlay />
+    </View>
+  );
+}
+
+/** Renders any captured fatal JS error on top of the beacon so the user can
+ * read it (and screenshot it) instead of seeing a silent crash. */
+function BootFatalOverlay() {
+  const [fatal, setFatal] = useState<{ message: string; stack?: string } | null>(__bootFatal);
+  useEffect(() => {
+    const fn = (e: { message: string; stack?: string }) => setFatal(e);
+    __bootFatalListeners.push(fn);
+    return () => {
+      const i = __bootFatalListeners.indexOf(fn);
+      if (i >= 0) __bootFatalListeners.splice(i, 1);
+    };
+  }, []);
+  if (!fatal) return null;
+  return (
+    <View style={beaconStyles.fatalBox}>
+      <Text style={beaconStyles.fatalTitle}>Boot error</Text>
+      <Text style={beaconStyles.fatalMsg} numberOfLines={6}>{fatal.message}</Text>
+      {fatal.stack ? (
+        <Text style={beaconStyles.fatalStack} numberOfLines={8}>{fatal.stack.split('\n').slice(0, 8).join('\n')}</Text>
+      ) : null}
     </View>
   );
 }
@@ -99,6 +169,31 @@ const beaconStyles = StyleSheet.create({
     fontSize: 12,
     opacity: 0.4,
     marginTop: 12,
+  },
+  fatalBox: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 32,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(180, 30, 30, 0.95)',
+  },
+  fatalTitle: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  fatalMsg: {
+    color: '#ffffff',
+    fontSize: 12,
+    marginBottom: 6,
+  },
+  fatalStack: {
+    color: '#ffd9d9',
+    fontSize: 10,
+    fontFamily: 'Courier',
   },
 });
 
