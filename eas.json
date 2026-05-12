@@ -39,7 +39,8 @@
         "EXPO_INCLUDE_LIVE_ACTIVITIES": "false",
         "APP_CLIP_BUNDLE_ID": "com.emergentmindlab.offerhoundv2.Clip",
         "WIDGETS_BUNDLE_ID": "com.emergentmindlab.offerhoundv2.widgets",
-        "APP_GROUP_ID": "group.com.emergentmindlab.offerhoundv2.shared"
+        "APP_GROUP_ID": "group.com.emergentmindlab.offerhoundv2.shared",
+        "RCT_USE_PREBUILT_RNCORE": "0"
       }
     },
     "production-play": {
