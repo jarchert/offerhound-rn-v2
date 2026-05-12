@@ -15,6 +15,8 @@
     "assetBundlePatterns": [
       "**/*"
     ],
+    "newArchEnabled": false,
+    "jsEngine": "hermes",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.emergentmindlab.offerhoundv2",
@@ -179,7 +181,7 @@
       "@react-native-google-signin/google-signin",
       "./plugins/with-app-clip",
       "./plugins/with-widgets",
-      "./plugins/with-live-activities",
+      "./plugins/with-live-activities"
     ],
     "extra": {
       "eas": {
