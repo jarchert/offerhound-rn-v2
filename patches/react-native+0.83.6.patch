@@ -1,0 +1,25 @@
+diff --git a/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm b/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
+index 35cfd7a..89129fa 100644
+--- a/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
++++ b/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
+@@ -470,9 +470,17 @@ void ObjCTurboModule::performVoidMethodInvocation(
+     @try {
+       [inv invokeWithTarget:strongModule];
+     } @catch (NSException *exception) {
+-      // Void methods are always async, re-throw instead of converting to
+-      // JSError, same as the async branch in performMethodInvocation.
+-      @throw exception;
++      // iOS 26 + RN 0.83 New Architecture regression:
++      // objc_exception_rethrow calls std::terminate instead of propagating
++      // when no active C++ exception is in flight, killing the process.
++      // Fix: convert the NSException to a JS-visible console error and
++      // swallow it here rather than rethrowing. This matches what
++      // performMethodInvocation does for non-void methods (converts to
++      // JSError). Void methods are fire-and-forget so the caller never
++      // observes a return value anyway.
++      // See: facebook/react-native#46204, #47891
++      NSLog(@"[RCTTurboModule] Caught NSException in void method '%s.%s': %@ — swallowing to avoid iOS 26 __cxa_rethrow crash",
++            moduleName, methodName, exception);
+     } @finally {
+       [retainedObjectsForInvocation removeAllObjects];
+     }
