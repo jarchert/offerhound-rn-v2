@@ -1,8 +1,20 @@
 diff --git a/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm b/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
-index 35cfd7a..89129fa 100644
+index 35cfd7a..94e7dff 100644
 --- a/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
 +++ b/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
-@@ -470,9 +470,17 @@ void ObjCTurboModule::performVoidMethodInvocation(
+@@ -406,7 +406,10 @@ id ObjCTurboModule::performMethodInvocation(
+         // See https://github.com/reactwg/react-native-new-architecture/discussions/276#discussioncomment-12567155
+         throw convertNSExceptionToJSError(runtime, exception, std::string{moduleName}, methodNameStr);
+       } else {
+-        @throw exception;
++        // iOS 26 + RN 0.83 regression: @throw here hits objc_exception_rethrow
++        // -> __cxa_rethrow -> std::terminate on async paths. Swallow and log.
++        NSLog(@"[RCTTurboModule] Caught NSException in async method '%s.%s': %@ — swallowing to avoid iOS 26 __cxa_rethrow crash",
++              moduleName, methodName, exception);
+       }
+     } @finally {
+       [retainedObjectsForInvocation removeAllObjects];
+@@ -470,9 +473,17 @@ void ObjCTurboModule::performVoidMethodInvocation(
      @try {
        [inv invokeWithTarget:strongModule];
      } @catch (NSException *exception) {

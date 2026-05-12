@@ -50,7 +50,7 @@ import * as SplashScreen from 'expo-splash-screen';
 //     next step is native-side: xcrun devicectl logs on the frozen launch.
 // -----------------------------------------------------------------------------
 
-console.log('[boot] App module evaluating (Build 64 - Old Arch)');
+console.log('[boot] App module evaluating (Build 65 - patched RN)');
 
 // -----------------------------------------------------------------------------
 // Build 63 — global JS error handler.
@@ -114,7 +114,7 @@ function BootBeacon() {
   return (
     <View style={beaconStyles.fill}>
       <Text style={beaconStyles.title}>OfferHound</Text>
-      <Text style={beaconStyles.subtitle}>Build 64 — JS alive (Old Arch)</Text>
+      <Text style={beaconStyles.subtitle}>Build 65 — JS alive</Text>
       <Text style={beaconStyles.note}>Loading your account…</Text>
       <BootFatalOverlay />
     </View>

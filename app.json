@@ -150,6 +150,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "./plugins/with-fatal-handler",
       "expo-font",
       "expo-apple-authentication",
       [

@@ -23,13 +23,10 @@ import { PodcastPlayerProvider } from '@/contexts/PodcastPlayerContext';
 import { CookiePreferencesProvider } from '@/contexts/CookiePreferencesContext';
 
 import RootNavigator from '@/navigation/RootNavigator';
-import { linking } from '@/navigation/linking';
-// NOTE: NavigationContainer with `linking` is deferred to a useEffect below.
-// On iOS 26 + New Architecture, the `linking` config immediately calls
-// expo-linking's `createURL()` at render time, which triggers a void TurboModule
-// method on the turbomodulemanager queue → __cxa_rethrow → crash.
-// We render NavigationContainer WITHOUT linking first, then add linking after
-// the first paint.
+// NOTE: linking.ts is intentionally NOT imported at module-eval time.
+// Linking.createURL('/') inside linking.ts runs synchronously on import,
+// which triggers a void TurboModule call on iOS 26 + New Arch and crashes.
+// We dynamically import it inside a useEffect instead.
 import ErrorBoundary from '@/components/ErrorBoundary';
 import OfflineBanner from '@/components/OfflineBanner';
 import ImpersonationBanner from '@/components/ImpersonationBanner';
@@ -168,11 +165,18 @@ export default function RootBootShell() {
 
   // Lazy-load NavigationContainer linking after first paint so no TurboModule
   // calls fire at module-eval time (fixes iOS 26 + New Arch __cxa_rethrow).
+  // linking.ts calls Linking.createURL('/') at module scope, so we must
+  // dynamically import it rather than use a static top-level import.
   // MUST be declared before any early return to satisfy rules-of-hooks.
-  const [navReady, setNavReady] = useState(false);
+  const [linkingConfig, setLinkingConfig] = useState<any>(undefined);
   useEffect(() => {
-    setNavReady(true);
+    import('@/navigation/linking')
+      .then((mod) => setLinkingConfig(mod.linking))
+      .catch((e) => console.warn('[boot] linking import failed:', e));
   }, []);
+
+  // navReady flag kept for backward compat with the NavigationContainer prop.
+  const navReady = linkingConfig !== undefined;
 
   // Render a blank view while fonts are resolving. App.tsx is already
   // showing the boot beacon behind us via Suspense, so a blank View here
@@ -194,7 +198,7 @@ export default function RootBootShell() {
                       <AthleteProfileProvider>
                         <PodcastPlayerProvider>
                           {/* linking is added after first render to avoid iOS 26 TurboModule crash */}
-                          <NavigationContainer linking={navReady ? linking : undefined}>
+                          <NavigationContainer linking={navReady ? linkingConfig : undefined}>
                             <ImpersonationBanner />
                             <OfflineBanner />
                             <RootNavigator />
