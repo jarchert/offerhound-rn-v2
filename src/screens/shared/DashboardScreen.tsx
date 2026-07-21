@@ -114,6 +114,7 @@ import { SocialLinksManager } from '@/components/SocialLinksManager';
 import { SocialSyndicationCenter } from '@/components/SocialSyndicationCenter';
 import { CoachReferencesManager } from '@/components/CoachReferencesManager';
 import { SharePlayerCardDialog } from '@/components/SharePlayerCardDialog';
+import { ParentInviteCard } from '@/components/dashboard/ParentInviteCard';
 // PORT-PENDING: SEO — web-only meta component, intentionally omitted on RN
 
 import { SPORTS_CONFIG } from '@/lib/data/sports';
@@ -946,6 +947,10 @@ export default function DashboardScreen() {
         <BackButton label="Back" />
 
         {profile && !isParentView && <TranscriptRequestsCard />}
+
+        {/* Family / Parent invite — matches Lovable web Dashboard
+            (src/pages/Dashboard.tsx imports ParentInviteModal there). */}
+        {profile && !isParentView && <ParentInviteCard />}
 
         {/* Shareable card preview */}
         {profile && !isParentView && (
