@@ -418,7 +418,7 @@ export default function DashboardScreen() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onPress={() => nav.navigate('NILAdvisorScreen' as never)}>
+            <Button onPress={() => nav.navigate('NILIntelligence' as never)}>
               Explore NIL Education
             </Button>
           </CardContent>
@@ -1036,7 +1036,7 @@ export default function DashboardScreen() {
                   </Button>
                   <Button
                     onPress={() => {
-                      nav.navigate('AthleteMatchesScreen' as never);
+                      nav.navigate('AthleteTabs' as any, { screen: 'MatchesTab' } as any);
                       setMobileMenuOpen(false);
                     }}
                   >
@@ -1044,7 +1044,7 @@ export default function DashboardScreen() {
                   </Button>
                   <Button
                     onPress={() => {
-                      nav.navigate('CoachSearchScreen' as never);
+                      nav.navigate('ScoutDirectory' as never);
                       setMobileMenuOpen(false);
                     }}
                   >
@@ -1053,7 +1053,7 @@ export default function DashboardScreen() {
                   <Button
                     variant="outline"
                     onPress={() => {
-                      nav.navigate('CampsScreen' as never);
+                      nav.navigate('SavedCamps' as never);
                       setMobileMenuOpen(false);
                     }}
                   >

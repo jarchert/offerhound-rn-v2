@@ -207,6 +207,8 @@ export const linking: LinkingOptions<any> = {
       FounderMessage: 'founder',
       LeaveReview: 'leave-review',
       CoachSearchScreen: 'coach-search',
+      ScoutDirectory: 'scouts',
+      SavedCamps: 'camps',
       PodcastEpisodeDetail: 'podcasts/:id',
       ScoutTrends: 'scout/trends',
       Pricing: 'pricing',

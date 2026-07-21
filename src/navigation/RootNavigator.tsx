@@ -37,6 +37,8 @@ import LetterComposerScreen from '@/screens/shared/LetterComposerScreen';
 import AICoachScreen from '@/screens/shared/AICoachScreen';
 import LeaveReviewScreen from '@/screens/shared/LeaveReviewScreen';
 import CoachSearchScreen from '@/screens/shared/CoachSearchScreen';
+import ScoutDirectoryScreen from '@/screens/scout/ScoutDirectoryScreen';
+import SavedCampsScreen from '@/screens/shared/SavedCampsScreen';
 import PodcastEpisodeDetailScreen from '@/screens/shared/PodcastEpisodeDetailScreen';
 import ScoutTrendsScreen from '@/screens/scout/ScoutTrendsScreen';
 import SmokeTestScreen from '@/screens/dev/SmokeTestScreen';
@@ -80,6 +82,8 @@ export type RootStackParamList = {
   AICoach: undefined;
   LeaveReview: undefined;
   CoachSearchScreen: undefined;
+  ScoutDirectory: undefined;
+  SavedCamps: undefined;
   PodcastEpisodeDetail: { id?: string } | undefined;
   ScoutTrends: undefined;
   SmokeTest: undefined;
@@ -198,6 +202,8 @@ export default function RootNavigator() {
           />
           <Stack.Screen name="LeaveReview" component={LeaveReviewScreen} />
           <Stack.Screen name="CoachSearchScreen" component={CoachSearchScreen} />
+          <Stack.Screen name="ScoutDirectory" component={ScoutDirectoryScreen} />
+          <Stack.Screen name="SavedCamps" component={SavedCampsScreen} />
           <Stack.Screen name="PodcastEpisodeDetail" component={PodcastEpisodeDetailScreen} />
           <Stack.Screen name="ScoutTrends" component={ScoutTrendsScreen} />
           <Stack.Screen name="SmokeTest" component={SmokeTestScreen} />
