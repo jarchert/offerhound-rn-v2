@@ -176,7 +176,7 @@ export default function CoachRosterScreen() {
   };
 
   const goToSearch = () => {
-    (nav as any).navigate('CoachSearchAthletes');
+    (nav as any).navigate('AthleteSearch');
   };
 
   return (

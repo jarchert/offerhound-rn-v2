@@ -39,6 +39,11 @@ import LeaveReviewScreen from '@/screens/shared/LeaveReviewScreen';
 import CoachSearchScreen from '@/screens/shared/CoachSearchScreen';
 import ScoutDirectoryScreen from '@/screens/scout/ScoutDirectoryScreen';
 import SavedCampsScreen from '@/screens/shared/SavedCampsScreen';
+import AthleteSearchScreen from '@/screens/shared/AthleteSearchScreen';
+import InfluencerBoardScreen from '@/screens/influencer/InfluencerBoardScreen';
+import CoachDirectoryScreen from '@/screens/shared/CoachDirectoryScreen';
+import SavedCoachesScreen from '@/screens/shared/SavedCoachesScreen';
+import ReferralTrackingScreen from '@/screens/shared/ReferralTrackingScreen';
 import PodcastEpisodeDetailScreen from '@/screens/shared/PodcastEpisodeDetailScreen';
 import ScoutTrendsScreen from '@/screens/scout/ScoutTrendsScreen';
 import SmokeTestScreen from '@/screens/dev/SmokeTestScreen';
@@ -84,6 +89,11 @@ export type RootStackParamList = {
   CoachSearchScreen: undefined;
   ScoutDirectory: undefined;
   SavedCamps: undefined;
+  AthleteSearch: undefined;
+  InfluencerBoard: undefined;
+  CoachDirectory: undefined;
+  SavedCoaches: undefined;
+  Referrals: undefined;
   PodcastEpisodeDetail: { id?: string } | undefined;
   ScoutTrends: undefined;
   SmokeTest: undefined;
@@ -204,6 +214,11 @@ export default function RootNavigator() {
           <Stack.Screen name="CoachSearchScreen" component={CoachSearchScreen} />
           <Stack.Screen name="ScoutDirectory" component={ScoutDirectoryScreen} />
           <Stack.Screen name="SavedCamps" component={SavedCampsScreen} />
+          <Stack.Screen name="AthleteSearch" component={AthleteSearchScreen} />
+          <Stack.Screen name="InfluencerBoard" component={InfluencerBoardScreen} />
+          <Stack.Screen name="CoachDirectory" component={CoachDirectoryScreen} />
+          <Stack.Screen name="SavedCoaches" component={SavedCoachesScreen} />
+          <Stack.Screen name="Referrals" component={ReferralTrackingScreen} />
           <Stack.Screen name="PodcastEpisodeDetail" component={PodcastEpisodeDetailScreen} />
           <Stack.Screen name="ScoutTrends" component={ScoutTrendsScreen} />
           <Stack.Screen name="SmokeTest" component={SmokeTestScreen} />

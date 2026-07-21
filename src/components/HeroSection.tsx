@@ -65,8 +65,8 @@ export function HeroSection({ isOwnerView = true, profile }: HeroSectionProps) {
   const isSm = width >= 640;  // Tailwind `sm:` breakpoint
 
   const goToCoaches = () => {
-    // Mirrors Lovable: navigate("/activity", { state: { scrollTo: "coaches-section" } }).
-    navigation.navigate('Activity' as never, { scrollTo: 'coaches-section' } as never);
+    // Mirrors Lovable: navigate("/dashboard", { state: { scrollTo: "coaches-section" } }).
+    navigation.navigate('AthleteTabs' as never, { screen: 'HomeTab' } as never);
   };
 
   // Fallback values for when profile is not provided
