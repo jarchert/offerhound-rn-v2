@@ -51,7 +51,7 @@ export default function AdminDashboard() {
 
         <SectionHeader title="Admin tools" />
         <View style={s.tools}>
-          <Text style={s.toolsHint}>Detailed admin pages (User management, Audit log, Testimonial review, Beta feedback) will be available in a future update.</Text>
+          <Text style={s.toolsHint}>Use the tabs below — Users, Moderate, Content, Audit, and Letters — to manage the platform.</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

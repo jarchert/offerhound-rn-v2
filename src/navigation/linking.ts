@@ -205,6 +205,7 @@ export const linking: LinkingOptions<any> = {
       // Cross-cutting public screens
       Install: 'install',
       FounderMessage: 'founder',
+      LeaveReview: 'leave-review',
       Pricing: 'pricing',
       SubscriptionSuccess: 'subscription-success',
 

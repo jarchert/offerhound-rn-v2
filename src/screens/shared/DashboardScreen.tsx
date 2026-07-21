@@ -1062,7 +1062,7 @@ export default function DashboardScreen() {
                   <Button
                     variant="outline"
                     onPress={() => {
-                      nav.navigate('CampDiscoveryScreen' as never);
+                      nav.navigate('LeaveReview' as never);
                       setMobileMenuOpen(false);
                     }}
                   >
