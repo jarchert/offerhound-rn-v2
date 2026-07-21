@@ -25,6 +25,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Search } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
 import { supabase } from '@/integrations/supabase/client';
 import { Navbar } from '@/components/Navbar';
 import { CoachMatchCard } from '@/components/coach/CoachMatchCard';
@@ -61,6 +62,7 @@ interface CoachRow {
 type TabKey = 'all' | 'head' | 'assistants';
 
 export default function CoachSearchScreen() {
+  const nav = useNavigation<any>();
   const [query, setQuery] = useState('');
   const [debounced, setDebounced] = useState('');
   const [conference, setConference] = useState('all');
@@ -248,6 +250,7 @@ export default function CoachSearchScreen() {
             }}
             variant="compact"
             viewerRole="athlete"
+            onOpenProfile={() => nav.navigate('CoachProfile' as never, { id: item.id } as never)}
           />
         )}
         ListEmptyComponent={

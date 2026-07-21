@@ -42,6 +42,7 @@ import SavedCampsScreen from '@/screens/shared/SavedCampsScreen';
 import AthleteSearchScreen from '@/screens/shared/AthleteSearchScreen';
 import InfluencerBoardScreen from '@/screens/influencer/InfluencerBoardScreen';
 import CoachDirectoryScreen from '@/screens/shared/CoachDirectoryScreen';
+import CoachProfileScreen from '@/screens/shared/CoachProfileScreen';
 import SavedCoachesScreen from '@/screens/shared/SavedCoachesScreen';
 import ReferralTrackingScreen from '@/screens/shared/ReferralTrackingScreen';
 import PodcastEpisodeDetailScreen from '@/screens/shared/PodcastEpisodeDetailScreen';
@@ -92,6 +93,7 @@ export type RootStackParamList = {
   AthleteSearch: undefined;
   InfluencerBoard: undefined;
   CoachDirectory: undefined;
+  CoachProfile: { id: string };
   SavedCoaches: undefined;
   Referrals: undefined;
   PodcastEpisodeDetail: { id?: string } | undefined;
@@ -217,6 +219,7 @@ export default function RootNavigator() {
           <Stack.Screen name="AthleteSearch" component={AthleteSearchScreen} />
           <Stack.Screen name="InfluencerBoard" component={InfluencerBoardScreen} />
           <Stack.Screen name="CoachDirectory" component={CoachDirectoryScreen} />
+          <Stack.Screen name="CoachProfile" component={CoachProfileScreen} />
           <Stack.Screen name="SavedCoaches" component={SavedCoachesScreen} />
           <Stack.Screen name="Referrals" component={ReferralTrackingScreen} />
           <Stack.Screen name="PodcastEpisodeDetail" component={PodcastEpisodeDetailScreen} />

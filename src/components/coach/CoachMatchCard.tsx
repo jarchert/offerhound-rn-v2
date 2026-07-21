@@ -58,6 +58,12 @@ export interface CoachMatchCardProps {
   onToggleSave?: (coachId: string) => void;
   onDismiss?: () => void;
   onContact?: () => void;
+  /**
+   * When provided, tapping the card header (avatar/name block) opens the coach
+   * profile. Mirrors Lovable web CoachSearch, where the whole card navigates to
+   * `/coaches/:id`. Opt-in so score/match surfaces keep their existing behavior.
+   */
+  onOpenProfile?: () => void;
   proximityLabel?: string | null;
   viewerRole?: 'athlete' | 'coach' | 'scout' | 'club-coach' | 'hs-coach';
   coachAudience?: 'college-coach' | 'hs-coach';
@@ -112,6 +118,7 @@ export function CoachMatchCard({
   onToggleSave,
   onDismiss,
   onContact,
+  onOpenProfile,
   proximityLabel,
   viewerRole = 'athlete',
   coachAudience = 'college-coach',
@@ -240,14 +247,14 @@ export function CoachMatchCard({
             fallback={coach.name?.charAt(0) || 'C'}
             size={40}
           />
-          <View style={s.mobileHeaderText}>
+          <Pressable style={s.mobileHeaderText} onPress={onOpenProfile} disabled={!onOpenProfile}>
             <View style={s.nameRow}>
               <Text style={s.nameSm} numberOfLines={1}>{coach.name}</Text>
               <PriorityBadge />
             </View>
             <Text style={s.metaText} numberOfLines={1}>{coach.title}</Text>
             <Text style={s.metaText} numberOfLines={1}>{coach.school}</Text>
-          </View>
+          </Pressable>
           {hasScore ? (
             <View style={s.scoreRight}>
               <Text style={s.scoreBig}>{Math.round(scores!.match_score)}</Text>
@@ -308,7 +315,7 @@ export function CoachMatchCard({
           fallback={coach.name?.charAt(0) || 'C'}
           size={48}
         />
-        <View style={s.desktopMain}>
+        <Pressable style={s.desktopMain} onPress={onOpenProfile} disabled={!onOpenProfile}>
           <View style={s.nameRow}>
             <Text style={s.nameLg} numberOfLines={1}>{coach.name}</Text>
             <PriorityBadge />
@@ -318,7 +325,7 @@ export function CoachMatchCard({
           </Text>
           <MetaRow />
           <FullScores />
-        </View>
+        </Pressable>
         <View style={s.desktopRight}>
           {hasScore ? (
             <View style={{ alignItems: 'flex-end' }}>
