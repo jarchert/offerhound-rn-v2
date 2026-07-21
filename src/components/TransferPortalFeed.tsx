@@ -1,22 +1,16 @@
-// TODO(session4): Port full implementation from Ch.13 of the conversion guide.
-// This is a minimal scaffold so the bundle compiles.
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, typography, spacing } from '@/lib/theme';
+// TransferPortalFeed — thin re-export.
+//
+// The real RN port already lives at `src/components/dashboard/TransferPortalFeedCard.tsx`
+// (117 lines, fully wired: pulls `transfer_portal_news`, calls
+// `crawl-recruiting-podcasts` on refresh, FlatList render, Linking.openURL on
+// tap). Seven dashboard screens import `TransferPortalFeed` from this path,
+// so we redirect them to the real implementation here instead of leaving a
+// stub in place.
+//
+// If the underlying component ever moves, update this re-export — do not put
+// stub UI back.
 
-export function TransferPortalFeed(_props: any) {
-  return (
-    <View style={s.container}>
-      <Text style={s.text}>[TransferPortalFeed]</Text>
-      <Text style={s.hint}>Scaffold — port from Ch.13</Text>
-    </View>
-  );
-}
-
-export default TransferPortalFeed;
-
-const s = StyleSheet.create({
-  container: { padding: spacing.md, backgroundColor: colors.muted, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
-  text: { fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, fontSize: typography.fontSize.sm },
-  hint: { fontFamily: typography.fontFamily.body, color: colors.mutedForeground, fontSize: typography.fontSize.xs, marginTop: 2 },
-});
+export {
+  TransferPortalFeedCard as TransferPortalFeed,
+  TransferPortalFeedCard as default,
+} from '@/components/dashboard/TransferPortalFeedCard';

@@ -1,22 +1,10 @@
-// TODO(session4): Port full implementation from Ch.13 of the conversion guide.
-// This is a minimal scaffold so the bundle compiles.
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, typography, spacing } from '@/lib/theme';
+// CampNewsFeed — thin re-export.
+//
+// The real RN port lives at `src/components/dashboard/CampNewsFeedCard.tsx`
+// (browse-camps CTA with proper navigation). One dashboard imports
+// `CampNewsFeed` from this path, so redirect to the real implementation.
 
-export function CampNewsFeed(_props: any) {
-  return (
-    <View style={s.container}>
-      <Text style={s.text}>[CampNewsFeed]</Text>
-      <Text style={s.hint}>Scaffold — port from Ch.13</Text>
-    </View>
-  );
-}
-
-export default CampNewsFeed;
-
-const s = StyleSheet.create({
-  container: { padding: spacing.md, backgroundColor: colors.muted, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
-  text: { fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, fontSize: typography.fontSize.sm },
-  hint: { fontFamily: typography.fontFamily.body, color: colors.mutedForeground, fontSize: typography.fontSize.xs, marginTop: 2 },
-});
+export {
+  CampNewsFeedCard as CampNewsFeed,
+  CampNewsFeedCard as default,
+} from '@/components/dashboard/CampNewsFeedCard';
