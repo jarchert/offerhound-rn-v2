@@ -7,7 +7,7 @@
 //   - Tailwind classes → StyleSheet using @/lib/theme tokens.
 //   - SEO is a no-op shim (RN has no <head>); kept for parity.
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { useNavigation, CommonActions } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { Search, MapPin, Users, Trophy, Lock, Sparkles } from 'lucide-react-native';
@@ -257,7 +257,12 @@ export default function PublicClubDiscoveryScreen() {
               ) : (
                 <View style={s.list}>
                   {filteredClubs.map((c) => (
-                    <ClubCard key={c.id} club={c} onConnect={goAuth} />
+                    <ClubCard
+                      key={c.id}
+                      club={c}
+                      onConnect={goAuth}
+                      onOpen={() => nav.navigate('PublicClubCoachProfile' as any, { id: c.id })}
+                    />
                   ))}
                 </View>
               )}
@@ -326,7 +331,7 @@ export default function PublicClubDiscoveryScreen() {
 
 // ----------------- Sub-components -----------------
 
-function ClubCard({ club, onConnect }: { club: ClubCoach; onConnect: () => void }) {
+function ClubCard({ club, onConnect, onOpen }: { club: ClubCoach; onConnect: () => void; onOpen?: () => void }) {
   const initials = (club.club_name || 'C')
     .split(' ')
     .map((w) => w[0])
@@ -338,6 +343,7 @@ function ClubCard({ club, onConnect }: { club: ClubCoach; onConnect: () => void 
     .join(', ');
 
   return (
+    <Pressable onPress={onOpen} disabled={!onOpen}>
     <Card style={s.cardItem}>
       <CardContent>
         <View style={s.cardRow}>
@@ -391,6 +397,7 @@ function ClubCard({ club, onConnect }: { club: ClubCoach; onConnect: () => void 
         </View>
       </CardContent>
     </Card>
+    </Pressable>
   );
 }
 

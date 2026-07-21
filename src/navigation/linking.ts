@@ -213,6 +213,7 @@ export const linking: LinkingOptions<any> = {
       InfluencerBoard: 'influencers',
       CoachDirectory: 'coaches',
       CoachProfile: 'coaches/:id',
+      PublicClubCoachProfile: 'club-coach/:id',
       SavedCoaches: 'saved-coaches',
       Referrals: 'referrals',
       PodcastEpisodeDetail: 'podcasts/:id',
