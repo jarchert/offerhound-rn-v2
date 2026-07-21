@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: spacing.xs,
-    gapRow: spacing.xs,
+    rowGap: spacing.xs,
   },
   nilLink: {
     fontFamily: typography.fontFamily.bodyMedium,

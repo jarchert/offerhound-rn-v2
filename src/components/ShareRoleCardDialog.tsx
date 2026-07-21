@@ -27,13 +27,29 @@ export type ShareRole = 'athlete' | 'coach' | 'club_coach' | 'hs_coach' | 'scout
 
 interface ShareRoleCardDialogProps {
   role: ShareRole;
-  visible: boolean;
-  onClose: () => void;
+  /**
+   * Controlled mode: parent owns `visible` + `onClose`.
+   * Uncontrolled mode: omit both and wrap a trigger element in `children`;
+   * tapping the child opens the sheet, internal state manages close.
+   */
+  visible?: boolean;
+  onClose?: () => void;
+  children?: React.ReactNode;
 }
 
 const APP_PUBLIC_URL = 'https://offer-hound.com';
 
-export function ShareRoleCardDialog({ role, visible, onClose }: ShareRoleCardDialogProps) {
+export function ShareRoleCardDialog({ role, visible, onClose, children }: ShareRoleCardDialogProps) {
+  const isControlled = typeof visible === 'boolean';
+  const [internalVisible, setInternalVisible] = React.useState(false);
+  const open = isControlled ? !!visible : internalVisible;
+  const handleClose = () => {
+    if (isControlled) onClose?.();
+    else setInternalVisible(false);
+  };
+  const handleOpen = () => {
+    if (!isControlled) setInternalVisible(true);
+  };
   const { user } = useAuth();
   const { toast } = useToast();
   const { data: coachProfile } = useCoachProfile();
@@ -137,13 +153,21 @@ export function ShareRoleCardDialog({ role, visible, onClose }: ShareRoleCardDia
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
+    <>
+      {/* Uncontrolled: render the child as the trigger */}
+      {!isControlled && children ? (
+        <Pressable onPress={handleOpen} accessibilityRole="button">
+          {children}
+        </Pressable>
+      ) : null}
+
+      <Modal visible={open} transparent animationType="slide" onRequestClose={handleClose}>
+        <Pressable style={styles.backdrop} onPress={handleClose}>
         <Pressable style={styles.sheet} onPress={() => {}}>
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>{titleMap[role]}</Text>
-            <Pressable onPress={onClose} hitSlop={8}><X size={20} color={colors.mutedForeground} /></Pressable>
+            <Pressable onPress={handleClose} hitSlop={8}><X size={20} color={colors.mutedForeground} /></Pressable>
           </View>
 
           <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -191,6 +215,7 @@ export function ShareRoleCardDialog({ role, visible, onClose }: ShareRoleCardDia
         </Pressable>
       </Pressable>
     </Modal>
+    </>
   );
 }
 
