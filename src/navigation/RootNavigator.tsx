@@ -36,6 +36,8 @@ import InboxScreen from '@/screens/shared/InboxScreen';
 import LetterComposerScreen from '@/screens/shared/LetterComposerScreen';
 import AICoachScreen from '@/screens/shared/AICoachScreen';
 import LeaveReviewScreen from '@/screens/shared/LeaveReviewScreen';
+import PodcastEpisodeDetailScreen from '@/screens/shared/PodcastEpisodeDetailScreen';
+import ScoutTrendsScreen from '@/screens/scout/ScoutTrendsScreen';
 import SmokeTestScreen from '@/screens/dev/SmokeTestScreen';
 import InstallScreen from '@/screens/shared/InstallScreen';
 import FounderMessageScreen from '@/screens/shared/FounderMessageScreen';
@@ -76,6 +78,8 @@ export type RootStackParamList = {
   LetterComposer: { seed?: any } | undefined;
   AICoach: undefined;
   LeaveReview: undefined;
+  PodcastEpisodeDetail: { id?: string } | undefined;
+  ScoutTrends: undefined;
   SmokeTest: undefined;
   Install: undefined;
   FounderMessage: undefined;
@@ -191,6 +195,8 @@ export default function RootNavigator() {
             options={{ presentation: 'modal' }}
           />
           <Stack.Screen name="LeaveReview" component={LeaveReviewScreen} />
+          <Stack.Screen name="PodcastEpisodeDetail" component={PodcastEpisodeDetailScreen} />
+          <Stack.Screen name="ScoutTrends" component={ScoutTrendsScreen} />
           <Stack.Screen name="SmokeTest" component={SmokeTestScreen} />
           <Stack.Screen name="Install" component={InstallScreen} />
           <Stack.Screen name="FounderMessage" component={FounderMessageScreen} />

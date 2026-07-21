@@ -59,7 +59,7 @@ export function LandingPodcastSection() {
 
   const goAll = () => nav.navigate('PodcastsTab');
   const goEpisode = (id: string) =>
-    nav.navigate('PodcastsTab', { screen: 'PodcastDetail', params: { id } });
+    nav.navigate('PodcastEpisodeDetail', { id });
 
   return (
     <View style={s.section}>
