@@ -36,6 +36,7 @@ import InboxScreen from '@/screens/shared/InboxScreen';
 import LetterComposerScreen from '@/screens/shared/LetterComposerScreen';
 import AICoachScreen from '@/screens/shared/AICoachScreen';
 import LeaveReviewScreen from '@/screens/shared/LeaveReviewScreen';
+import CoachSearchScreen from '@/screens/shared/CoachSearchScreen';
 import PodcastEpisodeDetailScreen from '@/screens/shared/PodcastEpisodeDetailScreen';
 import ScoutTrendsScreen from '@/screens/scout/ScoutTrendsScreen';
 import SmokeTestScreen from '@/screens/dev/SmokeTestScreen';
@@ -78,6 +79,7 @@ export type RootStackParamList = {
   LetterComposer: { seed?: any } | undefined;
   AICoach: undefined;
   LeaveReview: undefined;
+  CoachSearchScreen: undefined;
   PodcastEpisodeDetail: { id?: string } | undefined;
   ScoutTrends: undefined;
   SmokeTest: undefined;
@@ -195,6 +197,7 @@ export default function RootNavigator() {
             options={{ presentation: 'modal' }}
           />
           <Stack.Screen name="LeaveReview" component={LeaveReviewScreen} />
+          <Stack.Screen name="CoachSearchScreen" component={CoachSearchScreen} />
           <Stack.Screen name="PodcastEpisodeDetail" component={PodcastEpisodeDetailScreen} />
           <Stack.Screen name="ScoutTrends" component={ScoutTrendsScreen} />
           <Stack.Screen name="SmokeTest" component={SmokeTestScreen} />

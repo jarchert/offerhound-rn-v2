@@ -206,6 +206,7 @@ export const linking: LinkingOptions<any> = {
       Install: 'install',
       FounderMessage: 'founder',
       LeaveReview: 'leave-review',
+      CoachSearchScreen: 'coach-search',
       PodcastEpisodeDetail: 'podcasts/:id',
       ScoutTrends: 'scout/trends',
       Pricing: 'pricing',
