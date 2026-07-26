@@ -204,7 +204,7 @@ export const linking: LinkingOptions<any> = {
 
       // Cross-cutting public screens
       Install: 'install',
-      FounderMessage: 'founder',
+      FounderMessage: 'founder-message',
       LeaveReview: 'leave-review',
       CoachSearchScreen: 'coach-search',
       ScoutDirectory: 'scouts',
@@ -219,7 +219,7 @@ export const linking: LinkingOptions<any> = {
       PodcastEpisodeDetail: 'podcasts/:id',
       ScoutTrends: 'scout/trends',
       Pricing: 'pricing',
-      SubscriptionSuccess: 'subscription-success',
+      SubscriptionSuccess: 'subscription/success',
 
       // Fallback not-found (optional; RN v7 supports this)
       NotFound: '*',
