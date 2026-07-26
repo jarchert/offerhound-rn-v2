@@ -74,9 +74,14 @@ export const linking: LinkingOptions<any> = {
       },
 
       // Camp ecosystem (shared across roles)
+      // Note: the bare 'camps' path is intentionally NOT registered here. It is
+      // claimed by the top-level SavedCamps screen below, matching Lovable MAIN
+      // (src/components/AnimatedRoutes.tsx line 171: `<Route path="/camps"
+      // element={<SavedCamps />} />`) and MAIN's global Navbar link. Camp browse
+      // is reached via 'camps/discover' (CampsDiscover) which is the alt path
+      // MAIN redirects to its /camp-discovery page.
       CampStack: {
         screens: {
-          CampDiscovery: 'camps',
           CampsList: 'camps/list',
           CampsDiscover: 'camps/discover',
           ClaimCampSpot: 'camps/claim',
@@ -139,11 +144,16 @@ export const linking: LinkingOptions<any> = {
       },
 
       // Scout role tabs
+      // Note: 'scout/trends' is intentionally NOT registered here. TrendsTab
+      // was dropped from the ScoutTabs navigator in Build 25 (see
+      // src/navigation/role/ScoutTabs.tsx). The path is owned by the top-level
+      // ScoutTrends screen below, matching Lovable MAIN
+      // (src/components/AnimatedRoutes.tsx line 196: `<Route path="/scout/trends"
+      // element={<ScoutTrends />} />`).
       ScoutTabs: {
         screens: {
           DashboardTab: 'scout',
           LettersTab: 'scout/letters',
-          TrendsTab: 'scout/trends',
           OnboardingTab: 'scout/guide',
         },
       },

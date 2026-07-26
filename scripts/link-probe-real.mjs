@@ -31,23 +31,13 @@ const configBlock = realSrc.slice(start + 'config: '.length, endIdx + 1);
 const asJs = '(' + configBlock.replace(/\/\/[^\n]*\n/g, '\n') + ')';
 const config = (0, eval)(asJs);
 
-// Neutralize pre-existing duplicate registrations so the real parser can run
-// against the URLs this probe cares about. All of these existed in linking.ts
-// before this session's edits — the duplicates are not caused by the two-line
-// fix under test. The drops are probe-only; the real file is untouched here.
-// Recording each as a separate follow-up.
-//
-// Pre-existing duplicates in src/navigation/linking.ts:
-//   'camps'        -> CampStack>CampDiscovery (line 79)  vs  SavedCamps (line 211)
-//   'scout/trends' -> ScoutTabs>TrendsTab      (line 146) vs  ScoutTrends (line 220)
-if (config.screens?.ScoutTrends === 'scout/trends') {
-  delete config.screens.ScoutTrends;
-  console.log("  (probe-only: removed pre-existing duplicate top-level ScoutTrends -> 'scout/trends')");
-}
-if (config.screens?.SavedCamps === 'camps') {
-  delete config.screens.SavedCamps;
-  console.log("  (probe-only: removed pre-existing duplicate top-level SavedCamps -> 'camps')");
-}
+// Historical note: two duplicate pattern registrations used to exist here
+// ('camps' -> {CampDiscovery, SavedCamps} and 'scout/trends' -> {TrendsTab,
+// ScoutTrends}). They were removed by the duplicate-cleanup PR that also
+// added the '/camps' and '/scout/trends' cases below. The probe no longer
+// needs to strip anything at load time; if a duplicate is ever reintroduced
+// getStateFromPath will throw and the probe will fail loudly, which is the
+// correct behavior.
 console.log('  (config loaded from src/navigation/linking.ts, screens keys:', Object.keys(config.screens).length, ')');
 console.log('  (real linking.ts sha256:', createHash('sha256').update(realSrc).digest('hex').slice(0, 12), ')');
 
@@ -59,6 +49,10 @@ const cases = [
   ['/club-coach/uuid-xyz',   'PublicClubCoachProfile'],
   ['/founder',               null],
   ['/subscription-success',  null],
+  // Duplicate-cleanup cases: each of these two bare paths must resolve to
+  // exactly one destination now that the stale registrations are gone.
+  ['/camps',                 'SavedCamps'],
+  ['/scout/trends',          'ScoutTrends'],
 ];
 
 function leafName(state) {
