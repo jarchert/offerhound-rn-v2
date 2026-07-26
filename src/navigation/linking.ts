@@ -112,11 +112,11 @@ export const linking: LinkingOptions<any> = {
       PublicProfileStack: {
         screens: {
           PublicProfile: 'p/:customUrl',
-          AthleteProfileByUrl: 'a/:customUrl',
+          AthleteProfileByUrl: 'athlete/:customUrl',
           ProfileLegacy: 'profile/:customUrl',
-          PublicScoutProfile: 'scout/:scoutId',
-          InfluencerProfile: 'influencer/:handle',
-          InfluencerBlogPost: 'influencer/:handle/blog/:slug',
+          PublicScoutProfile: 'scouts/:scoutId',
+          InfluencerProfile: 'influencers/:handle',
+          InfluencerBlogPost: 'influencers/:handle/blog/:slug',
           InviteShareCard: 'invite',
         },
       },

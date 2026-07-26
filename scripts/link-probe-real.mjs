@@ -53,6 +53,22 @@ const cases = [
   // exactly one destination now that the stale registrations are gone.
   ['/camps',                 'SavedCamps'],
   ['/scout/trends',          'ScoutTrends'],
+  // Parity sweep Part 1: MAIN-verified singular/plural fixes.
+  ['/scouts/some-slug',      'PublicScoutProfile'],
+  ['/influencers/some-handle',       'InfluencerProfile'],
+  ['/influencers/handle/blog/slug',  'InfluencerBlogPost'],
+  ['/athlete/custom-url',    'AthleteProfileByUrl'],
+  // Regression guards: bare AthleteTabs static paths must NOT collide with
+  // the new athlete/:customUrl pattern. Static registrations win.
+  ['/athlete',               'HomeTab'],
+  ['/athlete/matches',       'MatchesTab'],
+  ['/athlete/messages',      'MessagesTab'],
+  ['/athlete/letters',       'LettersTab'],
+  ['/athlete/profile',       'ProfileTab'],
+  // Regression guards: the old singular/short paths must NOT resolve.
+  ['/scout/some-slug',       null],
+  ['/influencer/some-handle', null],
+  ['/a/custom-url',          null],
 ];
 
 function leafName(state) {
