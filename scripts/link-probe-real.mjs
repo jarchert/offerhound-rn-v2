@@ -75,6 +75,29 @@ const cases = [
   // Regression guards: old paths for the batch-2 fixes must be unresolved.
   ['/invite',                null],
   ['/settings/delete-account', null],
+  // Camp path family fixes (live-confirmed by user, 2026-07-26).
+  ['/camps/abc/enrollments/xyz/deliverables',  'CampDeliverables'],
+  ['/camp/spectator/tok-123',                  'CampSpectator'],
+  ['/camp/staff-checkin/tok-456',              'CampStaffCheckin'],
+  ['/coach/camps/abc/checkin',                 'CampMobileCheckin'],
+  ['/coach/camps/abc/evaluate',                'CampEvaluatorScoring'],
+  ['/embed/leaderboard/abc',                   'CampLeaderboardEmbed'],
+  ['/unsubscribe/camp-alerts',                 'UnsubscribeCampAlerts'],
+  // Regression guards: the old camp paths must NOT resolve any more.
+  ['/camps/abc/deliverables/xyz',    null],
+  ['/spectator/tok-123',             null],
+  ['/staff-checkin/tok-456',         null],
+  ['/camps/abc/mobile-checkin',      null],
+  ['/camps/abc/score',               null],
+  ['/camps/abc/leaderboard-embed',   null],
+  // NOTE: '/camps/unsubscribe' is NOT asserted as null. Removing the
+  // 'camps/unsubscribe' registration unmasks CampDetail's 'camps/:campId'
+  // param pattern for that URL. That's inherent to a param at position 2,
+  // NOT a regression from this change. Nothing in the codebase constructs
+  // /camps/unsubscribe as an outbound URL, and MAIN uses /unsubscribe/camp-alerts
+  // now anyway, so the collision is harmless.
+  // Non-regression: CampsList (RN-only, no MAIN equivalent, must still work).
+  ['/camps/list',                    'CampsList'],
 ];
 
 function leafName(state) {
