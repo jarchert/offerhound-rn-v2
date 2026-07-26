@@ -26,10 +26,10 @@ export function useActivityStats() {
           .from("saved_coaches" as any)
           .select("*, coach:coaches(name, school)")
           .eq("user_id", user.id)
-          .order("created_at", { ascending: false }),
+          .order("saved_at", { ascending: false }),
         supabase
           .from("coach_letter_history")
-          .select("id, coach_name, coach_email, school_name, letter_type, sent_at, created_at")
+          .select("id, athlete_name, athlete_email, athlete_school, letter_type, sent_at, created_at")
           .eq("coach_user_id", user.id)
           .order("sent_at", { ascending: false }),
       ]);
@@ -60,17 +60,18 @@ export function useActivityStats() {
              id: `saved-${s.id}`,
              type: "saved",
              description: `Saved ${coachName}${school}`,
-             date: s.created_at,
+             date: s.saved_at,
           });
        });
 
        letterList.forEach((l) => {
-          const school = l.school_name ? ` at ${l.school_name}` : "";
+          const school = l.athlete_school ? ` at ${l.athlete_school}` : "";
           const typeLabel = l.letter_type ? `${l.letter_type} letter` : "letter";
+          const recipient = l.athlete_name || "an athlete";
           activity.push({
              id: `letter-${l.id}`,
              type: "letter",
-             description: `Sent ${typeLabel} to ${l.coach_name}${school}`,
+             description: `Sent ${typeLabel} to ${recipient}${school}`,
              date: l.sent_at || l.created_at,
           });
        });

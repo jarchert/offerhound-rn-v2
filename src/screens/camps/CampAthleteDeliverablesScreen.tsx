@@ -105,7 +105,7 @@ export default function CampAthleteDeliverablesScreen() {
       <SafeAreaView style={s.container}>
         <View style={s.center}>
           <Text style={s.muted}>Camp not found.</Text>
-          <Button variant="outline" onPress={() => navigation.navigate('Home' as never)} style={{ marginTop: spacing.md }}>
+          <Button variant="outline" onPress={() => navigation.goBack()} style={{ marginTop: spacing.md }}>
             Go home
           </Button>
         </View>

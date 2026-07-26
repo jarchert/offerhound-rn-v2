@@ -204,9 +204,22 @@ export const linking: LinkingOptions<any> = {
 
       // Cross-cutting public screens
       Install: 'install',
-      FounderMessage: 'founder',
+      FounderMessage: 'founder-message',
+      LeaveReview: 'leave-review',
+      CoachSearchScreen: 'coach-search',
+      ScoutDirectory: 'scouts',
+      SavedCamps: 'camps',
+      AthleteSearch: 'athletes',
+      InfluencerBoard: 'influencers',
+      CoachDirectory: 'coaches',
+      CoachProfile: 'coaches/:id',
+      PublicClubCoachProfile: 'club-coach/:id',
+      SavedCoaches: 'saved-coaches',
+      Referrals: 'referrals',
+      PodcastEpisodeDetail: 'podcasts/:id',
+      ScoutTrends: 'scout/trends',
       Pricing: 'pricing',
-      SubscriptionSuccess: 'subscription-success',
+      SubscriptionSuccess: 'subscription/success',
 
       // Fallback not-found (optional; RN v7 supports this)
       NotFound: '*',

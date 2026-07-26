@@ -43,7 +43,7 @@ export default function SettingsScreen() {
         <Text style={s.email}>{user?.email}</Text>
 
         <SettingsGroup title="Subscription">
-          <SettingsRow icon={CreditCard} label="Manage Subscription" onPress={() => nav.navigate('Paywall' as any)} />
+          <SettingsRow icon={CreditCard} label="Manage Subscription" onPress={() => nav.navigate('SettingsStack' as any, { screen: 'AccountSettings' })} />
         </SettingsGroup>
 
         <SettingsGroup title="Account Information">

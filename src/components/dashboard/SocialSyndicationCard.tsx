@@ -1,9 +1,16 @@
 // SocialSyndicationCard — RN port of Lovable SocialSyndicationCenter.tsx (connect/manage flavor).
 // Connect/disconnect handles for Instagram, X (Twitter), TikTok, YouTube, Facebook.
 // Saves to player_profiles.social_links JSON column via usePlayerProfile.updateProfile.
+//
+// Brand icons: lucide-react-native@1.11 does not export Instagram/Twitter/Youtube/
+// Facebook. Codebase pattern for brand marks is @expo/vector-icons FontAwesome6
+// (see MediaShareButtons, InfluencerShareButtons, RoleCardGenerator). We wrap
+// FontAwesome6 in a small adapter that matches the { size?, color? } prop shape
+// used by lucide-react-native so the PLATFORMS table stays consistent.
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Megaphone, Instagram, Twitter, Youtube, Facebook, Music2, X as XIcon, Check } from 'lucide-react-native';
+import { Megaphone, Music2, X as XIcon, Check } from 'lucide-react-native';
+import { FontAwesome6 } from '@expo/vector-icons';
 import { Card, CardContent, CardHeader, CardTitle, Button, Input, Badge } from '@/components/ui';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +24,17 @@ interface PlatformDef {
   Icon: React.ComponentType<{ size?: number; color?: string }>;
   placeholder: string;
 }
+
+// FontAwesome6 adapter: match lucide-react-native's { size, color } prop shape.
+const brand = (name: string): React.ComponentType<{ size?: number; color?: string }> =>
+  ({ size = 18, color = colors.primary }) => (
+    <FontAwesome6 name={name as any} size={size} color={color} />
+  );
+
+const Instagram = brand('instagram');
+const Twitter = brand('x-twitter'); // X (Twitter) — FontAwesome6 brand name
+const Youtube = brand('youtube');
+const Facebook = brand('facebook');
 
 const PLATFORMS: PlatformDef[] = [
   { key: 'instagram', label: 'Instagram', Icon: Instagram, placeholder: '@yourhandle' },

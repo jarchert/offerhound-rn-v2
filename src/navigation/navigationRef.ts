@@ -12,7 +12,10 @@ export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 /** Navigate to any root-stack screen from outside a navigator. */
 export function navigate(name: keyof RootStackParamList, params?: any) {
   if (navigationRef.isReady()) {
-    navigationRef.navigate(name as never, params);
+    // The overload TS resolves for the strong 2-arg form is `[never, any]`, so
+    // we cast through `any` — the ref is created with RootStackParamList and
+    // resolves at runtime.
+    (navigationRef.navigate as any)(name as never, params);
   }
 }
 

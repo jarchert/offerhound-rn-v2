@@ -11,7 +11,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import * as TrackingTransparency from 'expo-tracking-transparency';
+import * as TrackingTransparency from '@/lib/tracking-transparency';
 import { Navbar } from '@/components/Navbar';
 import { BackButton } from '@/components/BackButton';
 import { Card } from '@/components/ui/Card';

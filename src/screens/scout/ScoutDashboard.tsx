@@ -194,7 +194,7 @@ export default function ScoutDashboard() {
     (nav as any).navigate('ScoutTabs', { screen: 'LettersTab' });
   };
   const goTrends = () => {
-    (nav as any).navigate('ScoutTabs', { screen: 'TrendsTab' });
+    (nav as any).navigate('ScoutTrends');
   };
 
   if (profileLoading) {

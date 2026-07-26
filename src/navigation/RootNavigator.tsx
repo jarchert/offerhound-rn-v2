@@ -35,6 +35,19 @@ import NotificationsScreen from '@/screens/shared/NotificationsScreen';
 import InboxScreen from '@/screens/shared/InboxScreen';
 import LetterComposerScreen from '@/screens/shared/LetterComposerScreen';
 import AICoachScreen from '@/screens/shared/AICoachScreen';
+import LeaveReviewScreen from '@/screens/shared/LeaveReviewScreen';
+import CoachSearchScreen from '@/screens/shared/CoachSearchScreen';
+import ScoutDirectoryScreen from '@/screens/scout/ScoutDirectoryScreen';
+import SavedCampsScreen from '@/screens/shared/SavedCampsScreen';
+import AthleteSearchScreen from '@/screens/shared/AthleteSearchScreen';
+import InfluencerBoardScreen from '@/screens/influencer/InfluencerBoardScreen';
+import CoachDirectoryScreen from '@/screens/shared/CoachDirectoryScreen';
+import CoachProfileScreen from '@/screens/shared/CoachProfileScreen';
+import PublicClubCoachProfileScreen from '@/screens/public/PublicClubCoachProfileScreen';
+import SavedCoachesScreen from '@/screens/shared/SavedCoachesScreen';
+import ReferralTrackingScreen from '@/screens/shared/ReferralTrackingScreen';
+import PodcastEpisodeDetailScreen from '@/screens/shared/PodcastEpisodeDetailScreen';
+import ScoutTrendsScreen from '@/screens/scout/ScoutTrendsScreen';
 import SmokeTestScreen from '@/screens/dev/SmokeTestScreen';
 import InstallScreen from '@/screens/shared/InstallScreen';
 import FounderMessageScreen from '@/screens/shared/FounderMessageScreen';
@@ -74,6 +87,19 @@ export type RootStackParamList = {
   Inbox: undefined;
   LetterComposer: { seed?: any } | undefined;
   AICoach: undefined;
+  LeaveReview: undefined;
+  CoachSearchScreen: undefined;
+  ScoutDirectory: undefined;
+  SavedCamps: undefined;
+  AthleteSearch: undefined;
+  InfluencerBoard: undefined;
+  CoachDirectory: undefined;
+  CoachProfile: { id: string };
+  PublicClubCoachProfile: { id: string };
+  SavedCoaches: undefined;
+  Referrals: undefined;
+  PodcastEpisodeDetail: { id?: string } | undefined;
+  ScoutTrends: undefined;
   SmokeTest: undefined;
   Install: undefined;
   FounderMessage: undefined;
@@ -188,6 +214,19 @@ export default function RootNavigator() {
             component={AICoachScreen}
             options={{ presentation: 'modal' }}
           />
+          <Stack.Screen name="LeaveReview" component={LeaveReviewScreen} />
+          <Stack.Screen name="CoachSearchScreen" component={CoachSearchScreen} />
+          <Stack.Screen name="ScoutDirectory" component={ScoutDirectoryScreen} />
+          <Stack.Screen name="SavedCamps" component={SavedCampsScreen} />
+          <Stack.Screen name="AthleteSearch" component={AthleteSearchScreen} />
+          <Stack.Screen name="InfluencerBoard" component={InfluencerBoardScreen} />
+          <Stack.Screen name="CoachDirectory" component={CoachDirectoryScreen} />
+          <Stack.Screen name="CoachProfile" component={CoachProfileScreen} />
+          <Stack.Screen name="PublicClubCoachProfile" component={PublicClubCoachProfileScreen} />
+          <Stack.Screen name="SavedCoaches" component={SavedCoachesScreen} />
+          <Stack.Screen name="Referrals" component={ReferralTrackingScreen} />
+          <Stack.Screen name="PodcastEpisodeDetail" component={PodcastEpisodeDetailScreen} />
+          <Stack.Screen name="ScoutTrends" component={ScoutTrendsScreen} />
           <Stack.Screen name="SmokeTest" component={SmokeTestScreen} />
           <Stack.Screen name="Install" component={InstallScreen} />
           <Stack.Screen name="FounderMessage" component={FounderMessageScreen} />

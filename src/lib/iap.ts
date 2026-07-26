@@ -21,10 +21,15 @@ import {
   requestPurchase,
   getAvailablePurchases,
   finishTransaction,
+  purchaseUpdatedListener,
+  purchaseErrorListener,
   type Purchase,
   type ProductSubscription,
   type Product,
 } from 'expo-iap';
+
+export { purchaseUpdatedListener, purchaseErrorListener };
+export type { Purchase, ProductSubscription, Product };
 
 // ---------------------------------------------------------------------------
 // Product map — single source of truth. Keys are the Lovable PRICING_TIERS ids.

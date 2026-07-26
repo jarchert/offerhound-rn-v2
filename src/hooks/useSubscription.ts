@@ -11,13 +11,11 @@ import {
   restorePurchases as iapRestore,
   acknowledgePurchase,
   tierIdForSku,
-  type SubscriptionTierId,
-} from '@/lib/iap';
-import {
   purchaseUpdatedListener,
   purchaseErrorListener,
+  type SubscriptionTierId,
   type Purchase,
-} from 'expo-iap';
+} from '@/lib/iap';
 
 // ---------------------------------------------------------------------------
 // Tier model

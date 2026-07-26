@@ -12,9 +12,8 @@ import {
 } from 'react-native';
 import { Button, Card, CardContent } from '@/components/ui';
 import { colors, spacing, typography } from '@/lib/theme';
-import { fetchSubscriptions } from '@/lib/iap';
+import { fetchSubscriptions, type ProductSubscription } from '@/lib/iap';
 import { useSubscription } from '@/hooks/useSubscription';
-import type { ProductSubscription } from 'expo-iap';
 
 const MANAGE_SUBS_URL =
   Platform.OS === 'ios'
