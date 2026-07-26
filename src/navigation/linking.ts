@@ -98,13 +98,19 @@ export const linking: LinkingOptions<any> = {
       },
 
       // Settings
+      // Note: DeleteAccount is NOT registered here as 'settings/delete-account'.
+      // MAIN serves this at unprefixed /delete-account (live-confirmed line 283),
+      // and the same DeleteAccountScreen component is already reachable via
+      // AuthStack.DeleteAccount -> 'delete-account'. Registering it here too
+      // would create a duplicate pattern. In-app navigation from Settings uses
+      // screen name jumps (nav.navigate('DeleteAccount')), which don't need a
+      // URL registration to work.
       SettingsStack: {
         screens: {
           Settings: 'settings',
           NotificationSettings: 'settings/notifications',
           FollowingSettings: 'settings/following',
           CookieSettings: 'settings/privacy',
-          DeleteAccount: 'settings/delete-account',
         },
       },
 
@@ -117,7 +123,7 @@ export const linking: LinkingOptions<any> = {
           PublicScoutProfile: 'scouts/:scoutId',
           InfluencerProfile: 'influencers/:handle',
           InfluencerBlogPost: 'influencers/:handle/blog/:slug',
-          InviteShareCard: 'invite',
+          InviteShareCard: 'invite/share-card',
         },
       },
 

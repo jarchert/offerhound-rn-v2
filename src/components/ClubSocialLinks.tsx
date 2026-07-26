@@ -91,7 +91,12 @@ export function ClubSocialLinks() {
   });
 
   // RN equivalent of `${window.location.origin}/coach/dashboard` — use Expo deep link URL.
-  const profileUrl = Linking.createURL('/coach/dashboard');
+  // Path is '/coach' (not '/coach/dashboard'): RN linking.ts registers the coach
+  // dashboard as `DashboardTab: 'coach'`, so a recipient tapping this custom-scheme
+  // link (offerhoundv2:///coach) lands on the coach dashboard tab. Using
+  // '/coach/dashboard' would 404 inside the RN app itself because that path is
+  // not registered.
+  const profileUrl = Linking.createURL('/coach');
 
   const copyLink = async () => {
     await Clipboard.setStringAsync(profileUrl);

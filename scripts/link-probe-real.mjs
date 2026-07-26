@@ -69,6 +69,12 @@ const cases = [
   ['/scout/some-slug',       null],
   ['/influencer/some-handle', null],
   ['/a/custom-url',          null],
+  // Part 1 batch 2: additional MAIN routes (live-confirmed by user).
+  ['/invite/share-card',     'InviteShareCard'],
+  ['/delete-account',        'DeleteAccount'],
+  // Regression guards: old paths for the batch-2 fixes must be unresolved.
+  ['/invite',                null],
+  ['/settings/delete-account', null],
 ];
 
 function leafName(state) {
