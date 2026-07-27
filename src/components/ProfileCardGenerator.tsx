@@ -26,7 +26,7 @@ import { Button } from '@/components/ui/Button';
 import { toast } from '@/components/ui/toast';
 import { AthletePerformanceRadar } from '@/components/AthletePerformanceRadar';
 import { EventsTable } from '@/components/athlete/SportStatsEditor';
-import { isEventBasedSport } from '@/lib/data/sportPositions';
+import { isEventBasedSport, SPORT_METRICS } from '@/lib/data/sportPositions';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { copyToClipboard, getProfileUrl } from '@/lib/utils';
 import { CardShareActions } from '@/components/CardShareActions';
@@ -126,6 +126,26 @@ export const ProfileCardGenerator = () => {
   // helper so RoleCardGenerator and this file stay in lockstep. No new
   // data source is introduced. `twitter` fallback handled by the helper.
   const socials = collectSocials(profile.social_links, profile.twitter ?? null);
+
+  // Sport-stat strip (Tier 3 #5). For stat-based sports, take the sport's
+  // SPORT_METRICS ordering and pluck values out of profile.sport_stats. Event-
+  // based sports (track/swimming) already render an EventsTable below, so
+  // we skip the strip there. Capped at 4 populated entries to stay compact.
+  const statStripEntries: { key: string; label: string; value: string }[] = (() => {
+    if (!profile.sport || isEventBasedSport(profile.sport)) return [];
+    const metrics = SPORT_METRICS[profile.sport] || [];
+    const raw = (profile.sport_stats as Record<string, unknown> | null | undefined) || {};
+    const out: { key: string; label: string; value: string }[] = [];
+    for (const m of metrics) {
+      const v = raw[m.key];
+      if (v === null || v === undefined || v === '') continue;
+      const s2 = String(v).trim();
+      if (!s2) continue;
+      out.push({ key: m.key, label: m.label, value: s2 });
+      if (out.length >= 4) break;
+    }
+    return out;
+  })();
 
   return (
     <View style={s.wrap}>
@@ -265,6 +285,19 @@ export const ProfileCardGenerator = () => {
                 );
               })}
             </View>
+          </View>
+        )}
+
+        {/* Sport-stat strip (Tier 3 #5) — compact headline stats for stat-based
+            sports. Event-based sports use the EventsTable below instead. */}
+        {statStripEntries.length > 0 && (
+          <View style={s.statStrip}>
+            {statStripEntries.map((entry) => (
+              <View key={entry.key} style={s.statStripCell}>
+                <Text style={s.statStripValue} numberOfLines={1}>{entry.value}</Text>
+                <Text style={s.statStripLabel} numberOfLines={1}>{entry.label}</Text>
+              </View>
+            ))}
           </View>
         )}
 
@@ -450,6 +483,36 @@ const s = StyleSheet.create({
     fontFamily: typography.fontFamily.body,
     fontSize: 11,
     color: colors.foreground,
+  },
+
+  statStrip: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.muted,
+    paddingVertical: 8,
+  },
+  statStripCell: {
+    flexGrow: 1,
+    flexBasis: '25%',
+    minWidth: 80,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    alignItems: 'center',
+  },
+  statStripValue: {
+    fontFamily: typography.fontFamily.bodyBold,
+    fontSize: typography.fontSize.base,
+    color: colors.foreground,
+  },
+  statStripLabel: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: 10,
+    color: colors.mutedForeground,
+    textAlign: 'center',
+    marginTop: 2,
   },
 
   eventsWrap: {
