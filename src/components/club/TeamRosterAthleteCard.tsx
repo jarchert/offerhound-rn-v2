@@ -40,6 +40,7 @@ import {
   Send,
 } from 'lucide-react-native';
 import { colors, spacing, typography } from '@/lib/theme';
+import { RosterTransferButton } from '@/components/club/RosterTransferButton';
 
 interface RosterRow {
   id: string;
@@ -74,6 +75,8 @@ interface Props {
   onParentInvite: (id: string, currentEmail: string | null) => void;
   onRemove: (id: string) => void;
   onSendLetter: (athleteProfileId: string, athleteName: string) => void;
+  /** The team this roster entry belongs to — used by RosterTransferButton. */
+  sourceTeamId?: string;
 }
 
 /**
@@ -91,6 +94,7 @@ export function TeamRosterAthleteCard({
   onParentInvite,
   onRemove,
   onSendLetter,
+  sourceTeamId,
 }: Props) {
   const navigation = useNavigation<any>();
   const [expanded, setExpanded] = useState(false);
@@ -355,6 +359,13 @@ export function TeamRosterAthleteCard({
                     <Text style={s.tinyBadgeText}>Awaiting Parent</Text>
                   </View>
                 </Badge>
+              ) : null}
+              {roster.athlete_profile_id && sourceTeamId ? (
+                <RosterTransferButton
+                  athleteProfileId={roster.athlete_profile_id}
+                  athleteName={displayName}
+                  sourceTeamId={sourceTeamId}
+                />
               ) : null}
               <Pressable
                 onPress={() => onRemove(roster.id)}

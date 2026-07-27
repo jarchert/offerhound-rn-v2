@@ -13,7 +13,7 @@ import {
   Loader2, Users, Search, Eye, LogOut, LayoutDashboard, MessageSquare,
   UserCog, Trophy, School, Mail, UserPlus, Image as ImageIcon, Calendar, Contact,
   Share2, Star, GraduationCap, Save, Telescope, FileCheck, Film, Award,
-  Sparkles, RefreshCw, Target,
+  Sparkles, RefreshCw, Target, ArrowRightLeft,
 } from 'lucide-react-native';
 import { useQuery } from '@tanstack/react-query';
 
@@ -43,6 +43,7 @@ import { HSCoachEndorsementComposer } from '@/components/hs-coach/HSCoachEndorse
 import { HSCoachReferralPanel } from '@/components/hs-coach/HSCoachReferralPanel';
 import { HSCoachTranscriptVerificationTab } from '@/components/hs-coach/HSCoachTranscriptVerificationTab';
 import { HSCoachFilmVerificationTab } from '@/components/hs-coach/HSCoachFilmVerificationTab';
+import { TransferRequestsScreen } from '@/screens/hs-coach/TransferRequestsScreen';
 import { ShareRoleCardDialog } from '@/components/ShareRoleCardDialog';
 import { AthleteMatchCard } from '@/components/athlete/AthleteMatchCard';
 
@@ -282,6 +283,7 @@ export default function HSCoachDashboardScreen() {
               <TabsTrigger value="discover"><TabLabel icon={Telescope} label="Coaches & Scouts" /></TabsTrigger>
               <TabsTrigger value="athletes"><TabLabel icon={Star} label="Saved" /></TabsTrigger>
               <TabsTrigger value="profile"><TabLabel icon={Eye} label="Profile" /></TabsTrigger>
+              <TabsTrigger value="transfers"><TabLabel icon={ArrowRightLeft} label="Transfers" /></TabsTrigger>
             </TabsList>
 
             {/* Overview */}
@@ -529,6 +531,11 @@ export default function HSCoachDashboardScreen() {
             {/* Profile Tab */}
             <TabsContent value="profile">
               <HSCoachProfileEditor profile={profileAny} onUpdate={updateProfile} />
+            </TabsContent>
+
+            {/* Transfers Tab */}
+            <TabsContent value="transfers">
+              <TransferRequestsScreen />
             </TabsContent>
           </Tabs>
 
