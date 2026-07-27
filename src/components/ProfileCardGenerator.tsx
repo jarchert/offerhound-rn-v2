@@ -18,7 +18,7 @@
 
 import React, { useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Copy, MapPin, GraduationCap, Ruler, Weight, Zap } from 'lucide-react-native';
+import { Copy, MapPin, GraduationCap, Ruler, Weight, Zap, Mail, Phone } from 'lucide-react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
@@ -60,6 +60,40 @@ export const ProfileCardGenerator = () => {
     { label: '40-Yard', value: profile.forty_yard ? `${profile.forty_yard}s` : null, icon: Zap },
     { label: 'GPA', value: profile.gpa, icon: GraduationCap },
   ].filter((m) => m.value);
+
+  // Contact-visibility gating (Tier 3 #1): show email/phone on the card only
+  // when BOTH the field is non-empty AND the athlete has explicitly opted in
+  // via share_email_publicly / share_phone_publicly on player_profiles.
+  // If neither survives the gate, the entire contact section is omitted so
+  // captured/shared images never leak contact info the athlete hasn't shared.
+  const visibleEmail =
+    profile.share_email_publicly === true && typeof profile.email === 'string' && profile.email.trim()
+      ? profile.email.trim()
+      : null;
+  const visiblePhone =
+    profile.share_phone_publicly === true && typeof profile.phone === 'string' && profile.phone.trim()
+      ? profile.phone.trim()
+      : null;
+  type ContactRow = {
+    key: string;
+    label: string;
+    value: string;
+    icon: (size: number, color: string) => React.ReactNode;
+  };
+  const contactRows: ContactRow[] = [
+    visibleEmail && {
+      key: 'email',
+      label: 'Email',
+      value: visibleEmail,
+      icon: (size: number, color: string) => <Mail size={size} color={color} />,
+    },
+    visiblePhone && {
+      key: 'phone',
+      label: 'Phone',
+      value: visiblePhone,
+      icon: (size: number, color: string) => <Phone size={size} color={color} />,
+    },
+  ].filter(Boolean) as ContactRow[];
 
   return (
     <View style={s.wrap}>
@@ -127,6 +161,25 @@ export const ProfileCardGenerator = () => {
             )}
           </View>
         </View>
+
+        {/* Contact info (Tier 3 #1) — gated by share_email_publicly / share_phone_publicly.
+            Rendered inside the capture region so the QR image reflects visible contact state.
+            When both flags are off, the whole section is skipped. */}
+        {contactRows.length > 0 && (
+          <View style={s.contactGrid}>
+            {contactRows.map((item) => (
+              <View key={item.key} style={s.contactRow}>
+                <View style={s.contactInner}>
+                  {item.icon(14, colors.mutedForeground)}
+                  <View style={s.contactText}>
+                    <Text style={s.contactLabel}>{item.label}</Text>
+                    <Text style={s.contactValue} numberOfLines={1}>{item.value}</Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Events Table — Track & Field / Swimming */}
         {isEventBasedSport(profile.sport) && profile.sport_stats && (
@@ -246,6 +299,32 @@ const s = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.foreground,
     textAlign: 'center',
+  },
+
+  contactGrid: { gap: spacing.xs },
+  contactRow: {
+    minWidth: 0,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 8,
+  },
+  contactInner: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, minWidth: 0 },
+  contactText: { flex: 1, minWidth: 0 },
+  contactLabel: {
+    fontFamily: typography.fontFamily.bodySemiBold,
+    fontSize: 10,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    color: colors.mutedForeground,
+  },
+  contactValue: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: 13,
+    lineHeight: 17,
+    color: colors.foreground,
   },
 
   eventsWrap: {
