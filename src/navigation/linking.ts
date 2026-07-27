@@ -94,6 +94,12 @@ export const linking: LinkingOptions<any> = {
           CampEvaluatorScoring: 'coach/camps/:campId/evaluate',
           CampLeaderboardEmbed: 'embed/leaderboard/:campId',
           UnsubscribeCampAlerts: 'unsubscribe/camp-alerts',
+          // Legacy alias for the stale /camps/unsubscribe URL used before
+          // MAIN moved to /unsubscribe/camp-alerts. Without this, the bare
+          // path falls through to CampDetail's 'camps/:campId' param
+          // pattern and tries to load a camp with id='unsubscribe'.
+          // Silent recovery: same UnsubscribeCampAlertsScreen component.
+          UnsubscribeCampAlertsLegacy: 'camps/unsubscribe',
         },
       },
 

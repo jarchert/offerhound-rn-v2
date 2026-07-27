@@ -96,6 +96,11 @@ const cases = [
   // NOT a regression from this change. Nothing in the codebase constructs
   // /camps/unsubscribe as an outbound URL, and MAIN uses /unsubscribe/camp-alerts
   // now anyway, so the collision is harmless.
+  // UPDATE 2026-07-27: Silent recovery alias added — /camps/unsubscribe now
+  // routes to UnsubscribeCampAlertsLegacy (same underlying component as the
+  // real unsubscribe screen). Explicit static match wins over the :campId
+  // param pattern, so stale email links land on the real screen.
+  ['/camps/unsubscribe',             'UnsubscribeCampAlertsLegacy'],
   // Non-regression: CampsList (RN-only, no MAIN equivalent, must still work).
   ['/camps/list',                    'CampsList'],
 ];
