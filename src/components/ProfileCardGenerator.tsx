@@ -18,7 +18,7 @@
 
 import React, { useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Copy, MapPin, GraduationCap, Ruler, Weight, Zap, Mail, Phone } from 'lucide-react-native';
+import { Copy, MapPin, GraduationCap, Ruler, Weight, Zap, Mail, Phone, Shield, Star } from 'lucide-react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
@@ -95,6 +95,13 @@ export const ProfileCardGenerator = () => {
     },
   ].filter(Boolean) as ContactRow[];
 
+  // Verified shield + star rating (Tier 3 #2). Both are optional adornments
+  // on the header. Star rating is a Postgres integer (probe: eq.5.0 → 22P02),
+  // so we clamp to [0,5] and only render when the rounded value is > 0.
+  const isVerified = profile.is_verified === true;
+  const rawStars = typeof profile.star_rating === 'number' ? profile.star_rating : 0;
+  const starCount = Math.max(0, Math.min(5, Math.round(rawStars)));
+
   return (
     <View style={s.wrap}>
       {/* Capture region: card + radar */}
@@ -110,9 +117,19 @@ export const ProfileCardGenerator = () => {
                 fallback={initials}
               />
               <View style={s.identityMeta}>
-                <Text style={s.name} numberOfLines={1}>
-                  {name}
-                </Text>
+                <View style={s.nameRow}>
+                  <Text style={s.name} numberOfLines={1}>
+                    {name}
+                  </Text>
+                  {isVerified && (
+                    <Shield
+                      size={16}
+                      color={colors.primary}
+                      style={s.verifiedShield}
+                      accessibilityLabel="Verified athlete"
+                    />
+                  )}
+                </View>
                 <View style={s.metaRow}>
                   {!!profile.position && <Text style={s.position}>{profile.position}</Text>}
                   {!!profile.position && !!profile.graduation_year && (
@@ -140,6 +157,29 @@ export const ProfileCardGenerator = () => {
                 </View>
               </View>
             </View>
+
+            {/* Star rating (Tier 3 #2) — renders 5 stars, first N filled based on
+                player_profiles.star_rating (integer, clamped to [0,5]). Hidden
+                when rating is 0/null/absent. Placed under identity meta so it
+                reads as a credential, not a decoration. */}
+            {starCount > 0 && (
+              <View
+                style={s.starRow}
+                accessibilityLabel={`Rated ${starCount} out of 5 stars`}
+              >
+                {[0, 1, 2, 3, 4].map((i) => {
+                  const filled = i < starCount;
+                  return (
+                    <Star
+                      key={i}
+                      size={14}
+                      color={colors.primary}
+                      fill={filled ? colors.primary : 'transparent'}
+                    />
+                  );
+                })}
+              </View>
+            )}
 
             {/* Badges */}
             <View style={s.badgeRow}>
@@ -252,12 +292,16 @@ const s = StyleSheet.create({
 
   identityRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   identityMeta: { flex: 1, minWidth: 0, gap: 2 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minWidth: 0 },
+  verifiedShield: { marginTop: 1 },
   name: {
+    flexShrink: 1,
     fontFamily: typography.fontFamily.heading,
     fontSize: typography.fontSize.xl,
     color: colors.foreground,
     letterSpacing: typography.letterSpacing.heading,
   },
+  starRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.xs },
   position: {
     fontFamily: typography.fontFamily.bodyMedium,
