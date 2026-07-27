@@ -34,6 +34,34 @@ import { buildMecard } from '@/lib/mecard';
 import { socialIcons, collectSocials } from '@/lib/socialCardIcons';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
+// Card theming (Tier 3 #7)
+// card_theme maps a preset name to an accent hex; accent_color is a free-form
+// hex override stored directly on player_profiles. Resolution order:
+//   1. accent_color (freeform hex, wins if present)
+//   2. card_theme  (preset name → hex lookup)
+//   3. colors.primary (fallback — matches pre-Tier-3 behavior)
+const CARD_THEME_PRESETS: Record<string, string> = {
+  classic: colors.primary,       // default brand colour
+  midnight: '#1e3a5f',           // deep navy
+  forest:   '#2d6a4f',           // deep green
+  ocean:    '#0077b6',           // ocean blue
+  flame:    '#d62828',           // bold red
+  gold:     '#f4a261',           // warm amber
+  slate:    '#475569',           // cool grey
+  rose:     '#be185d',           // deep rose
+};
+
+function resolveAccent(cardTheme: unknown, accentColor: unknown): string {
+  if (typeof accentColor === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(accentColor.trim())) {
+    return accentColor.trim();
+  }
+  if (typeof cardTheme === 'string' && cardTheme.trim()) {
+    const preset = CARD_THEME_PRESETS[cardTheme.trim().toLowerCase()];
+    if (preset) return preset;
+  }
+  return colors.primary;
+}
+
 export const ProfileCardGenerator = () => {
   const { profile } = usePlayerProfile() as any;
   const cardRef = useRef<View>(null);
@@ -62,6 +90,10 @@ export const ProfileCardGenerator = () => {
     { label: '40-Yard', value: profile.forty_yard ? `${profile.forty_yard}s` : null, icon: Zap },
     { label: 'GPA', value: profile.gpa, icon: GraduationCap },
   ].filter((m) => m.value);
+
+  // Card theming (Tier 3 #7) — resolved once per render; used inline on accent
+  // bar and verified-shield so the static StyleSheet stays intact for perf.
+  const accentColor = resolveAccent(profile.card_theme, profile.accent_color);
 
   // Contact-visibility gating (Tier 3 #1): show email/phone on the card only
   // when BOTH the field is non-empty AND the athlete has explicitly opted in
@@ -153,7 +185,7 @@ export const ProfileCardGenerator = () => {
       <View ref={cardRef} collapsable={false} style={s.capture}>
         {/* Player Card Header */}
         <View style={s.header}>
-          <View style={s.accentBar} />
+          <View style={[s.accentBar, { backgroundColor: accentColor }]} />
           <View style={s.headerBody}>
             <View style={s.identityRow}>
               <Avatar
@@ -169,7 +201,7 @@ export const ProfileCardGenerator = () => {
                   {isVerified && (
                     <Shield
                       size={16}
-                      color={colors.primary}
+                      color={accentColor}
                       style={s.verifiedShield}
                       accessibilityLabel="Verified athlete"
                     />
@@ -218,8 +250,8 @@ export const ProfileCardGenerator = () => {
                     <Star
                       key={i}
                       size={14}
-                      color={colors.primary}
-                      fill={filled ? colors.primary : 'transparent'}
+                      color={accentColor}
+                      fill={filled ? accentColor : 'transparent'}
                     />
                   );
                 })}
