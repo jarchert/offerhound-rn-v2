@@ -141,7 +141,7 @@ export default function AgencyDashboardScreen() {
             <Button
               variant="outline" size="sm"
               leftIcon={<TrendingUp size={14} color={colors.primary} />}
-              onPress={() => (nav.getParent() as any)?.navigate('ScoutTabs', { screen: 'TrendsTab' })}
+              onPress={() => nav.navigate('ScoutTrends' as never)}
             >
               Trends
             </Button>

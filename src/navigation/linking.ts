@@ -74,32 +74,43 @@ export const linking: LinkingOptions<any> = {
       },
 
       // Camp ecosystem (shared across roles)
+      // Note: the bare 'camps' path is intentionally NOT registered here. It is
+      // claimed by the top-level SavedCamps screen below, matching Lovable MAIN
+      // (src/components/AnimatedRoutes.tsx line 171: `<Route path="/camps"
+      // element={<SavedCamps />} />`) and MAIN's global Navbar link. Camp browse
+      // is reached via 'camps/discover' (CampsDiscover) which is the alt path
+      // MAIN redirects to its /camp-discovery page.
       CampStack: {
         screens: {
-          CampDiscovery: 'camps',
           CampsList: 'camps/list',
           CampsDiscover: 'camps/discover',
           ClaimCampSpot: 'camps/claim',
           CampDetail: 'camps/:campId',
           CampLeaderboard: 'camps/:campId/leaderboard',
-          CampDeliverables: 'camps/:campId/deliverables/:enrollmentId',
-          CampSpectator: 'spectator/:token',
-          CampStaffCheckin: 'staff-checkin/:token',
-          CampMobileCheckin: 'camps/:campId/mobile-checkin',
-          CampEvaluatorScoring: 'camps/:campId/score',
-          CampLeaderboardEmbed: 'camps/:campId/leaderboard-embed',
-          UnsubscribeCampAlerts: 'camps/unsubscribe',
+          CampDeliverables: 'camps/:campId/enrollments/:enrollmentId/deliverables',
+          CampSpectator: 'camp/spectator/:token',
+          CampStaffCheckin: 'camp/staff-checkin/:token',
+          CampMobileCheckin: 'coach/camps/:campId/checkin',
+          CampEvaluatorScoring: 'coach/camps/:campId/evaluate',
+          CampLeaderboardEmbed: 'embed/leaderboard/:campId',
+          UnsubscribeCampAlerts: 'unsubscribe/camp-alerts',
         },
       },
 
       // Settings
+      // Note: DeleteAccount is NOT registered here as 'settings/delete-account'.
+      // MAIN serves this at unprefixed /delete-account (live-confirmed line 283),
+      // and the same DeleteAccountScreen component is already reachable via
+      // AuthStack.DeleteAccount -> 'delete-account'. Registering it here too
+      // would create a duplicate pattern. In-app navigation from Settings uses
+      // screen name jumps (nav.navigate('DeleteAccount')), which don't need a
+      // URL registration to work.
       SettingsStack: {
         screens: {
           Settings: 'settings',
           NotificationSettings: 'settings/notifications',
           FollowingSettings: 'settings/following',
           CookieSettings: 'settings/privacy',
-          DeleteAccount: 'settings/delete-account',
         },
       },
 
@@ -107,12 +118,12 @@ export const linking: LinkingOptions<any> = {
       PublicProfileStack: {
         screens: {
           PublicProfile: 'p/:customUrl',
-          AthleteProfileByUrl: 'a/:customUrl',
+          AthleteProfileByUrl: 'athlete/:customUrl',
           ProfileLegacy: 'profile/:customUrl',
-          PublicScoutProfile: 'scout/:scoutId',
-          InfluencerProfile: 'influencer/:handle',
-          InfluencerBlogPost: 'influencer/:handle/blog/:slug',
-          InviteShareCard: 'invite',
+          PublicScoutProfile: 'scouts/:scoutId',
+          InfluencerProfile: 'influencers/:handle',
+          InfluencerBlogPost: 'influencers/:handle/blog/:slug',
+          InviteShareCard: 'invite/share-card',
         },
       },
 
@@ -139,11 +150,16 @@ export const linking: LinkingOptions<any> = {
       },
 
       // Scout role tabs
+      // Note: 'scout/trends' is intentionally NOT registered here. TrendsTab
+      // was dropped from the ScoutTabs navigator in Build 25 (see
+      // src/navigation/role/ScoutTabs.tsx). The path is owned by the top-level
+      // ScoutTrends screen below, matching Lovable MAIN
+      // (src/components/AnimatedRoutes.tsx line 196: `<Route path="/scout/trends"
+      // element={<ScoutTrends />} />`).
       ScoutTabs: {
         screens: {
           DashboardTab: 'scout',
           LettersTab: 'scout/letters',
-          TrendsTab: 'scout/trends',
           OnboardingTab: 'scout/guide',
         },
       },

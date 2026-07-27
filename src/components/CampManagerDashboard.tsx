@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { View, Text, ScrollView, Pressable, TextInput, Switch as RNSwitch, Linking, Platform } from "react-native";
+import { useNavigation } from '@react-navigation/native';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -64,6 +65,7 @@ interface CampManagerDashboardProps {
 }
 
 export function CampManagerDashboard({ sport = "football" }: CampManagerDashboardProps) {
+  const nav = useNavigation<any>();
   const { data: camps = [], isLoading } = useCamps();
   const createCamp = useCreateCamp();
   const updateCamp = useUpdateCamp();
@@ -204,8 +206,8 @@ export function CampManagerDashboard({ sport = "football" }: CampManagerDashboar
       <ScrollView contentContainerStyle={{ gap: spacing.md, padding: spacing.md }}>
         <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.xs }}>
           <Button variant="ghost" size="sm" onPress={() => setOpsCamp(null)} leftIcon={<ArrowLeft size={16} color={colors.foreground} />}>Back to Camps</Button>
-          <Button variant="outline" size="sm" onPress={() => Linking.openURL(`/coach/camps/${opsCamp.id}/checkin`)}>📱 Mobile check-in</Button>
-          <Button variant="outline" size="sm" onPress={() => Linking.openURL(`/coach/camps/${opsCamp.id}/evaluate`)}>🏃 Evaluator scoring</Button>
+          <Button variant="outline" size="sm" onPress={() => nav.navigate('CampStack' as any, { screen: 'CampMobileCheckin', params: { campId: opsCamp.id } })}>📱 Mobile check-in</Button>
+          <Button variant="outline" size="sm" onPress={() => nav.navigate('CampStack' as any, { screen: 'CampEvaluatorScoring', params: { campId: opsCamp.id } })}>🏃 Evaluator scoring</Button>
           <Button variant="outline" size="sm" onPress={() => Linking.openURL(`/camps/${opsCamp.id}/leaderboard`)}>🏆 Live leaderboard</Button>
         </View>
         <CampCheckInOps campId={opsCamp.id} campName={opsCamp.name} drillStations={(opsCamp as any).drill_stations || []} positions={opsCamp.positions || []} />
