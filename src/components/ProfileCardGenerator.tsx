@@ -30,6 +30,7 @@ import { isEventBasedSport } from '@/lib/data/sportPositions';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { copyToClipboard, getProfileUrl } from '@/lib/utils';
 import { CardShareActions } from '@/components/CardShareActions';
+import { buildMecard } from '@/lib/mecard';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
 export const ProfileCardGenerator = () => {
@@ -101,6 +102,23 @@ export const ProfileCardGenerator = () => {
   const isVerified = profile.is_verified === true;
   const rawStars = typeof profile.star_rating === 'number' ? profile.star_rating : 0;
   const starCount = Math.max(0, Math.min(5, Math.round(rawStars)));
+
+  // MECARD QR payload (Tier 3 #3). Uses the shared helper so this file and
+  // RoleCardGenerator stay in lockstep. Critically, we pass ONLY the gated
+  // visibleEmail / visiblePhone values from Tier 3 #1 — so the QR never
+  // encodes contact info the athlete hasn't opted to share. When neither
+  // survives the gate, the payload is just N:<name>;URL:<profileUrl>;; and
+  // the QR still functions as a link, matching the pre-Tier-3 behavior.
+  const qrPayload = buildMecard({
+    name,
+    phone: visiblePhone,
+    email: visibleEmail,
+    organization: profile.school ?? null,
+    title: profile.position ?? null,
+    location:
+      profile.city && profile.state ? `${profile.city}, ${profile.state}` : profile.state ?? null,
+    url: profileUrl,
+  });
 
   return (
     <View style={s.wrap}>
@@ -248,13 +266,13 @@ export const ProfileCardGenerator = () => {
         {/* QR Code (inside capture) */}
         <View style={s.qrRow}>
           <View style={s.qrBox}>
-            <QRCode value={profileUrl} size={72} color={colors.foreground} backgroundColor={colors.card} />
+            <QRCode value={qrPayload} size={72} color={colors.foreground} backgroundColor={colors.card} />
           </View>
           <View style={s.qrMeta}>
             <Text style={s.qrUrl} numberOfLines={1}>
               {profileUrl}
             </Text>
-            <Text style={s.qrHint}>Scan to view full profile</Text>
+            <Text style={s.qrHint}>Scan to save contact</Text>
           </View>
         </View>
       </View>

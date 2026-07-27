@@ -28,6 +28,7 @@ import { Copy, Mail, Phone, MapPin, Building, Shield } from 'lucide-react-native
 import { FontAwesome5, FontAwesome6 } from '@expo/vector-icons';
 import { copyToClipboard } from '@/lib/utils';
 import { CardShareActions } from '@/components/CardShareActions';
+import { buildMecard } from '@/lib/mecard';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
 interface RoleCardGeneratorProps {
@@ -189,18 +190,18 @@ export const RoleCardGenerator = ({ role }: RoleCardGeneratorProps) => {
       ? `${WEB_ORIGIN}/coaches`
       : `${WEB_ORIGIN}/`;
 
-  // QR payload: encode a MECARD so any phone scanner can save the contact directly.
-  const escapeMecard = (s2: string) => (s2 || '').replace(/([\\;,:])/g, '\\$1');
-  const mecardParts = [
-    `N:${escapeMecard(data.name)}`,
-    data.phone ? `TEL:${escapeMecard(data.phone)}` : '',
-    data.email ? `EMAIL:${escapeMecard(data.email)}` : '',
-    data.organization ? `ORG:${escapeMecard(data.organization)}` : '',
-    data.title ? `TITLE:${escapeMecard(data.title)}` : '',
-    data.location ? `ADR:${escapeMecard(data.location)}` : '',
-    `URL:${escapeMecard(publicWebUrl)}`,
-  ].filter(Boolean);
-  const mecard = `MECARD:${mecardParts.join(';')};;`;
+  // QR payload: encode a MECARD so any phone scanner can save the contact
+  // directly. Delegated to shared helper (@/lib/mecard) so ProfileCardGenerator
+  // uses the exact same escaping + field ordering (Tier 3 #3).
+  const mecard = buildMecard({
+    name: data.name,
+    phone: data.phone,
+    email: data.email,
+    organization: data.organization,
+    title: data.title,
+    location: data.location,
+    url: publicWebUrl,
+  });
 
   const qrPayload = role === 'scout' ? publicWebUrl : mecard;
   const cardUrl = publicWebUrl;
