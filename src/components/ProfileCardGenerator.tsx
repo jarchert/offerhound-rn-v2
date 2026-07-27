@@ -244,6 +244,15 @@ export const ProfileCardGenerator = () => {
                 ))}
               </View>
             )}
+
+            {/* Bio line (Tier 3 #6) — player_profiles.bio rendered inside the
+                header card so captured images include the athlete's own blurb.
+                Clamped to 3 lines; hidden entirely when absent or empty. */}
+            {!!profile.bio && (
+              <Text style={s.bio} numberOfLines={3}>
+                {String(profile.bio).trim()}
+              </Text>
+            )}
           </View>
         </View>
 
@@ -423,6 +432,13 @@ const s = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.foreground,
     textAlign: 'center',
+  },
+
+  bio: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.sm,
+    lineHeight: 20,
+    color: colors.mutedForeground,
   },
 
   contactGrid: { gap: spacing.xs },
