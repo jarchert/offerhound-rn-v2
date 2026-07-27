@@ -51,6 +51,7 @@ import { PublishPaywallDialog } from '@/components/PublishPaywallDialog';
 import { QRShareCard } from '@/components/QRShareCard';
 
 import { SportType } from '@/lib/data/sports';
+import { CoppaParentVerificationGate } from '@/components/CoppaParentVerificationGate';
 import { colors, typography, spacing } from '@/lib/theme';
 
 type Section = 'media' | 'sports' | 'references' | 'links' | 'share';
@@ -191,6 +192,14 @@ export default function AthleteProfileEditScreen() {
         contentContainerStyle={s.content}
         refreshControl={<RefreshControl refreshing={refreshing_} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
+        {/* Minor-Safe Profiles (Tier 2): COPPA gate shown at top of edit screen
+            for under-13 athletes. Renders nothing for 13+ or verified minors. */}
+        <CoppaParentVerificationGate
+          athleteUserId={user.id}
+          athleteProfileId={athleteId}
+          dateOfBirth={(profile as any).date_of_birth}
+        />
+
         <Tabs value={section} onValueChange={(v) => setSection(v as Section)}>
           <TabsList>
             <TabsTrigger value="media">Media</TabsTrigger>
