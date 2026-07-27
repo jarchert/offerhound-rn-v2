@@ -25,25 +25,15 @@ import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { useToast } from '@/hooks/use-toast';
 import { Copy, Mail, Phone, MapPin, Building, Shield } from 'lucide-react-native';
-import { FontAwesome5, FontAwesome6 } from '@expo/vector-icons';
 import { copyToClipboard } from '@/lib/utils';
 import { CardShareActions } from '@/components/CardShareActions';
 import { buildMecard } from '@/lib/mecard';
+import { socialIcons, collectSocials } from '@/lib/socialCardIcons';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
 interface RoleCardGeneratorProps {
   role: 'coach' | 'club_coach' | 'scout' | 'hs_coach';
 }
-
-type IconRender = (size: number, color: string) => React.ReactNode;
-const socialIcons: Record<string, IconRender> = {
-  instagram: (size, color) => <FontAwesome5 name="instagram" size={size} color={color} />,
-  facebook: (size, color) => <FontAwesome5 name="facebook" size={size} color={color} />,
-  x: (size, color) => <FontAwesome6 name="x-twitter" size={size} color={color} />,
-  twitter: (size, color) => <FontAwesome6 name="x-twitter" size={size} color={color} />,
-  tiktok: (size, color) => <FontAwesome5 name="tiktok" size={size} color={color} />,
-  youtube: (size, color) => <FontAwesome5 name="youtube" size={size} color={color} />,
-};
 
 // GAP: RN has no window.location.origin. Use stable web baseUrl from app config.
 const WEB_ORIGIN: string =
@@ -211,17 +201,9 @@ export const RoleCardGenerator = ({ role }: RoleCardGeneratorProps) => {
     toast({ title: ok ? 'Profile link copied!' : 'Failed to copy link' });
   };
 
-  // Collect social links
-  const socials: { platform: string; url: string }[] = [];
-  if (data.socialLinks && typeof data.socialLinks === 'object') {
-    Object.entries(data.socialLinks as Record<string, string>).forEach(([key, val]) => {
-      if (val) socials.push({ platform: key.toLowerCase(), url: val });
-    });
-  }
-  if (data.twitter && !socials.find((sx) => sx.platform === 'twitter' || sx.platform === 'x')) {
-    const handle = data.twitter.replace(/^@/, '');
-    socials.push({ platform: 'x', url: `https://x.com/${handle}` });
-  }
+  // Collect social links via shared helper (@/lib/socialCardIcons) so this
+  // matches ProfileCardGenerator's read shape 1:1 (Tier 3 #4).
+  const socials = collectSocials(data.socialLinks, data.twitter);
 
   const roleLabel =
     role === 'club_coach'

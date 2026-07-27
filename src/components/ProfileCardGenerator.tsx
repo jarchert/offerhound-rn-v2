@@ -31,6 +31,7 @@ import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { copyToClipboard, getProfileUrl } from '@/lib/utils';
 import { CardShareActions } from '@/components/CardShareActions';
 import { buildMecard } from '@/lib/mecard';
+import { socialIcons, collectSocials } from '@/lib/socialCardIcons';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
 export const ProfileCardGenerator = () => {
@@ -119,6 +120,12 @@ export const ProfileCardGenerator = () => {
       profile.city && profile.state ? `${profile.city}, ${profile.state}` : profile.state ?? null,
     url: profileUrl,
   });
+
+  // Social links (Tier 3 #4). Reads player_profiles.social_links (JSON) —
+  // the exact column SocialLinksManager writes to — through the shared
+  // helper so RoleCardGenerator and this file stay in lockstep. No new
+  // data source is introduced. `twitter` fallback handled by the helper.
+  const socials = collectSocials(profile.social_links, profile.twitter ?? null);
 
   return (
     <View style={s.wrap}>
@@ -236,6 +243,28 @@ export const ProfileCardGenerator = () => {
                 </View>
               </View>
             ))}
+          </View>
+        )}
+
+        {/* Social links (Tier 3 #4) — rendered inside the capture region
+            so the shared image includes the athlete's social handles.
+            Icons come from FontAwesome via the shared @/lib/socialCardIcons
+            map; platforms without an icon render text-only. Section is
+            hidden entirely when social_links is empty/absent. */}
+        {socials.length > 0 && (
+          <View style={s.socialsBox}>
+            <Text style={s.socialsLabel}>Social</Text>
+            <View style={s.socialsRow}>
+              {socials.map((social, index) => {
+                const renderIcon = socialIcons[social.platform];
+                return (
+                  <View key={`${social.platform}-${index}`} style={s.socialPill}>
+                    {renderIcon ? renderIcon(12, colors.foreground) : null}
+                    <Text style={s.socialText}>{social.platform}</Text>
+                  </View>
+                );
+              })}
+            </View>
           </View>
         )}
 
@@ -386,6 +415,40 @@ const s = StyleSheet.create({
     fontFamily: typography.fontFamily.body,
     fontSize: 13,
     lineHeight: 17,
+    color: colors.foreground,
+  },
+
+  socialsBox: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 8,
+  },
+  socialsLabel: {
+    fontFamily: typography.fontFamily.bodySemiBold,
+    fontSize: 10,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    color: colors.mutedForeground,
+    marginBottom: 8,
+  },
+  socialsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  socialPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.muted,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  socialText: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: 11,
     color: colors.foreground,
   },
 
