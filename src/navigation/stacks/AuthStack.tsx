@@ -10,6 +10,7 @@ import LandingScreen from '@/screens/auth/LandingScreen';
 import AuthScreen from '@/screens/auth/AuthScreen';
 import ParentalConsentScreen from '@/screens/auth/ParentalConsentScreen';
 import ConsentVisibilityScreen from '@/screens/auth/ConsentVisibilityScreen';
+import VisibilityDecisionScreen from '@/screens/parent/VisibilityDecisionScreen';
 import BetaRegisterScreen from '@/screens/auth/BetaRegisterScreen';
 import PasswordResetScreen from '@/screens/auth/PasswordResetScreen';
 import DeleteAccountScreen from '@/screens/shared/DeleteAccountScreen';
@@ -29,6 +30,7 @@ export type AuthStackParamList = {
   BetaRegister: undefined;
   ParentalConsent: undefined;
   RosterTransferConsent: { token: string };
+  VisibilityDecision: { proposalId: string };
   DeleteAccount: undefined;
   PasswordReset: undefined;
   PrivacyPolicy: undefined;
@@ -58,6 +60,7 @@ export default function AuthStack() {
       <Stack.Screen name="BetaRegister" component={BetaRegisterScreen} />
       <Stack.Screen name="ParentalConsent" component={ParentalConsentScreen} />
       <Stack.Screen name="RosterTransferConsent" component={ConsentVisibilityScreen} />
+      <Stack.Screen name="VisibilityDecision" component={VisibilityDecisionScreen} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
       <Stack.Screen name="PasswordReset" component={PasswordResetScreen} />
       {/* Legal screens — reachable directly from Footer deep-links */}

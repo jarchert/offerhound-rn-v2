@@ -54,6 +54,7 @@ export const linking: LinkingOptions<any> = {
           BetaRegister: 'beta-register',
           ParentalConsent: 'parental-consent',
           RosterTransferConsent: 'roster-transfer-consent',
+          VisibilityDecision: 'visibility-decision',
           DeleteAccount: 'delete-account',
           PasswordReset: 'reset-password',
         },
