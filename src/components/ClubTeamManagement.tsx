@@ -530,7 +530,6 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
                           { surface: "club-team-roster" },
                         );
                       }}
-                      sourceTeamId={selectedTeamId ?? undefined}
                     />
                   ))}
                 </View>
