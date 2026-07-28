@@ -14,11 +14,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
 import { TeamRosterAthleteCard } from "@/components/club/TeamRosterAthleteCard";
+import { ClubTransferRequests } from "@/components/club/ClubTransferRequests";
+import { Switch } from "@/components/ui/Switch";
 import { useToast } from "@/hooks/use-toast";
 import { useLetterCenter } from "@/hooks/useLetterCenter";
 import {
   Users, UserPlus, Loader2, Shield, Edit, Copy, Archive, Mail, Upload,
-  ChevronRight, ArrowLeft, Plus, CheckCircle2, Link2,
+  ChevronRight, ArrowLeft, Plus, CheckCircle2, Link2, Eye,
 } from "lucide-react-native";
 import { colors, typography, spacing } from "@/lib/theme";
 
@@ -39,11 +41,13 @@ const LEVELS = ["recreational", "competitive", "elite", "academy", "select", "tr
 type TeamFormData = {
   name: string; sport: string; gender: string; age_group: string;
   graduation_year: string; level: string; season: string; league: string; description: string;
+  recruiting_enabled: boolean;
 };
 
 const emptyTeamForm: TeamFormData = {
   name: "", sport: "football", gender: "coed", age_group: "",
   graduation_year: "", level: "competitive", season: "", league: "", description: "",
+  recruiting_enabled: false,
 };
 
 type RosterEntry = {
@@ -176,6 +180,7 @@ export function ClubTeamManagement({ clubProfileId, userId, hsCoachProfileId }: 
         season: form.season || null,
         league: form.league || null,
         description: form.description || null,
+        recruiting_enabled: isHsCoach ? false : (form.recruiting_enabled ?? false),
       });
       if (error) throw error;
     },
@@ -200,6 +205,7 @@ export function ClubTeamManagement({ clubProfileId, userId, hsCoachProfileId }: 
         season: form.season || null,
         league: form.league || null,
         description: form.description || null,
+        recruiting_enabled: form.recruiting_enabled ?? false,
       }).eq("id", id);
       if (error) throw error;
     },
@@ -458,6 +464,7 @@ export function ClubTeamManagement({ clubProfileId, userId, hsCoachProfileId }: 
       season: team.season || "",
       league: team.league || "",
       description: team.description || "",
+      recruiting_enabled: !!(team.recruiting_enabled),
     });
     setShowTeamDialog(true);
   };
@@ -497,10 +504,35 @@ export function ClubTeamManagement({ clubProfileId, userId, hsCoachProfileId }: 
           <Card style={{ flex: 1 }}><CardContent style={{ paddingVertical: spacing.sm, alignItems: "center" }}><Text style={{ fontSize: typography.fontSize["2xl"], fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground }}>{pendingParentCount}</Text><Text style={{ fontSize: typography.fontSize.xs, color: colors.mutedForeground }}>Parent Pending</Text></CardContent></Card>
         </View>
 
+        {/* recruiting_enabled toggle — club coaches only */}
+        {!hsCoachProfileId && (
+          <Card>
+            <CardContent style={{ paddingVertical: spacing.sm, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm }}>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Eye size={14} color={colors.primary} />
+                  <Text style={{ fontFamily: typography.fontFamily.bodySemiBold, fontSize: typography.fontSize.sm, color: colors.foreground }}>Visible to HS coaches</Text>
+                </View>
+                <Text style={{ fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.xs, color: colors.mutedForeground, marginTop: 2 }}>
+                  Athletes on this team can be discovered and claimed by high school coaches.
+                </Text>
+              </View>
+              <Switch
+                value={!!(selectedTeam as any).recruiting_enabled}
+                onValueChange={async (val: boolean) => {
+                  await supabase.from("teams").update({ recruiting_enabled: val }).eq("id", (selectedTeam as any).id);
+                  queryClient.invalidateQueries({ queryKey: ["club-teams"] });
+                }}
+              />
+            </CardContent>
+          </Card>
+        )}
+
         <Tabs value={rosterTab} onValueChange={setRosterTab}>
           <TabsList>
             <TabsTrigger value="roster">Roster ({roster.length})</TabsTrigger>
             <TabsTrigger value="staff">Staff ({staff.length})</TabsTrigger>
+            {!hsCoachProfileId && <TabsTrigger value="transfers">Transfers</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="roster">
@@ -546,6 +578,10 @@ export function ClubTeamManagement({ clubProfileId, userId, hsCoachProfileId }: 
                 </View>
               )}
             </View>
+          </TabsContent>
+
+          <TabsContent value="transfers">
+            <ClubTransferRequests teamId={(selectedTeam as any).id} />
           </TabsContent>
 
           <TabsContent value="staff">
@@ -805,6 +841,20 @@ export function ClubTeamManagement({ clubProfileId, userId, hsCoachProfileId }: 
             <View><Label>Season</Label><Input value={teamForm.season} onChangeText={(t: string) => setTeamForm(f => ({ ...f, season: t }))} placeholder="Spring 2026" /></View>
             <View><Label>League</Label><Input value={teamForm.league} onChangeText={(t: string) => setTeamForm(f => ({ ...f, league: t }))} placeholder="AAU, USSSA..." /></View>
             <View><Label>Description</Label><Textarea value={teamForm.description} onChangeText={(t: string) => setTeamForm(f => ({ ...f, description: t }))} numberOfLines={2} /></View>
+            {!hsCoachProfileId && (
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: spacing.sm, gap: spacing.sm }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: typography.fontFamily.bodySemiBold, fontSize: typography.fontSize.sm, color: colors.foreground }}>Visible to high school coaches</Text>
+                  <Text style={{ fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.xs, color: colors.mutedForeground, marginTop: 2 }}>
+                    Lets verified HS coaches find HS-aged athletes on this roster and request a transfer. You still approve every request, and parents consent for minors.
+                  </Text>
+                </View>
+                <Switch
+                  value={teamForm.recruiting_enabled}
+                  onValueChange={(v: boolean) => setTeamForm(f => ({ ...f, recruiting_enabled: v }))}
+                />
+              </View>
+            )}
           </View>
           <DialogFooter>
             <Button variant="outline" onPress={() => setShowTeamDialog(false)}>Cancel</Button>
