@@ -23,8 +23,13 @@ import {
 import { colors, typography, spacing } from "@/lib/theme";
 
 interface ClubTeamManagementProps {
-  clubProfileId: string;
+  /** Required when used by a Club Coach. Omit when hsCoachProfileId is set. */
+  clubProfileId?: string;
   userId: string;
+  /** When set, this component is being used by an HS Coach. Team creation
+   * will set level='high_school' and hs_coach_profile_id instead of
+   * club_coach_id. club_coach_id will be omitted. */
+  hsCoachProfileId?: string;
 }
 
 const SPORTS = ["football","basketball","baseball","soccer","softball","volleyball","track","swimming","tennis","golf","lacrosse","wrestling","hockey"];
@@ -54,7 +59,7 @@ const emptyRosterEntry: RosterEntry = {
   zorts_registration_url: "",
 };
 
-export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagementProps) {
+export function ClubTeamManagement({ clubProfileId, userId, hsCoachProfileId }: ClubTeamManagementProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const csvInputRef = useRef<HTMLInputElement | null>(null);
@@ -156,15 +161,18 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
   // ========== MUTATIONS ==========
   const createTeam = useMutation({
     mutationFn: async (form: TeamFormData) => {
+      const isHsCoach = !!hsCoachProfileId;
       const { error } = await supabase.from("teams").insert({
-        club_coach_id: clubProfileId,
+        ...(isHsCoach
+          ? { hs_coach_profile_id: hsCoachProfileId }
+          : { club_coach_id: clubProfileId }),
         coach_user_id: userId,
         name: form.name,
         sport: form.sport || (clubProfile as any)?.sport || "football",
         gender: form.gender || null,
         age_group: form.age_group || null,
         graduation_year: form.graduation_year ? parseInt(form.graduation_year) : null,
-        level: form.level || "club",
+        level: isHsCoach ? "high_school" : (form.level || "club"),
         season: form.season || null,
         league: form.league || null,
         description: form.description || null,
@@ -219,14 +227,17 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
 
   const duplicateTeam = useMutation({
     mutationFn: async (team: any) => {
+      const isHsCoach = !!hsCoachProfileId;
       const { error } = await supabase.from("teams").insert({
-        club_coach_id: clubProfileId,
+        ...(isHsCoach
+          ? { hs_coach_profile_id: hsCoachProfileId }
+          : { club_coach_id: clubProfileId }),
         coach_user_id: userId,
         name: `${team.name} (Copy)`,
         sport: team.sport,
         gender: team.gender,
         age_group: team.age_group,
-        level: team.level,
+        level: isHsCoach ? "high_school" : team.level,
         league: team.league,
         description: team.description,
       });

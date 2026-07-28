@@ -364,7 +364,7 @@ export default function HSCoachDashboardScreen() {
             {/* Roster Tab */}
             <TabsContent value="roster">
               {user && hsProfile ? (
-                <ClubTeamManagement clubProfileId={profileAny.id} userId={user.id} />
+                <ClubTeamManagement hsCoachProfileId={profileAny.id} userId={user.id} />
               ) : null}
             </TabsContent>
 
