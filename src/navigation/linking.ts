@@ -247,6 +247,10 @@ export const linking: LinkingOptions<any> = {
 
       // Fallback not-found (optional; RN v7 supports this)
       NotFound: '*',
+
+      // Minor-safe parent profile creation — token from invite email
+      // Matches MAIN's /minor-invite/:token route.
+      MinorInvite: 'minor-invite/:token',
     },
   },
 };

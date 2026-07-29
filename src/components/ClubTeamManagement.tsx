@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { View, Text, ScrollView, Pressable, Platform } from "react-native";
+import { useState, useRef, useCallback } from "react";
+import { View, Text, ScrollView, Pressable, Platform, Alert } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,7 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLetterCenter } from "@/hooks/useLetterCenter";
 import {
   Users, UserPlus, Loader2, Shield, Edit, Copy, Archive, Mail, Upload,
-  ChevronRight, ArrowLeft, Plus, CheckCircle2, Link2, Eye,
+  ChevronRight, ArrowLeft, Plus, CheckCircle2, Link2, Eye, AlertTriangle,
 } from "lucide-react-native";
 import { colors, typography, spacing } from "@/lib/theme";
 
@@ -57,6 +57,24 @@ type RosterEntry = {
   zorts_registration_url: string;
 };
 
+/** Returns age in whole years from a YYYY-MM-DD string, or null if unparseable. */
+function computeAge(dob: string): number | null {
+  if (!dob || !/^\d{4}-\d{2}-\d{2}$/.test(dob)) return null;
+  const birth = new Date(dob);
+  if (isNaN(birth.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const m = now.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+/** True when DOB string represents an athlete under 13. */
+function isUnder13(dob: string): boolean {
+  const age = computeAge(dob);
+  return age !== null && age < 13;
+}
+
 const emptyRosterEntry: RosterEntry = {
   athlete_name: "", athlete_email: "", position: "", jersey_number: "",
   school: "", graduation_year: "", date_of_birth: "", parent_name: "", parent_email: "", parent_phone: "",
@@ -82,6 +100,9 @@ export function ClubTeamManagement({ clubProfileId, userId, hsCoachProfileId }: 
   const [parentInviteEmail, setParentInviteEmail] = useState("");
   const [selectedRosterId, setSelectedRosterId] = useState<string | null>(null);
   const [rosterTab, setRosterTab] = useState("roster");
+  // Minor-Safe: when the coach enters a DOB that makes the athlete under-13,
+  // collapse the form to name + DOB + parent email only.
+  const rosterDobIsUnder13 = isUnder13(rosterForm.date_of_birth);
 
   // Fetch teams
   const { data: teams = [], isLoading } = useQuery({
@@ -258,6 +279,41 @@ export function ClubTeamManagement({ clubProfileId, userId, hsCoachProfileId }: 
   const addRosterEntry = useMutation({
     mutationFn: async (entry: RosterEntry) => {
       if (!selectedTeamId) throw new Error("No team selected");
+      // Minor-Safe: under-13 athletes must be added by a parent.
+      // Belt-and-suspenders: the DB trigger also enforces this, but we block
+      // here first so the coach sees a clear, actionable error immediately.
+      if (isUnder13(entry.date_of_birth)) {
+        if (!entry.parent_email) {
+          throw new Error(
+            "Athletes under 13 cannot be added directly by a coach. " +
+            "Please enter the parent's email address — we will invite the parent " +
+            "to create the athlete's profile."
+          );
+        }
+        // Allowed: create a minimal invite-only row so the parent invite flow fires.
+        // Only name + DOB + parent_email are persisted; all other fields are stripped.
+        const { data: inserted, error } = await supabase.from("team_rosters").insert({
+          team_id: selectedTeamId,
+          athlete_name: entry.athlete_name,
+          date_of_birth: entry.date_of_birth,
+          parent_email: entry.parent_email,
+          parent_name: entry.parent_name || null,
+          parent_phone: entry.parent_phone || null,
+          status: "parent_pending",
+          invite_method: "manual",
+        }).select("id").single();
+        if (error) throw error;
+        try {
+          const { error: inviteErr } = await supabase.functions.invoke(
+            "invite-club-athlete",
+            { body: { rosterId: (inserted as any).id } },
+          );
+          if (inviteErr) console.warn("Invite send warning:", inviteErr);
+        } catch (e) {
+          console.warn("Invite send failed (roster row still created):", e);
+        }
+        return { under13: true };
+      }
       const { data: inserted, error } = await supabase.from("team_rosters").insert({
         team_id: selectedTeamId,
         athlete_name: entry.athlete_name,
@@ -289,6 +345,19 @@ export function ClubTeamManagement({ clubProfileId, userId, hsCoachProfileId }: 
       }
     },
     onSuccess: (result: any) => {
+      if (result?.under13) {
+        queryClient.invalidateQueries({ queryKey: ["club-roster", selectedTeamId] });
+        queryClient.invalidateQueries({ queryKey: ["club-roster-counts"] });
+        toast({
+          title: "Parent invite sent",
+          description:
+            "This athlete is under 13. We have invited the parent to create the profile — " +
+            "no athlete data has been stored beyond name, date of birth, and parent contact.",
+        });
+        setShowRosterDialog(false);
+        setRosterForm(emptyRosterEntry);
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["club-roster", selectedTeamId] });
       queryClient.invalidateQueries({ queryKey: ["club-roster-counts"] });
       const sent = result?.results?.filter((r: any) => r.success).length || 0;
@@ -391,6 +460,7 @@ export function ClubTeamManagement({ clubProfileId, userId, hsCoachProfileId }: 
   });
 
   // CSV upload handler (RN via DocumentPicker)
+  // Minor-Safe: under-13 rows detected in the CSV are rejected before any DB insert.
   const handleCSVUpload = async () => {
     if (!selectedTeamId) return;
     const result = await DocumentPicker.getDocumentAsync({ type: "text/csv", copyToCacheDirectory: true });
@@ -422,24 +492,49 @@ export function ClubTeamManagement({ clubProfileId, userId, hsCoachProfileId }: 
 
     if (nameIdx < 0) { toast({ title: "CSV must have a 'name' column", variant: "destructive" }); return; }
 
-    const rows = lines.slice(1).map(line => {
-      const cols = line.split(",").map(c => c.trim().replace(/^"|"$/g, ""));
-      return {
-        team_id: selectedTeamId!,
-        athlete_name: cols[nameIdx] || "",
-        athlete_email: emailIdx >= 0 ? cols[emailIdx] || null : null,
-        position: posIdx >= 0 ? cols[posIdx] || null : null,
-        jersey_number: jerseyIdx >= 0 ? cols[jerseyIdx] || null : null,
-        school: schoolIdx >= 0 ? cols[schoolIdx] || null : null,
-        graduation_year: gradIdx >= 0 && cols[gradIdx] ? parseInt(cols[gradIdx]) : null,
-        parent_email: parentEmailIdx >= 0 ? cols[parentEmailIdx] || null : null,
-        parent_name: parentNameIdx >= 0 ? cols[parentNameIdx] || null : null,
-        parent_phone: parentPhoneIdx >= 0 ? cols[parentPhoneIdx] || null : null,
-        status: "invited" as const,
-        invite_method: "csv" as const,
-      };
-    }).filter(r => r.athlete_name);
+    // Minor-Safe: parse DOB column index before mapping rows
+    const dobIdx = headers.findIndex(h => h.includes("dob") || (h.includes("date") && h.includes("birth")));
 
+    const allParsed = lines.slice(1).map((line, lineNum) => {
+      const cols = line.split(",").map(c => c.trim().replace(/^"|"$/g, ""));
+      const dob = dobIdx >= 0 ? (cols[dobIdx] || "") : "";
+      return {
+        lineNum: lineNum + 2, // 1-based, +1 for header
+        dob,
+        under13: isUnder13(dob),
+        row: {
+          team_id: selectedTeamId!,
+          athlete_name: cols[nameIdx] || "",
+          athlete_email: emailIdx >= 0 ? cols[emailIdx] || null : null,
+          position: posIdx >= 0 ? cols[posIdx] || null : null,
+          jersey_number: jerseyIdx >= 0 ? cols[jerseyIdx] || null : null,
+          school: schoolIdx >= 0 ? cols[schoolIdx] || null : null,
+          graduation_year: gradIdx >= 0 && cols[gradIdx] ? parseInt(cols[gradIdx]) : null,
+          date_of_birth: dob || null,
+          parent_email: parentEmailIdx >= 0 ? cols[parentEmailIdx] || null : null,
+          parent_name: parentNameIdx >= 0 ? cols[parentNameIdx] || null : null,
+          parent_phone: parentPhoneIdx >= 0 ? cols[parentPhoneIdx] || null : null,
+          status: "invited" as const,
+          invite_method: "csv" as const,
+        },
+      };
+    }).filter(r => r.row.athlete_name);
+
+    // Reject under-13 rows: block the entire upload and report which rows need fixing
+    const blockedRows = allParsed.filter(r => r.under13);
+    if (blockedRows.length > 0) {
+      const names = blockedRows
+        .map(r => `Row ${r.lineNum}: ${r.row.athlete_name} (DOB ${r.dob})`)
+        .join("\n");
+      Alert.alert(
+        "Under-13 athletes in CSV",
+        `${blockedRows.length} row(s) appear to be under 13 and cannot be imported directly by a coach.\n\n${names}\n\nRemove these rows and re-upload, then add each under-13 athlete manually using the 'Add Athlete' button — you will be prompted to invite the parent instead.`,
+        [{ text: "OK" }],
+      );
+      return;
+    }
+
+    const rows = allParsed.map(r => r.row);
     if (rows.length === 0) { toast({ title: "No valid rows found", variant: "destructive" }); return; }
 
     const { error } = await supabase.from("team_rosters").insert(rows);
@@ -622,33 +717,62 @@ export function ClubTeamManagement({ clubProfileId, userId, hsCoachProfileId }: 
         {/* Add Roster Dialog */}
         <Dialog open={showRosterDialog} onOpenChange={setShowRosterDialog}>
           <DialogContent>
-            <DialogHeader><DialogTitle>Add Athlete</DialogTitle><DialogDescription>Manually add an athlete to the roster</DialogDescription></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>Add Athlete</DialogTitle>
+              <DialogDescription>Manually add an athlete to the roster</DialogDescription>
+            </DialogHeader>
             <View style={{ gap: spacing.sm }}>
+              {/* Name + DOB always shown */}
               <View><Label>Name *</Label><Input value={rosterForm.athlete_name} onChangeText={(t: string) => setRosterForm(f => ({ ...f, athlete_name: t }))} /></View>
-              <View style={{ flexDirection: "row", gap: spacing.sm }}>
-                <View style={{ flex: 1 }}><Label>Email</Label><Input keyboardType="email-address" value={rosterForm.athlete_email} onChangeText={(t: string) => setRosterForm(f => ({ ...f, athlete_email: t }))} /></View>
-                <View style={{ flex: 1 }}><Label>Position</Label><Input value={rosterForm.position} onChangeText={(t: string) => setRosterForm(f => ({ ...f, position: t }))} /></View>
-              </View>
-              <View style={{ flexDirection: "row", gap: spacing.sm }}>
-                <View style={{ flex: 1 }}><Label>Jersey #</Label><Input value={rosterForm.jersey_number} onChangeText={(t: string) => setRosterForm(f => ({ ...f, jersey_number: t }))} /></View>
-                <View style={{ flex: 1 }}><Label>School</Label><Input value={rosterForm.school} onChangeText={(t: string) => setRosterForm(f => ({ ...f, school: t }))} /></View>
-              </View>
-              <View style={{ flexDirection: "row", gap: spacing.sm }}>
-                <View style={{ flex: 1 }}><Label>Grad Year</Label><Input keyboardType="numeric" value={rosterForm.graduation_year} onChangeText={(t: string) => setRosterForm(f => ({ ...f, graduation_year: t }))} placeholder="2027" /></View>
-                <View style={{ flex: 1 }}><Label>Date of Birth</Label><Input value={rosterForm.date_of_birth} onChangeText={(t: string) => setRosterForm(f => ({ ...f, date_of_birth: t }))} placeholder="YYYY-MM-DD" /></View>
-              </View>
-              <Text style={{ fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, marginTop: spacing.xs }}>Parent/Guardian Info</Text>
+              <View style={{ flex: 1 }}><Label>Date of Birth</Label><Input value={rosterForm.date_of_birth} onChangeText={(t: string) => setRosterForm(f => ({ ...f, date_of_birth: t }))} placeholder="YYYY-MM-DD" /></View>
+
+              {/* Minor-Safe: under-13 banner + collapsed form */}
+              {rosterDobIsUnder13 ? (
+                <View style={{ backgroundColor: `${colors.destructive}15`, borderWidth: 1, borderColor: colors.destructive, borderRadius: 8, padding: spacing.sm, gap: spacing.xs }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <AlertTriangle size={16} color={colors.destructive} />
+                    <Text style={{ fontFamily: typography.fontFamily.bodySemiBold, color: colors.destructive, fontSize: typography.fontSize.sm }}>Under 13 — parent must create this profile</Text>
+                  </View>
+                  <Text style={{ fontFamily: typography.fontFamily.body, color: colors.mutedForeground, fontSize: typography.fontSize.xs, lineHeight: 18 }}>
+                    Athletes under 13 cannot have a profile created directly by a coach. Enter the parent's email and we will invite them to set it up — only the name, date of birth, and parent contact are stored until the parent completes the profile.
+                  </Text>
+                </View>
+              ) : (
+                // Full form for 13+ athletes
+                <>
+                  <View style={{ flexDirection: "row", gap: spacing.sm }}>
+                    <View style={{ flex: 1 }}><Label>Email</Label><Input keyboardType="email-address" value={rosterForm.athlete_email} onChangeText={(t: string) => setRosterForm(f => ({ ...f, athlete_email: t }))} /></View>
+                    <View style={{ flex: 1 }}><Label>Position</Label><Input value={rosterForm.position} onChangeText={(t: string) => setRosterForm(f => ({ ...f, position: t }))} /></View>
+                  </View>
+                  <View style={{ flexDirection: "row", gap: spacing.sm }}>
+                    <View style={{ flex: 1 }}><Label>Jersey #</Label><Input value={rosterForm.jersey_number} onChangeText={(t: string) => setRosterForm(f => ({ ...f, jersey_number: t }))} /></View>
+                    <View style={{ flex: 1 }}><Label>School</Label><Input value={rosterForm.school} onChangeText={(t: string) => setRosterForm(f => ({ ...f, school: t }))} /></View>
+                  </View>
+                  <View><Label>Grad Year</Label><Input keyboardType="numeric" value={rosterForm.graduation_year} onChangeText={(t: string) => setRosterForm(f => ({ ...f, graduation_year: t }))} placeholder="2027" /></View>
+                  <Text style={{ fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, marginTop: spacing.xs }}>Zorts Registration</Text>
+                  <View><Label>Zorts Registration URL</Label><Input value={rosterForm.zorts_registration_url} onChangeText={(t: string) => setRosterForm(f => ({ ...f, zorts_registration_url: t }))} placeholder="https://zfrhs.com/..." /></View>
+                </>
+              )}
+
+              {/* Parent/Guardian — always shown (required for under-13, optional for older) */}
+              <Text style={{ fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, marginTop: spacing.xs }}>
+                {rosterDobIsUnder13 ? "Parent/Guardian (required) *" : "Parent/Guardian Info"}
+              </Text>
               <View><Label>Parent Name</Label><Input value={rosterForm.parent_name} onChangeText={(t: string) => setRosterForm(f => ({ ...f, parent_name: t }))} /></View>
               <View style={{ flexDirection: "row", gap: spacing.sm }}>
-                <View style={{ flex: 1 }}><Label>Parent Email</Label><Input keyboardType="email-address" value={rosterForm.parent_email} onChangeText={(t: string) => setRosterForm(f => ({ ...f, parent_email: t }))} /></View>
+                <View style={{ flex: 1 }}><Label>Parent Email {rosterDobIsUnder13 ? "*" : ""}</Label><Input keyboardType="email-address" value={rosterForm.parent_email} onChangeText={(t: string) => setRosterForm(f => ({ ...f, parent_email: t }))} /></View>
                 <View style={{ flex: 1 }}><Label>Parent Phone</Label><Input keyboardType="phone-pad" value={rosterForm.parent_phone} onChangeText={(t: string) => setRosterForm(f => ({ ...f, parent_phone: t }))} /></View>
               </View>
-              <Text style={{ fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, marginTop: spacing.xs }}>Zorts Registration</Text>
-              <View><Label>Zorts Registration URL</Label><Input value={rosterForm.zorts_registration_url} onChangeText={(t: string) => setRosterForm(f => ({ ...f, zorts_registration_url: t }))} placeholder="https://zfrhs.com/..." /></View>
             </View>
             <DialogFooter>
               <Button variant="outline" onPress={() => setShowRosterDialog(false)}>Cancel</Button>
-              <Button onPress={() => addRosterEntry.mutate(rosterForm)} disabled={!rosterForm.athlete_name || addRosterEntry.isPending} leftIcon={addRosterEntry.isPending ? <Loader2 size={16} color={colors.primaryForeground} /> : <UserPlus size={16} color={colors.primaryForeground} />}>Add</Button>
+              <Button
+                onPress={() => addRosterEntry.mutate(rosterForm)}
+                disabled={!rosterForm.athlete_name || (rosterDobIsUnder13 && !rosterForm.parent_email) || addRosterEntry.isPending}
+                leftIcon={addRosterEntry.isPending ? <Loader2 size={16} color={colors.primaryForeground} /> : <UserPlus size={16} color={colors.primaryForeground} />}
+              >
+                {rosterDobIsUnder13 ? "Invite Parent" : "Add"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
