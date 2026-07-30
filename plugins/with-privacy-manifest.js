@@ -3,7 +3,7 @@
 // Required by Apple as of Spring 2024 for all App Store submissions.
 // See: https://developer.apple.com/documentation/bundleresources/privacy_manifest_files
 
-const { withXcodeProject, IOSConfig } = require('@expo/config-plugins');
+const { withDangerousMod, withXcodeProject } = require('@expo/config-plugins');
 const path = require('path');
 const fs = require('fs');
 
@@ -161,31 +161,58 @@ const PRIVACY_MANIFEST = `<?xml version="1.0" encoding="UTF-8"?>
 
   </array>
 </dict>
-</plist>
-PRIVACY_MANIFEST_EOF
-`;
+</plist>`;
+
+/**
+ * Derive the ios/<AppName> folder name the same way Expo does:
+ * strip everything except alphanumeric characters from the slug.
+ * e.g. "offerhound-v2" -> "offerhoundv2"
+ */
+function getIosAppFolderName(config) {
+  const slug = config.slug || config.expo?.slug || '';
+  return slug.replace(/[^a-zA-Z0-9]/g, '');
+}
 
 module.exports = function withPrivacyManifest(config) {
-  return withXcodeProject(config, async (cfg) => {
+  // Step 1: write the file using withDangerousMod (ios platform).
+  // This runs after ios/ is generated, so the target directory exists.
+  config = withDangerousMod(config, [
+    'ios',
+    async (cfg) => {
+      const projectRoot = cfg.modRequest.projectRoot;
+      const appFolderName = getIosAppFolderName(cfg);
+      const iosDirPath = path.join(projectRoot, 'ios', appFolderName);
+
+      fs.mkdirSync(iosDirPath, { recursive: true });
+      fs.writeFileSync(
+        path.join(iosDirPath, 'PrivacyInfo.xcprivacy'),
+        PRIVACY_MANIFEST,
+        'utf8'
+      );
+
+      return cfg;
+    },
+  ]);
+
+  // Step 2: register the file in the Xcode project via withXcodeProject.
+  // modResults here is the already-parsed xcodeproj, so ios/ definitely exists.
+  config = withXcodeProject(config, (cfg) => {
     const projectRoot = cfg.modRequest.projectRoot;
-    // getSourceRoot returns the ios/<AppName> directory (e.g. ios/offerhoundv2)
-    const iosDirPath = IOSConfig.Paths.getSourceRoot(projectRoot);
-    const iosDir = path.basename(iosDirPath);
-
-    // Write PrivacyInfo.xcprivacy into the iOS app folder
-    const destPath = path.join(iosDirPath, 'PrivacyInfo.xcprivacy');
-    fs.mkdirSync(iosDirPath, { recursive: true });
-    fs.writeFileSync(destPath, PRIVACY_MANIFEST.trim(), 'utf8');
-
-    // Add the file to the Xcode project so it's included in the app bundle
+    const appFolderName = getIosAppFolderName(cfg);
     const project = cfg.modResults;
-    const groupName = iosDir;
-    const opt = { target: project.getFirstTarget().uuid };
 
-    if (!project.pbxFileReferences().find(([, f]) => f.path === '"PrivacyInfo.xcprivacy"')) {
-      project.addResourceFile('PrivacyInfo.xcprivacy', opt, groupName);
+    const refs = project.pbxFileReferences();
+    const alreadyAdded = Object.values(refs).some(
+      (f) => f && (f.path === '"PrivacyInfo.xcprivacy"' || f.path === 'PrivacyInfo.xcprivacy')
+    );
+
+    if (!alreadyAdded) {
+      const opt = { target: project.getFirstTarget().uuid };
+      project.addResourceFile('PrivacyInfo.xcprivacy', opt, appFolderName);
     }
 
     return cfg;
   });
+
+  return config;
 };
