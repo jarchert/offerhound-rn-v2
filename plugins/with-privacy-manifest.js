@@ -201,7 +201,7 @@ module.exports = function withPrivacyManifest(config) {
     const appFolderName = getIosAppFolderName(cfg);
     const project = cfg.modResults;
 
-    const refs = project.pbxFileReferences();
+    const refs = project.pbxFileReferenceSection();
     const alreadyAdded = Object.values(refs).some(
       (f) => f && (f.path === '"PrivacyInfo.xcprivacy"' || f.path === 'PrivacyInfo.xcprivacy')
     );
