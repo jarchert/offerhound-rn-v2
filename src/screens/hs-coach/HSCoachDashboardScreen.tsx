@@ -13,7 +13,7 @@ import {
   Loader2, Users, Search, Eye, LogOut, LayoutDashboard, MessageSquare,
   UserCog, Trophy, School, Mail, UserPlus, Image as ImageIcon, Calendar, Contact,
   Share2, Star, GraduationCap, Save, Telescope, FileCheck, Film, Award,
-  Sparkles, RefreshCw, Target,
+  Sparkles, RefreshCw, Target, ArrowRightLeft,
 } from 'lucide-react-native';
 import { useQuery } from '@tanstack/react-query';
 
@@ -40,6 +40,8 @@ import { RecruitingPipeline } from '@/components/RecruitingPipeline';
 import { PositionNeedsBoard } from '@/components/PositionNeedsBoard';
 import { CoachProfileImageUpload } from '@/components/CoachProfileImageUpload';
 import { HSCoachEndorsementComposer } from '@/components/hs-coach/HSCoachEndorsementComposer';
+import { HSClubRosterBrowse } from '@/components/hs-coach/HSClubRosterBrowse';
+import { HSTransferRequests } from '@/components/hs-coach/HSTransferRequests';
 import { HSCoachReferralPanel } from '@/components/hs-coach/HSCoachReferralPanel';
 import { HSCoachTranscriptVerificationTab } from '@/components/hs-coach/HSCoachTranscriptVerificationTab';
 import { HSCoachFilmVerificationTab } from '@/components/hs-coach/HSCoachFilmVerificationTab';
@@ -280,6 +282,7 @@ export default function HSCoachDashboardScreen() {
               <TabsTrigger value="messaging"><TabLabel icon={MessageSquare} label="Messaging" /></TabsTrigger>
               <TabsTrigger value="media"><TabLabel icon={ImageIcon} label="Media" /></TabsTrigger>
               <TabsTrigger value="discover"><TabLabel icon={Telescope} label="Coaches & Scouts" /></TabsTrigger>
+              <TabsTrigger value="club-roster"><TabLabel icon={ArrowRightLeft} label="Club Athletes" /></TabsTrigger>
               <TabsTrigger value="athletes"><TabLabel icon={Star} label="Saved" /></TabsTrigger>
               <TabsTrigger value="profile"><TabLabel icon={Eye} label="Profile" /></TabsTrigger>
             </TabsList>
@@ -364,7 +367,7 @@ export default function HSCoachDashboardScreen() {
             {/* Roster Tab */}
             <TabsContent value="roster">
               {user && hsProfile ? (
-                <ClubTeamManagement clubProfileId={profileAny.id} userId={user.id} />
+                <ClubTeamManagement hsCoachProfileId={profileAny.id} userId={user.id} />
               ) : null}
             </TabsContent>
 
@@ -477,6 +480,22 @@ export default function HSCoachDashboardScreen() {
 
             <TabsContent value="discover">
               <ClubCoachDirectoryTab clubProfile={{ sport: profileAny.sport, state: profileAny.school_state }} />
+            </TabsContent>
+
+            {/* Club Athletes — browse + claim */}
+            <TabsContent value="club-roster">
+              <View style={{ gap: spacing.lg }}>
+                <HSClubRosterBrowse hsProfileId={profileAny.id} />
+                <Card>
+                  <CardHeader>
+                    <CardTitle>My Transfer Requests</CardTitle>
+                    <CardDescription>Track and cancel outgoing transfer requests</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <HSTransferRequests />
+                  </CardContent>
+                </Card>
+              </View>
             </TabsContent>
 
             {/* Saved Athletes Tab */}

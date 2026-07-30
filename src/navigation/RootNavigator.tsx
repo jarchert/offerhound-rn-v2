@@ -60,6 +60,7 @@ import CoachCampaignsScreen from '@/screens/coach/CoachCampaignsScreen';
 import CoachCommunicationRulesScreen from '@/screens/coach/CoachCommunicationRulesScreen';
 import AthleteProfileEditScreen from '@/screens/athlete/AthleteProfileEditScreen';
 import InfluencerBlogComposerScreen from '@/screens/influencer/InfluencerBlogComposerScreen';
+import ParentAthleteEditor from '@/components/ParentAthleteEditor';
 
 // Persistent post-auth overlay
 import FloatingAICoach from '@/components/FloatingAICoach';
@@ -111,6 +112,8 @@ export type RootStackParamList = {
   CoachCommunicationRules: undefined;
   AthleteProfileEdit: undefined;
   InfluencerBlogComposer: { postId?: string } | undefined;
+  /** Minor-safe profile creation — token from /minor-invite/:token deep link. */
+  MinorInvite: { token: string };
   NotFound: undefined;
 };
 
@@ -177,6 +180,7 @@ export default function RootNavigator() {
           <Stack.Screen name="Pricing" component={PricingScreen} />
           <Stack.Screen name="Support" component={SupportScreen} />
           <Stack.Screen name="CoachCommunicationRules" component={CoachCommunicationRulesScreen} />
+          <Stack.Screen name="MinorInvite" component={ParentAthleteEditor} />
           <Stack.Screen name="NotFound" component={NotFoundScreen} />
         </>
       ) : (
@@ -242,6 +246,7 @@ export default function RootNavigator() {
             component={InfluencerBlogComposerScreen}
             options={{ presentation: 'modal' }}
           />
+          <Stack.Screen name="MinorInvite" component={ParentAthleteEditor} />
           <Stack.Screen name="NotFound" component={NotFoundScreen} />
         </>
       )}
