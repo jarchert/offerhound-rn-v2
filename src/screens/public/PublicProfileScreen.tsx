@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp, CommonActions } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, AlertCircle, Home, Share2, Check } from 'lucide-react-native';
+import { Loader2, AlertCircle, Home, Share2, Check, ShieldOff } from 'lucide-react-native';
 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,6 +25,7 @@ import { useCoachProfile } from '@/hooks/useCoachProfile';
 import { useScoutProfile } from '@/hooks/useScoutProfile';
 import { useHSCoachProfile } from '@/hooks/useHSCoachProfile';
 import { roleToInitialRoute } from '@/navigation/RootNavigator';
+import { getAgeBand } from '@/lib/getAgeBand';
 
 import { HeroSection } from '@/components/HeroSection';
 import { AthleteProfile } from '@/components/AthleteProfile';
@@ -52,7 +53,7 @@ export default function PublicProfileScreen() {
   const slug = params?.customUrl;
   const nav = useNavigation<any>();
   const { user, userRole } = useAuth() as any;
-  const homeTarget = (user ? roleToInitialRoute(userRole) : 'AuthStack') as string;
+  const homeTarget = (user ? roleToInitialRoute(userRole) : 'LandingTab') as string;
 
   const { data: coachProfile } = useCoachProfile();
   const { data: scoutProfile } = useScoutProfile();
@@ -130,6 +131,33 @@ export default function PublicProfileScreen() {
             <Text style={s.notFoundTitle}>Profile Not Found</Text>
             <Text style={s.notFoundDesc}>
               This profile doesn't exist or hasn't been published yet.
+            </Text>
+            <Button
+              onPress={() =>
+                nav.dispatch(CommonActions.navigate({ name: homeTarget as any }))
+              }
+              leftIcon={<Home size={16} color={colors.primaryForeground} />}>
+              Go Home
+            </Button>
+          </CardContent>
+        </Card>
+      </View>
+    );
+  }
+
+  // Under-15 hard-block — never render a 'child'-band profile publicly.
+  // getAgeBand returns 'child' for age < 15; 'unknown' (no DOB) is treated
+  // as permissive so profiles without a date_of_birth are still viewable.
+  const ageBand = getAgeBand((profile as any).date_of_birth ?? null);
+  if (ageBand === 'child') {
+    return (
+      <View style={s.loading}>
+        <Card style={s.notFoundCard}>
+          <CardContent style={s.notFoundContent}>
+            <ShieldOff size={48} color={colors.mutedForeground} />
+            <Text style={s.notFoundTitle}>Profile Unavailable</Text>
+            <Text style={s.notFoundDesc}>
+              This profile is not publicly accessible.
             </Text>
             <Button
               onPress={() =>

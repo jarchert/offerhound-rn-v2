@@ -558,6 +558,7 @@ export default function CoachDirectoryScreen() {
                       proximityLabel={proximityLabel}
                       isSaved={isSaved}
                       onToggleSave={isAuthenticated ? toggleSave : undefined}
+                      disableContact={!isAuthenticated}
                       viewerRole={viewerRole}
                       coachAudience={isHSCoachCard ? 'hs-coach' : 'college-coach'}
                     />

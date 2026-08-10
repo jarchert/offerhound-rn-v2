@@ -137,11 +137,24 @@ export default function AthleteSearchScreen() {
   const { data: athletes = [], isLoading } = useQuery({
     queryKey: ['athlete-search', search, position, gradYear],
     queryFn: async () => {
+      // Under-15 hard-block: compute the latest date_of_birth that makes
+      // someone exactly 15 today. Anyone born AFTER this cutoff is under 15
+      // and must never appear in any public or authenticated search results.
+      // Rows with no date_of_birth are treated as 15+ (unknown → permissive,
+      // consistent with getAgeBand('unknown') → no-block elsewhere).
+      const today = new Date();
+      const cutoff = new Date(today);
+      cutoff.setFullYear(cutoff.getFullYear() - 15);
+      const cutoffDate = cutoff.toISOString().slice(0, 10); // 'YYYY-MM-DD'
+
       let q = supabase
         .from('player_profiles')
         .select(
           'id, full_name, position, school, graduation_year, city, state, profile_image_url, custom_url, sport',
         )
+        // Exclude under-15 athletes: keep rows where dob is null (unknown age)
+        // or dob is on/before the cutoff (athlete is 15 or older).
+        .or(`date_of_birth.is.null,date_of_birth.lte.${cutoffDate}`)
         .order('full_name')
         .limit(100);
       if (search) q = q.ilike('full_name', `%${search}%`);
