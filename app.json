@@ -148,6 +148,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "expo-dev-client",
       "expo-font",
       "expo-apple-authentication",
       [
