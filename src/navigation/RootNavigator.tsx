@@ -58,6 +58,7 @@ import SupportScreen from '@/screens/shared/SupportScreen';
 import NotFoundScreen from '@/screens/shared/NotFoundScreen';
 import CoachCampaignsScreen from '@/screens/coach/CoachCampaignsScreen';
 import CoachCommunicationRulesScreen from '@/screens/coach/CoachCommunicationRulesScreen';
+import SampleAthleteScreen from '@/screens/public/SampleAthleteScreen';
 import AthleteProfileEditScreen from '@/screens/athlete/AthleteProfileEditScreen';
 import InfluencerBlogComposerScreen from '@/screens/influencer/InfluencerBlogComposerScreen';
 import ParentAthleteEditor from '@/components/ParentAthleteEditor';
@@ -106,6 +107,7 @@ export type RootStackParamList = {
   FounderMessage: undefined;
   Pricing: undefined;
   SubscriptionSuccess: undefined;
+  SampleAthlete: undefined;
   NILIntelligence: undefined;
   Support: undefined;
   CoachCampaigns: undefined;
@@ -163,6 +165,8 @@ function PublicNavigator() {
       <Stack.Screen name="CoachCommunicationRules" component={CoachCommunicationRulesScreen} />
       <Stack.Screen name="MinorInvite" component={ParentAthleteEditor} />
       {/* Public-access directory screens — contact gating applied per-screen */}
+      <Stack.Screen name="SampleAthlete" component={SampleAthleteScreen} />
+      <Stack.Screen name="NILIntelligence" component={NILIntelligenceScreen} />
       <Stack.Screen name="CoachDirectory" component={CoachDirectoryScreen} />
       <Stack.Screen name="ScoutDirectory" component={ScoutDirectoryScreen} />
       <Stack.Screen name="InfluencerBoard" component={InfluencerBoardScreen} />
