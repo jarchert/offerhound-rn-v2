@@ -200,6 +200,8 @@ jest.mock('../navigation/stacks/PublicTabs', () => {
     { label: 'Sample Athlete',  route: 'SampleAthlete' },
     { label: 'NIL Intelligence',route: 'NILIntelligence' },
     { label: 'News and Learn',  route: 'NILIntelligence' },
+    { label: 'Camp Discovery',  route: 'CampStack' },
+    { label: 'Pricing',         route: 'Pricing' },
   ];
   return {
     default: function PublicTabsStub() {
@@ -223,6 +225,54 @@ import ScoutDirectoryScreen from '../screens/scout/ScoutDirectoryScreen';
 import InfluencerBoardScreen from '../screens/influencer/InfluencerBoardScreen';
 import SampleAthleteScreen from '../screens/public/SampleAthleteScreen';
 import NILIntelligenceScreen from '../screens/shared/NILIntelligenceScreen';
+import CampStack from '../navigation/stacks/CampStack';
+import PricingScreen from '../screens/shared/PricingScreen';
+
+// ─── Additional mocks for CampStack and PricingScreen ───────────────────────
+// @shopify/flash-list: CampDiscoveryScreen uses FlashList (not FlatList).
+// Mock it as a plain ScrollView so RNTL can inspect its children.
+jest.mock('@shopify/flash-list', () => {
+  const R = require('react');
+  const { ScrollView } = require('react-native');
+  return {
+    FlashList: ({ data, renderItem, ListEmptyComponent, keyExtractor }: any) => {
+      if (!data || data.length === 0) {
+        return R.createElement(ScrollView, null,
+          typeof ListEmptyComponent === 'function'
+            ? R.createElement(ListEmptyComponent)
+            : ListEmptyComponent
+        );
+      }
+      return R.createElement(ScrollView, null,
+        data.map((item: any, i: number) =>
+          R.createElement(R.Fragment, { key: keyExtractor ? keyExtractor(item, i) : i },
+            renderItem({ item, index: i })
+          )
+        )
+      );
+    },
+  };
+});
+jest.mock('@/contexts/SportContext', () => ({
+  useSport: () => ({ selectedSport: 'football', setSelectedSport: jest.fn(), sportName: 'Football' }),
+  SportProvider: ({ children }: any) => children,
+}));
+jest.mock('@/hooks/useCollegeCamps', () => ({
+  addCampToDeviceCalendar: jest.fn().mockResolvedValue(null),
+}));
+jest.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: jest.fn() }) }));
+jest.mock('@/hooks/useSubscription', () => ({ useSubscription: () => ({ refresh: jest.fn() }) }));
+jest.mock('@/components/Paywall', () => {
+  const { View } = require('react-native');
+  const R = require('react');
+  return { default: () => R.createElement(View, null) };
+});
+jest.mock('@/lib/iap', () => ({
+  TIER_TO_PRODUCT_ID: {},
+  fetchSubscriptions: jest.fn().mockResolvedValue([]),
+}));
+jest.mock('@/lib/pricing', () => ({ PRICING_TIERS: [] }));
+jest.mock('@/lib/platform', () => ({ shouldHidePricingUI: () => true }));
 
 const Stack = createNativeStackNavigator();
 const PublicTabsStub = require('../navigation/stacks/PublicTabs').default;
@@ -239,6 +289,8 @@ function TestPublicNavigator() {
       <Stack.Screen name="AthleteSearch" component={AthleteSearchScreen} />
       <Stack.Screen name="ScoutDirectory" component={ScoutDirectoryScreen} />
       <Stack.Screen name="InfluencerBoard" component={InfluencerBoardScreen} />
+      <Stack.Screen name="CampStack" component={CampStack} />
+      <Stack.Screen name="Pricing" component={PricingScreen} />
     </Stack.Navigator>
   );
 }
@@ -325,6 +377,33 @@ describe('PublicDiscoverScreen tile navigation — stack screens', () => {
     await waitFor(() => {
       expect(queryByText('Profile Not Found')).toBeNull();
       expect(getByText('NIL Intelligence')).toBeTruthy();
+    });
+    unmount();
+  });
+
+  // ─── Item 1: CampStack and Pricing tiles ──────────────────────────────────
+  // CampStack is a nested navigator — its initial screen is CampDiscovery,
+  // which renders 'College camps' and 'DISCOVER' text.
+  // PricingScreen: shouldHidePricingUI() always returns true in RN (Apple/Google
+  // IAP policy), so the screen always renders the 'MANAGE YOUR PLAN' branch.
+
+  it('Camp Discovery -> CampStack initial screen (CampDiscoveryScreen), NOT Profile Not Found', async () => {
+    const { findByText, getByText, queryByText, unmount } = await render(<Wrapper />);
+    await act(async () => { fireEvent.press(await findByText('Camp Discovery')); });
+    await waitFor(() => {
+      expect(queryByText('Profile Not Found')).toBeNull();
+      expect(getByText('College camps')).toBeTruthy();
+    });
+    unmount();
+  });
+
+  it('Pricing -> PricingScreen (MANAGE YOUR PLAN branch), NOT Profile Not Found', async () => {
+    const { findByText, getByText, queryByText, unmount } = await render(<Wrapper />);
+    await act(async () => { fireEvent.press(await findByText('Pricing')); });
+    await waitFor(() => {
+      expect(queryByText('Profile Not Found')).toBeNull();
+      // shouldHidePricingUI() returns true in RN — IAP compliance branch
+      expect(getByText('MANAGE YOUR PLAN')).toBeTruthy();
     });
     unmount();
   });
