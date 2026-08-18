@@ -18,14 +18,25 @@ interface Props {
   athleteId: string;
   currentImageUrl?: string | null;
   onImageUpdated?: (url: string | null) => void;
+  /** When true, all uploads are blocked (under-13 minor-safe profile). */
+  isMinorSafe?: boolean;
 }
 
-export function HeroBackgroundImageUpload({ athleteId, currentImageUrl, onImageUpdated }: Props) {
+export function HeroBackgroundImageUpload({ athleteId, currentImageUrl, onImageUpdated, isMinorSafe = false }: Props) {
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentImageUrl || null);
   const { toast } = useToast();
 
   const pickAndUpload = async () => {
+    // Minor-Safe guard: block uploads for under-13 profiles.
+    if (isMinorSafe) {
+      toast({
+        title: 'Upload Locked',
+        description: 'Hero background images cannot be uploaded until a parent completes the consent process for this minor athlete.',
+        variant: 'destructive',
+      });
+      return;
+    }
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {

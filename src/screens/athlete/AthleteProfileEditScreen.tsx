@@ -240,6 +240,7 @@ export default function AthleteProfileEditScreen() {
                     currentImageUrl={form.profile_image_url}
                     athleteName={athleteName}
                     onImageUpdated={(url) => updateField({ profile_image_url: url })}
+                    isMinorSafe={isMinorSafe}
                   />
                 </CardContent>
               </Card>
@@ -253,6 +254,7 @@ export default function AthleteProfileEditScreen() {
                     athleteId={athleteId}
                     currentImageUrl={form.banner_image_url}
                     onImageUpdated={(url) => updateField({ banner_image_url: url })}
+                    isMinorSafe={isMinorSafe}
                   />
                 </CardContent>
               </Card>
@@ -266,6 +268,7 @@ export default function AthleteProfileEditScreen() {
                     athleteId={athleteId}
                     galleryImages={form.gallery_images}
                     onImagesUpdated={(images) => updateField({ gallery_images: images })}
+                    isMinorSafe={isMinorSafe}
                   />
                 </CardContent>
               </Card>
@@ -295,6 +298,7 @@ export default function AthleteProfileEditScreen() {
                     athleteId={athleteId}
                     currentImageUrl={form.family_image_url}
                     onImageUpdated={(url) => updateField({ family_image_url: url })}
+                    isMinorSafe={isMinorSafe}
                   />
                 </CardContent>
               </Card>
@@ -308,6 +312,7 @@ export default function AthleteProfileEditScreen() {
                     athleteId={athleteId}
                     currentImageUrl={form.action_image_url}
                     onImageUpdated={(url) => updateField({ action_image_url: url })}
+                    isMinorSafe={isMinorSafe}
                   />
                 </CardContent>
               </Card>
@@ -321,6 +326,7 @@ export default function AthleteProfileEditScreen() {
                     athleteId={athleteId}
                     currentImageUrl={form.footer_image_url}
                     onImageUpdated={(url) => updateField({ footer_image_url: url })}
+                    isMinorSafe={isMinorSafe}
                   />
                 </CardContent>
               </Card>

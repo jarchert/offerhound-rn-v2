@@ -35,6 +35,8 @@ interface BannerImageUploadProps {
   athleteId: string;
   currentImageUrl: string | null;
   onImageUpdated: (newUrl: string | null) => void;
+  /** When true, all uploads are blocked (under-13 minor-safe profile). */
+  isMinorSafe?: boolean;
 }
 
 // Best-effort mime inference from extension (ImagePicker assets don't always
@@ -62,6 +64,7 @@ export function BannerImageUpload({
   athleteId,
   currentImageUrl,
   onImageUpdated,
+  isMinorSafe = false,
 }: BannerImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -69,6 +72,15 @@ export function BannerImageUpload({
   const { toast } = useToast();
 
   const pickImage = async () => {
+    // Minor-Safe guard: block uploads for under-13 profiles.
+    if (isMinorSafe) {
+      toast({
+        title: 'Upload Locked',
+        description: 'Banner images cannot be uploaded until a parent completes the consent process for this minor athlete.',
+        variant: 'destructive',
+      });
+      return;
+    }
     // Request permission (no-op on web; safe on native).
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {

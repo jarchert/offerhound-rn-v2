@@ -12,12 +12,15 @@ interface FamilyImageUploadProps {
   athleteId: string;
   currentImageUrl: string | null;
   onImageUpdated: (newUrl: string | null) => void;
+  /** When true, all uploads are blocked (under-13 minor-safe profile). */
+  isMinorSafe?: boolean;
 }
 
 export function FamilyImageUpload({
   athleteId,
   currentImageUrl,
   onImageUpdated,
+  isMinorSafe = false,
 }: FamilyImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -25,6 +28,15 @@ export function FamilyImageUpload({
   const { toast } = useToast();
 
   const pickAndUpload = async () => {
+    // Minor-Safe guard: block uploads for under-13 profiles.
+    if (isMinorSafe) {
+      toast({
+        title: 'Upload Locked',
+        description: 'Family photos cannot be uploaded until a parent completes the consent process for this minor athlete.',
+        variant: 'destructive',
+      });
+      return;
+    }
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {

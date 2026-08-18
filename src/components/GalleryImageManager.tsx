@@ -29,6 +29,8 @@ interface GalleryImageManagerProps {
   onImagesUpdated?: (images: GalleryImage[]) => void;
   /** Hard cap on gallery size, parity default: 12 */
   maxImages?: number;
+  /** When true, all uploads are blocked (under-13 minor-safe profile). */
+  isMinorSafe?: boolean;
 }
 
 export function GalleryImageManager({
@@ -36,6 +38,7 @@ export function GalleryImageManager({
   galleryImages = [],
   onImagesUpdated,
   maxImages = 12,
+  isMinorSafe = false,
 }: GalleryImageManagerProps) {
   const [images, setImages] = useState<GalleryImage[]>(galleryImages);
   const [isUploading, setIsUploading] = useState(false);
@@ -62,6 +65,15 @@ export function GalleryImageManager({
   };
 
   const pickAndUpload = async () => {
+    // Minor-Safe guard: block uploads for under-13 profiles.
+    if (isMinorSafe) {
+      toast({
+        title: 'Upload Locked',
+        description: 'Gallery photos cannot be uploaded until a parent completes the consent process for this minor athlete.',
+        variant: 'destructive',
+      });
+      return;
+    }
     if (images.length >= maxImages) {
       toast({ title: `Max ${maxImages} images allowed`, variant: 'destructive' });
       return;
