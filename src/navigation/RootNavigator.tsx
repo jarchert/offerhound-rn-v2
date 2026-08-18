@@ -60,6 +60,7 @@ import CoachCampaignsScreen from '@/screens/coach/CoachCampaignsScreen';
 import CoachCommunicationRulesScreen from '@/screens/coach/CoachCommunicationRulesScreen';
 import SampleAthleteScreen from '@/screens/public/SampleAthleteScreen';
 import AthleteProfileEditScreen from '@/screens/athlete/AthleteProfileEditScreen';
+import RecruitingPipelineScreen from '@/screens/athlete/RecruitingPipelineScreen';
 import InfluencerBlogComposerScreen from '@/screens/influencer/InfluencerBlogComposerScreen';
 import ParentAthleteEditor from '@/components/ParentAthleteEditor';
 
@@ -113,6 +114,7 @@ export type RootStackParamList = {
   CoachCampaigns: undefined;
   CoachCommunicationRules: undefined;
   AthleteProfileEdit: undefined;
+  RecruitingPipeline: undefined;
   InfluencerBlogComposer: { postId?: string } | undefined;
   /** Minor-safe profile creation — token from /minor-invite/:token deep link. */
   MinorInvite: { token: string };
@@ -245,6 +247,7 @@ function AuthenticatedNavigator({ initialRouteName }: { initialRouteName: keyof 
         <Stack.Screen name="CoachCampaigns" component={CoachCampaignsScreen} />
         <Stack.Screen name="CoachCommunicationRules" component={CoachCommunicationRulesScreen} />
         <Stack.Screen name="AthleteProfileEdit" component={AthleteProfileEditScreen} />
+        <Stack.Screen name="RecruitingPipeline" component={RecruitingPipelineScreen} />
         <Stack.Screen
           name="InfluencerBlogComposer"
           component={InfluencerBlogComposerScreen}

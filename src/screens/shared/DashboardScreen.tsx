@@ -837,13 +837,9 @@ export default function DashboardScreen() {
                   <View style={styles.savedActions}>
                     <Button
                       onPress={() =>
-                        (nav.navigate as any)('LettersScreen', {
-                          coach: {
-                            name: saved.coach?.name || '',
-                            school: saved.coach?.school || '',
-                            email: saved.coach?.email || '',
-                          },
-                        })
+                        // Navigate to LettersTab (bottom tab) — the tab is named 'LettersTab'
+                        // inside AthleteTabs. There is no standalone registered route for letters.
+                        (nav.navigate as any)('AthleteTabs', { screen: 'LettersTab' })
                       }
                     >
                       Send Letter
