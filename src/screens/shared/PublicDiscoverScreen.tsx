@@ -24,6 +24,13 @@ export default function PublicDiscoverScreen() {
 
   const goTo = (route: string) => {
     try {
+      if (route === 'PodcastsTab') {
+        // PodcastsTab is a sibling tab in PublicTabs (BottomTabNavigator).
+        // PublicDiscoverScreen is a direct tab child, so nav IS already scoped
+        // to the tab navigator — nav.navigate() switches the active tab directly.
+        nav.navigate('PodcastsTab' as any);
+        return;
+      }
       nav.navigate(route as any);
     } catch (e) {
       // Log navigation failures in dev so broken tile routes surface immediately.
