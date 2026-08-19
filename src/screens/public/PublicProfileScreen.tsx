@@ -78,15 +78,18 @@ export default function PublicProfileScreen() {
     queryKey: ['public-profile', slug],
     queryFn: async () => {
       if (!slug) return null;
+      // LEFT JOIN athlete_visibility_settings via PostgREST embed (LEFT JOIN
+      // by default). Consumers below derive `showContactInfo` from AVS with
+      // strict semantics: show_contact_info === true → show; NULL/false → hide.
       let { data } = await supabase
         .from('player_profiles')
-        .select('*')
+        .select('*, athlete_visibility_settings(*)')
         .eq('custom_url', slug)
         .maybeSingle();
       if (!data) {
         const res = await supabase
           .from('player_profiles')
-          .select('*')
+          .select('*, athlete_visibility_settings(*)')
           .eq('id', slug)
           .maybeSingle();
         data = res.data;
@@ -145,6 +148,32 @@ export default function PublicProfileScreen() {
     );
   }
 
+  // Unpublished gate — owners can still view their own draft profile.
+  // Anyone else (recruiter, coach, public) sees the same "not found" screen.
+  const isOwner = !!user && user.id === (profile as any).user_id;
+  if (!(profile as any).is_published && !isOwner) {
+    return (
+      <View style={s.loading}>
+        <Card style={s.notFoundCard}>
+          <CardContent style={s.notFoundContent}>
+            <AlertCircle size={48} color={colors.mutedForeground} />
+            <Text style={s.notFoundTitle}>Profile Not Found</Text>
+            <Text style={s.notFoundDesc}>
+              This profile doesn't exist or hasn't been published yet.
+            </Text>
+            <Button
+              onPress={() =>
+                nav.dispatch(CommonActions.navigate({ name: homeTarget as any }))
+              }
+              leftIcon={<Home size={16} color={colors.primaryForeground} />}>
+              Go Home
+            </Button>
+          </CardContent>
+        </Card>
+      </View>
+    );
+  }
+
   // Under-15 hard-block — never render a 'child'-band profile publicly.
   // getAgeBand returns 'child' for age < 15; 'unknown' (no DOB) is treated
   // as permissive so profiles without a date_of_birth are still viewable.
@@ -179,6 +208,14 @@ export default function PublicProfileScreen() {
     profile.show_highlight_video !== false && !!profile.highlight_video_url;
 
   const isViewerNotOwner = !!profile?.id && !!user && user.id !== profile.user_id;
+
+  // Contact gate: show_contact_info === true → show; NULL/false → hide.
+  // Contact is opt-in, so the AVS row (or column) missing means DO NOT SHOW
+  // contact fields (email, LetterButton, MessageButton).
+  const avsRow = Array.isArray((profile as any).athlete_visibility_settings)
+    ? (profile as any).athlete_visibility_settings[0]
+    : (profile as any).athlete_visibility_settings;
+  const showContactInfo = avsRow?.show_contact_info === true;
 
   return (
     <View style={s.container}>
@@ -221,9 +258,10 @@ export default function PublicProfileScreen() {
           )}
 
           {/* PORT-PENDING: web `LetterButton` (role-aware AI Letter Center router)
-              has no RN equivalent yet. Tracked under session-parity-port. */}
+              has no RN equivalent yet. Tracked under session-parity-port.
+              When ported, gate on `showContactInfo` (contact is opt-in). */}
 
-          {isViewerNotOwner && (
+          {isViewerNotOwner && showContactInfo && (
             <MessageButton
               recipientId={profile.user_id}
               recipientName={profile.full_name || 'Athlete'}

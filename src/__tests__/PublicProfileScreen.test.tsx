@@ -273,6 +273,7 @@ const VALID_PROFILE = {
   id: 'profile-123',
   user_id: 'user-abc',
   custom_url: 'marcus-johnson',
+  is_published: true,
   full_name: 'Marcus Johnson',
   position: 'QB',
   school: 'Lincoln High School',
@@ -383,11 +384,16 @@ describe('PublicProfileScreen', () => {
 
   // Test 5 ── authenticated non-owner → action buttons present ─────────────────
   // user.id='other-user' !== profile.user_id='user-abc' → isViewerNotOwner=true
+  // Contact gate: AVS row with show_contact_info:true → Message button renders.
   it('authenticated non-owner: Message and Request Transcript buttons present', async () => {
     mockAuthStore.user = { id: 'other-user' };
     mockAuthStore.userRole = 'athlete';
-    __setProfileFixture('marcus-johnson', VALID_PROFILE);
-    __setProfileFixture('profile-123', VALID_PROFILE);
+    const PROFILE_WITH_CONTACT = {
+      ...VALID_PROFILE,
+      athlete_visibility_settings: { show_contact_info: true },
+    };
+    __setProfileFixture('marcus-johnson', PROFILE_WITH_CONTACT);
+    __setProfileFixture('profile-123', PROFILE_WITH_CONTACT);
 
     const { findByTestId, queryByText } = await renderProfile('marcus-johnson');
 

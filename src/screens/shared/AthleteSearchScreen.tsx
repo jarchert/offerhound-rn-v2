@@ -150,8 +150,14 @@ export default function AthleteSearchScreen() {
       let q = supabase
         .from('player_profiles')
         .select(
-          'id, full_name, position, school, graduation_year, city, state, profile_image_url, custom_url, sport',
+          // LEFT JOIN athlete_visibility_settings (PostgREST embedded resources
+          // are LEFT JOINs by default). We fetch show_in_search and filter in
+          // JS below because "IS NOT FALSE" (i.e. NULL passes through) is not
+          // cleanly expressible via PostgREST's .not()/.eq() on embedded cols.
+          'id, full_name, position, school, graduation_year, city, state, profile_image_url, custom_url, sport, athlete_visibility_settings(show_in_search)',
         )
+        // Only show published profiles — draft profiles must not appear in recruiter search.
+        .eq('is_published', true)
         // Exclude under-15 athletes: keep rows where dob is null (unknown age)
         // or dob is on/before the cutoff (athlete is 15 or older).
         .or(`date_of_birth.is.null,date_of_birth.lte.${cutoffDate}`)
@@ -161,7 +167,15 @@ export default function AthleteSearchScreen() {
       if (position !== 'all') q = q.eq('position', position);
       if (gradYear !== 'all') q = q.eq('graduation_year', gradYear);
       const { data } = await q;
-      return data || [];
+      // AVS filter: show_in_search NULL = show (backwards compat — no AVS row
+      // means pass-through); show_in_search === false = hide.
+      const rows = (data || []) as any[];
+      return rows.filter((r) => {
+        const avs = Array.isArray(r.athlete_visibility_settings)
+          ? r.athlete_visibility_settings[0]
+          : r.athlete_visibility_settings;
+        return avs?.show_in_search !== false;
+      });
     },
   });
 
