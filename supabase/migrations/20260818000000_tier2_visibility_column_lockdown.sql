@@ -46,6 +46,7 @@ DROP POLICY IF EXISTS "Athletes update own" ON public.athlete_visibility_setting
 CREATE OR REPLACE FUNCTION public.block_direct_visibility_column_write()
 RETURNS TRIGGER
 LANGUAGE plpgsql
+SET search_path = public
 -- No SECURITY DEFINER — default is SECURITY INVOKER, which preserves current_role
 AS $$
 BEGIN
@@ -85,6 +86,7 @@ CREATE TRIGGER trg_block_visibility_col_direct_write
 CREATE OR REPLACE FUNCTION public.block_direct_player_visibility_write()
 RETURNS TRIGGER
 LANGUAGE plpgsql
+SET search_path = public
 -- No SECURITY DEFINER — SECURITY INVOKER preserves current_role
 AS $$
 BEGIN
