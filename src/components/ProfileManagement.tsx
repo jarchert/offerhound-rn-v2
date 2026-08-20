@@ -48,6 +48,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { useProfileCompletion } from '@/hooks/useProfileCompletion';
 import { supabase } from '@/integrations/supabase/client';
+import { isMinorSafeAthlete } from '@/lib/isMinorSafeAthlete';
 import {
   SportStatsEditor,
   measurableMirrorFromStats,
@@ -135,6 +136,17 @@ export const ProfileManagement = () => {
 
   const pickAndUploadComparisonImage = async () => {
     if (!user) return;
+    // Minor-Safe guard (prop fast-path not applicable here — no prop — so DB-path only).
+    // isMinorSafeAthlete() is fail-open: lookup errors return false, never blocking
+    // a normal upload due to a transient network/DB issue.
+    const minorSafeLocked = await isMinorSafeAthlete(user.id);
+    if (minorSafeLocked) {
+      toast.error(
+        'Upload Locked',
+        'Profile photos cannot be uploaded until a parent completes the consent process for this minor athlete.',
+      );
+      return;
+    }
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {

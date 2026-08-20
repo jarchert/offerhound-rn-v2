@@ -537,3 +537,109 @@ describe('Suite E — non-minor-safe profiles: Upload Locked toast never fires',
     );
   });
 });
+
+// ─── Mocks for ProfileManagement (Suite F) ────────────────────────────────────
+// These jest.mock calls are hoisted by babel-jest to the top of the file.
+// The toast mock uses module-level jest.fn()s accessed via require() so they
+// survive the hoisting boundary without referencing not-yet-declared variables.
+
+jest.mock('@/components/ui/toast', () => ({
+  toast: {
+    error: jest.fn(),
+    success: jest.fn(),
+  },
+}));
+
+jest.mock('@/hooks/useAuth', () => ({
+  useAuth: () => ({ user: { id: 'test-user-id-pm' } }),
+}));
+
+jest.mock('@/hooks/usePlayerProfile', () => ({
+  usePlayerProfile: () => ({
+    profile: { player_comparison_image_url: null, player_comparison: null },
+    updateProfile: jest.fn().mockResolvedValue({}),
+    fetchProfile: jest.fn(),
+  }),
+}));
+
+jest.mock('@/hooks/useProfileCompletion', () => ({
+  useProfileCompletion: () => ({ percentage: 50, missingFields: [] }),
+}));
+
+jest.mock('@react-navigation/native', () => ({
+  useNavigation: () => ({ navigate: jest.fn() }),
+}));
+
+jest.mock('@/components/transcripts/TranscriptManager', () => {
+  const { View } = require('react-native');
+  const R = require('react');
+  return { TranscriptManager: () => R.createElement(View, { testID: 'transcript-manager' }) };
+});
+
+jest.mock('@/components/athlete/SportStatsEditor', () => {
+  const { View } = require('react-native');
+  const R = require('react');
+  return {
+    SportStatsEditor: () => R.createElement(View, { testID: 'sport-stats-editor' }),
+    measurableMirrorFromStats: jest.fn(() => ({})),
+  };
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Suite F — ProfileManagement comparison image upload (8th upload path)
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('Suite F — ProfileManagement comparison image upload (8th path)', () => {
+  // Grab the hoisted mock object after all mocks are set up.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const toastMod = require('@/components/ui/toast').toast as { error: jest.Mock; success: jest.Mock };
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { ProfileManagement } = require('@/components/ProfileManagement');
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('DB-path guard blocks storage.upload when is_minor_safe=true', async () => {
+    mockDBMinorSafe(true);
+    const { getByText } = await render(React.createElement(ProfileManagement, {}));
+    await act(async () => { fireEvent.press(getByText('Upload Image')); });
+    await waitFor(() => {
+      expect(toastMod.error).toHaveBeenCalledWith(
+        'Upload Locked',
+        expect.stringContaining('consent'),
+      );
+    });
+    expect(mockStorageUpload).not.toHaveBeenCalled();
+  });
+
+  it('storage.upload never called (guard fires even without prop)', async () => {
+    mockDBMinorSafe(true);
+    const { getByText } = await render(React.createElement(ProfileManagement, {}));
+    await act(async () => { fireEvent.press(getByText('Upload Image')); });
+    await waitFor(() => { expect(toastMod.error).toHaveBeenCalled(); });
+    expect(mockStorageUpload).not.toHaveBeenCalled();
+  });
+
+  it('fail-open: DB error does NOT show Upload Locked toast', async () => {
+    mockDBError();
+    const { getByText } = await render(React.createElement(ProfileManagement, {}));
+    await act(async () => { fireEvent.press(getByText('Upload Image')); });
+    await waitFor(() => { /* flush */ });
+    expect(toastMod.error).not.toHaveBeenCalledWith(
+      'Upload Locked',
+      expect.any(String),
+    );
+  });
+
+  it('normal upload (is_minor_safe=false): Upload Locked toast never fires', async () => {
+    mockDBNormal();
+    const { getByText } = await render(React.createElement(ProfileManagement, {}));
+    await act(async () => { fireEvent.press(getByText('Upload Image')); });
+    await waitFor(() => { /* flush */ });
+    expect(toastMod.error).not.toHaveBeenCalledWith(
+      'Upload Locked',
+      expect.any(String),
+    );
+  });
+});
