@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/Button';
 import { Label } from '@/components/ui/Label';
 import { Switch } from '@/components/ui/Switch';
 import { supabase } from '@/integrations/supabase/client';
+import { isMinorSafeAthlete } from '@/lib/isMinorSafeAthlete';
 import { useToast } from '@/hooks/use-toast';
 import { colors, typography, spacing } from '@/lib/theme';
 
@@ -47,8 +48,9 @@ export function HighlightVideoUpload({
   const { toast } = useToast();
 
   const pickAndUpload = async () => {
-    // Minor-Safe guard: block uploads for under-13 profiles.
-    if (isMinorSafe) {
+    // Minor-Safe guard (prop fast-path + DB verification).
+    const minorSafeLocked = isMinorSafe || (await isMinorSafeAthlete(athleteId));
+    if (minorSafeLocked) {
       toast({
         title: 'Upload Locked',
         description: 'Highlight videos cannot be uploaded until a parent completes the consent process for this minor athlete.',

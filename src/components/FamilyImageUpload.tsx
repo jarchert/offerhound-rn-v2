@@ -5,6 +5,7 @@ import { ImagePlus, Loader2, Trash2, Users, Maximize2 } from 'lucide-react-nativ
 import { Button } from '@/components/ui/Button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
 import { supabase } from '@/integrations/supabase/client';
+import { isMinorSafeAthlete } from '@/lib/isMinorSafeAthlete';
 import { useToast } from '@/hooks/use-toast';
 import { colors, typography, spacing } from '@/lib/theme';
 
@@ -28,8 +29,9 @@ export function FamilyImageUpload({
   const { toast } = useToast();
 
   const pickAndUpload = async () => {
-    // Minor-Safe guard: block uploads for under-13 profiles.
-    if (isMinorSafe) {
+    // Minor-Safe guard (prop fast-path + DB verification).
+    const minorSafeLocked = isMinorSafe || (await isMinorSafeAthlete(athleteId));
+    if (minorSafeLocked) {
       toast({
         title: 'Upload Locked',
         description: 'Family photos cannot be uploaded until a parent completes the consent process for this minor athlete.',

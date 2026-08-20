@@ -14,6 +14,7 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Plus, Loader2, X } from 'lucide-react-native';
 import { supabase } from '@/integrations/supabase/client';
+import { isMinorSafeAthlete } from '@/lib/isMinorSafeAthlete';
 import { useToast } from '@/hooks/use-toast';
 import { colors, typography, spacing } from '@/lib/theme';
 
@@ -65,8 +66,9 @@ export function GalleryImageManager({
   };
 
   const pickAndUpload = async () => {
-    // Minor-Safe guard: block uploads for under-13 profiles.
-    if (isMinorSafe) {
+    // Minor-Safe guard (prop fast-path + DB verification).
+    const minorSafeLocked = isMinorSafe || (await isMinorSafeAthlete(athleteId));
+    if (minorSafeLocked) {
       toast({
         title: 'Upload Locked',
         description: 'Gallery photos cannot be uploaded until a parent completes the consent process for this minor athlete.',

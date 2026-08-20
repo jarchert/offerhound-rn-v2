@@ -28,6 +28,7 @@ import { ImagePlus, Trash2, Image as ImageIconLucide, Maximize2 } from 'lucide-r
 import { Button } from '@/components/ui/Button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
 import { supabase } from '@/integrations/supabase/client';
+import { isMinorSafeAthlete } from '@/lib/isMinorSafeAthlete';
 import { useToast } from '@/hooks/use-toast';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
@@ -72,8 +73,9 @@ export function BannerImageUpload({
   const { toast } = useToast();
 
   const pickImage = async () => {
-    // Minor-Safe guard: block uploads for under-13 profiles.
-    if (isMinorSafe) {
+    // Minor-Safe guard (prop fast-path + DB verification).
+    const minorSafeLocked = isMinorSafe || (await isMinorSafeAthlete(athleteId));
+    if (minorSafeLocked) {
       toast({
         title: 'Upload Locked',
         description: 'Banner images cannot be uploaded until a parent completes the consent process for this minor athlete.',
