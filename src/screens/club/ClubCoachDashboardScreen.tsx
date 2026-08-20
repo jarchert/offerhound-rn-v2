@@ -240,7 +240,7 @@ export default function ClubCoachDashboardScreen() {
             ) : null}
           </View>
           <View style={s.bannerActions}>
-            <Button size="sm" onPress={() => nav.navigate('AthleteTabs' as any)} leftIcon={<Search size={14} color={colors.primaryForeground} />}>Search</Button>
+            <Button size="sm" onPress={() => nav.navigate('AthleteSearch' as any)} leftIcon={<Search size={14} color={colors.primaryForeground} />}>Search</Button>
             <Button variant="outline" size="sm" onPress={() => nav.navigate('LetterComposer' as any)} leftIcon={<FileCheck size={14} color={colors.foreground} />}>Letters</Button>
             <Button variant="outline" size="sm" onPress={() => nav.navigate('Messages' as any)} leftIcon={<MessageSquare size={14} color={colors.foreground} />}>Messages</Button>
           </View>
@@ -343,7 +343,7 @@ export default function ClubCoachDashboardScreen() {
                 <CardContent>
                   <View style={s.quickGrid}>
                     <Button variant="outline" onPress={() => setActiveTab('teams')} style={s.quickBtn} leftIcon={<Trophy size={16} color={colors.foreground} />}>Create Team</Button>
-                    <Button variant="outline" onPress={() => nav.navigate('AthleteTabs' as any)} style={s.quickBtn} leftIcon={<Search size={16} color={colors.foreground} />}>Find Athletes</Button>
+                    <Button variant="outline" onPress={() => nav.navigate('AthleteSearch' as any)} style={s.quickBtn} leftIcon={<Search size={16} color={colors.foreground} />}>Find Athletes</Button>
                     <Button variant="outline" onPress={() => nav.navigate('LetterComposer' as any)} style={s.quickBtn} leftIcon={<FileCheck size={16} color={colors.foreground} />}>AI Letters</Button>
                     <Button variant="outline" onPress={() => nav.navigate('Messages' as any)} style={s.quickBtn} leftIcon={<Mail size={16} color={colors.foreground} />}>Send Message</Button>
                     <Button variant="outline" onPress={() => setActiveTab('discover')} style={s.quickBtn} leftIcon={<Megaphone size={16} color={colors.foreground} />}>Coach Directory</Button>
@@ -509,7 +509,7 @@ export default function ClubCoachDashboardScreen() {
                               <Badge variant={saved.priority === 'high' ? 'default' : 'secondary'}>{String(saved.priority || 'normal')}</Badge>
                             </View>
                           </View>
-                          <Button variant="outline" size="sm" style={s.fullW} onPress={() => {/* PORT-PENDING: deep link to public profile */}}>View Profile</Button>
+                          <Button variant="outline" size="sm" style={s.fullW} onPress={() => nav.navigate('PublicProfileStack' as any, { screen: 'PublicProfile', params: { profileId: saved.athlete?.id } })}>View Profile</Button>
                         </View>
                       ))}
                     </View>
@@ -518,7 +518,7 @@ export default function ClubCoachDashboardScreen() {
                       <Users size={36} color={colors.mutedForeground} />
                       <Text style={s.emptyTitle}>No saved athletes</Text>
                       <Text style={s.muted}>Search for athletes to add to your roster or recommend to recruiters.</Text>
-                      <Button onPress={() => nav.navigate('AthleteTabs' as any)} leftIcon={<Search size={14} color={colors.primaryForeground} />}>Search Athletes</Button>
+                      <Button onPress={() => nav.navigate('AthleteSearch' as any)} leftIcon={<Search size={14} color={colors.primaryForeground} />}>Search Athletes</Button>
                     </View>
                   )}
                 </CardContent>

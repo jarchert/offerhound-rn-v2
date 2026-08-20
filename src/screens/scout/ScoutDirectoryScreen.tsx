@@ -97,10 +97,12 @@ export default function ScoutDirectoryScreen() {
     });
   };
 
-  // PORT-PENDING: no PublicScoutProfile route in RN yet.
-  // Tapping a card currently opens the LetterComposer instead.
+  // PublicScoutProfile is registered in PublicProfileStack.
   const handleOpenProfile = (scout: any) => {
-    handleSendLetter(scout);
+    nav.navigate('PublicProfileStack' as any, {
+      screen: 'PublicScoutProfile',
+      params: { scoutId: scout.id },
+    });
   };
 
   const viewerRole: 'athlete' | 'coach' | 'club-coach' | 'hs-coach' | 'scout' =

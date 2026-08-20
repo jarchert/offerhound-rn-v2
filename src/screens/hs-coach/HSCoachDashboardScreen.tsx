@@ -234,7 +234,7 @@ export default function HSCoachDashboardScreen() {
               ) : null}
             </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-              <Button size="sm" leftIcon={<Search size={14} color={colors.primaryForeground} />}>
+              <Button size="sm" leftIcon={<Search size={14} color={colors.primaryForeground} />} onPress={() => nav.navigate('AthleteSearch' as never)}>
                 Search Athletes
               </Button>
               <Button
@@ -354,10 +354,10 @@ export default function HSCoachDashboardScreen() {
                   <CardContent>
                     <View style={s.quickGrid}>
                       <QuickAction icon={Users} label="Manage Roster" onPress={() => setActiveTab('roster')} />
-                      <QuickAction icon={Search} label="Find Athletes" onPress={() => {/* PORT-PENDING: navigate to /athletes */}} />
+                      <QuickAction icon={Search} label="Find Athletes" onPress={() => nav.navigate('AthleteSearch' as never)} />
                       <QuickAction icon={FileCheck} label="AI Letters" onPress={() => nav.navigate('LetterComposer' as never)} />
                       <QuickAction icon={Mail} label="Messages" onPress={() => nav.navigate('Messages' as never)} />
-                      <QuickAction icon={GraduationCap} label="College Coaches" onPress={() => {/* PORT-PENDING: /coaches route */}} />
+                      <QuickAction icon={GraduationCap} label="College Coaches" onPress={() => nav.navigate('CoachDirectory' as never)} />
                     </View>
                   </CardContent>
                 </Card>
@@ -410,6 +410,7 @@ export default function HSCoachDashboardScreen() {
                         variant="outline" size="sm"
                         leftIcon={<Search size={14} color={colors.primary} />}
                         style={{ marginTop: spacing.md }}
+                        onPress={() => nav.navigate('AthleteSearch' as never)}
                       >
                         Search Athletes
                       </Button>
@@ -525,7 +526,7 @@ export default function HSCoachDashboardScreen() {
                               </Badge>
                             </View>
                           </View>
-                          <Button variant="outline" size="sm" style={{ marginTop: spacing.sm }}>
+                          <Button variant="outline" size="sm" style={{ marginTop: spacing.sm }} onPress={() => nav.navigate('PublicProfileStack' as never, { screen: 'PublicProfile', params: { profileId: saved.athlete?.id } } as never)}>
                             View Profile
                           </Button>
                         </View>
@@ -536,7 +537,7 @@ export default function HSCoachDashboardScreen() {
                       <Users size={36} color={colors.foregroundSubtle} />
                       <Text style={[s.empTitle, { marginTop: spacing.sm }]}>No saved athletes</Text>
                       <Text style={s.muted}>Search for athletes to recommend to college programs.</Text>
-                      <Button leftIcon={<Search size={14} color={colors.primaryForeground} />} style={{ marginTop: spacing.md }}>
+                      <Button leftIcon={<Search size={14} color={colors.primaryForeground} />} style={{ marginTop: spacing.md }} onPress={() => nav.navigate('AthleteSearch' as never)}>
                         Search Athletes
                       </Button>
                     </View>

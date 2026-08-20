@@ -374,7 +374,7 @@ export default function CoachDirectoryScreen() {
               <Button
                 variant="outline"
                 size="sm"
-                onPress={() => {/* PORT-PENDING: SavedCoaches route */}}
+                onPress={() => nav.navigate('SavedCoaches' as any)}
                 leftIcon={<Bookmark size={14} color={colors.foreground} />}
               >
                 {`Saved (${savedCoaches.length})`}

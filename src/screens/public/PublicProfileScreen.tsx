@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp, CommonActions } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, AlertCircle, Home, Share2, Check, ShieldOff } from 'lucide-react-native';
+import { Loader2, AlertCircle, Home, Share2, Check, ShieldOff, FileCheck } from 'lucide-react-native';
 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -209,6 +209,19 @@ export default function PublicProfileScreen() {
 
   const isViewerNotOwner = !!profile?.id && !!user && user.id !== profile.user_id;
 
+  // Coaches (college, club, HS) can send a recruitment letter to this athlete.
+  // Reuses the same LetterComposer seed pattern as CoachDashboard / AthleteSearchScreen.
+  const isCoachViewer = isCollegeCoach || isClubCoach || isHSCoach;
+  const goLetter = () => {
+    nav.navigate('LetterComposer' as never, {
+      seed: {
+        prefillAthleteId: profile.id,
+        prefillAthleteName: profile.full_name,
+        recipientName: profile.full_name,
+      },
+    } as never);
+  };
+
   // Contact gate: show_contact_info === true → show; NULL/false → hide.
   // Contact is opt-in, so the AVS row (or column) missing means DO NOT SHOW
   // contact fields (email, LetterButton, MessageButton).
@@ -257,9 +270,14 @@ export default function PublicProfileScreen() {
             />
           )}
 
-          {/* PORT-PENDING: web `LetterButton` (role-aware AI Letter Center router)
-              has no RN equivalent yet. Tracked under session-parity-port.
-              When ported, gate on `showContactInfo` (contact is opt-in). */}
+          {isViewerNotOwner && isCoachViewer && showContactInfo && (
+            <Button
+              leftIcon={<FileCheck size={14} color={colors.primaryForeground} />}
+              onPress={goLetter}
+            >
+              AI Letter
+            </Button>
+          )}
 
           {isViewerNotOwner && showContactInfo && (
             <MessageButton
