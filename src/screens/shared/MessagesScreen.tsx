@@ -385,7 +385,7 @@ function ActiveThread({
     if (unreadIds.length === 0) return;
     void supabase
       .from('messages')
-      .update({ read_at: new Date().toISOString() } as any)
+      .update({ read_at: new Date().toISOString(), is_read: true } as any)
       .in('id', unreadIds);
   }, [messages, user]);
 
