@@ -41,6 +41,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useCampCheckinSync } from '@/hooks/useCampCheckinSync';
 import { enqueueOp } from '@/lib/checkinQueue';
+import { CampWalkupRegistration } from '@/components/CampWalkupRegistration';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -471,15 +472,14 @@ export default function CampMobileCheckinScreen() {
           </TabsContent>
 
           <TabsContent value="walkup">
-            {/* PORT-PENDING: Lovable CampWalkupRegistration not yet ported to RN. */}
-            <Card>
-              <CardContent style={{ paddingVertical: 24 }}>
-                <Text style={[styles.muted, { textAlign: 'center' }]}>
-                  Walk-up registration form is coming soon to the native app. For now, register the
-                  athlete on the web dashboard, then check them in here.
-                </Text>
-              </CardContent>
-            </Card>
+            <CampWalkupRegistration
+              campId={campId ?? ''}
+              positions={camp.positions ?? []}
+              isOnline={isOnline}
+              onRegistered={() =>
+                queryClient.invalidateQueries({ queryKey: ['camp-ops-enrollments', campId] })
+              }
+            />
           </TabsContent>
         </Tabs>
 
