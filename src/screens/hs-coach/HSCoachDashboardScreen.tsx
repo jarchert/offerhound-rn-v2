@@ -45,6 +45,9 @@ import { HSTransferRequests } from '@/components/hs-coach/HSTransferRequests';
 import { HSCoachReferralPanel } from '@/components/hs-coach/HSCoachReferralPanel';
 import { HSCoachTranscriptVerificationTab } from '@/components/hs-coach/HSCoachTranscriptVerificationTab';
 import { HSCoachFilmVerificationTab } from '@/components/hs-coach/HSCoachFilmVerificationTab';
+import { FootballProgramTab } from '@/components/football/FootballProgramTab';
+import { FootballRosterTab } from '@/components/football/FootballRosterTab';
+import { FootballEmailBlockTab } from '@/components/football/FootballEmailBlockTab';
 import { ShareRoleCardDialog } from '@/components/ShareRoleCardDialog';
 import { AthleteMatchCard } from '@/components/athlete/AthleteMatchCard';
 
@@ -282,6 +285,9 @@ export default function HSCoachDashboardScreen() {
               <TabsTrigger value="messaging"><TabLabel icon={MessageSquare} label="Messaging" /></TabsTrigger>
               <TabsTrigger value="media"><TabLabel icon={ImageIcon} label="Media" /></TabsTrigger>
               <TabsTrigger value="discover"><TabLabel icon={Telescope} label="Coaches & Scouts" /></TabsTrigger>
+              {profileAny.sport === 'football' && (
+                <TabsTrigger value="football-hub"><TabLabel icon={Trophy} label="Football Hub" /></TabsTrigger>
+              )}
               <TabsTrigger value="club-roster"><TabLabel icon={ArrowRightLeft} label="Club Athletes" /></TabsTrigger>
               <TabsTrigger value="athletes"><TabLabel icon={Star} label="Saved" /></TabsTrigger>
               <TabsTrigger value="profile"><TabLabel icon={Eye} label="Profile" /></TabsTrigger>
@@ -483,6 +489,12 @@ export default function HSCoachDashboardScreen() {
               <ClubCoachDirectoryTab clubProfile={{ sport: profileAny.sport, state: profileAny.school_state }} />
             </TabsContent>
 
+            {profileAny.sport === 'football' && (
+              <TabsContent value="football-hub">
+                <FootballHubTabs />
+              </TabsContent>
+            )}
+
             {/* Club Athletes — browse + claim */}
             <TabsContent value="club-roster">
               <View style={{ gap: spacing.lg }}>
@@ -526,7 +538,7 @@ export default function HSCoachDashboardScreen() {
                               </Badge>
                             </View>
                           </View>
-                          <Button variant="outline" size="sm" style={{ marginTop: spacing.sm }} onPress={() => nav.navigate('PublicProfileStack' as never, { screen: 'PublicProfile', params: { profileId: saved.athlete?.id } } as never)}>
+                          <Button variant="outline" size="sm" style={{ marginTop: spacing.sm }} onPress={() => (nav as any).navigate('PublicProfileStack', { screen: 'PublicProfile', params: { profileId: saved.athlete?.id } })}>
                             View Profile
                           </Button>
                         </View>
@@ -558,6 +570,23 @@ export default function HSCoachDashboardScreen() {
         </ScrollView>
       </SafeAreaView>
     </TermsAcceptanceGate>
+  );
+}
+
+// ---------- Football Hub Sub-component ----------
+function FootballHubTabs() {
+  const [tab, setTab] = useState('program');
+  return (
+    <Tabs value={tab} onValueChange={setTab}>
+      <TabsList>
+        <TabsTrigger value="program"><TabLabel icon={Trophy} label="Program" /></TabsTrigger>
+        <TabsTrigger value="roster"><TabLabel icon={Users} label="Roster" /></TabsTrigger>
+        <TabsTrigger value="email-block"><TabLabel icon={Mail} label="Email Block" /></TabsTrigger>
+      </TabsList>
+      <TabsContent value="program"><FootballProgramTab /></TabsContent>
+      <TabsContent value="roster"><FootballRosterTab /></TabsContent>
+      <TabsContent value="email-block"><FootballEmailBlockTab /></TabsContent>
+    </Tabs>
   );
 }
 

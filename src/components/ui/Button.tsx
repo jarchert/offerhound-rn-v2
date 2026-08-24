@@ -16,11 +16,12 @@ interface ButtonProps {
   textStyle?: TextStyle;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  testID?: string;
 }
 
 export function Button({
   children, onPress, variant = 'default', size = 'default',
-  disabled, loading, style, textStyle, leftIcon, rightIcon,
+  disabled, loading, style, textStyle, leftIcon, rightIcon, testID,
 }: ButtonProps) {
   const variantStyle = variantStyles[variant];
   const sizeStyle = sizeStyles[size];
@@ -28,6 +29,7 @@ export function Button({
 
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       disabled={disabled || loading}
       style={({ pressed }) => [
