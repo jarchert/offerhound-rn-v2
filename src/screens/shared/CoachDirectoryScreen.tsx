@@ -561,6 +561,15 @@ export default function CoachDirectoryScreen() {
                       disableContact={!isAuthenticated}
                       viewerRole={viewerRole}
                       coachAudience={isHSCoachCard ? 'hs-coach' : 'college-coach'}
+                      onOpenProfile={
+                        isHSCoachCard
+                          ? () =>
+                              nav.navigate('PublicProfileStack' as any, {
+                                screen: 'PublicHSCoachProfile',
+                                params: { hsCoachId: coach.id },
+                              })
+                          : undefined
+                      }
                     />
                   </View>
                 </View>

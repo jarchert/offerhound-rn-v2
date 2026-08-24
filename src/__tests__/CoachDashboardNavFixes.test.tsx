@@ -326,8 +326,10 @@ jest.mock('@/lib/getAgeBand', () => ({
 // ─── Global beforeEach ────────────────────────────────────────────────────────
 beforeEach(() => {
   mockNavigate.mockClear();
-  // Full reset: clears both mockImplementation and mockReturnValue
-  mockUseQuery.mockReset();
+  // Use mockClear (not mockReset) to clear call history while preserving
+  // implementations. mockReset would wipe the mock entirely, breaking
+  // subsequent test files that share the same mock module.
+  mockUseQuery.mockClear();
   mockUseQuery.mockReturnValue({ data: undefined, isLoading: false, error: null });
   mockSavedAthletes.mockReturnValue({ data: [] });
   mockSavedCoaches.mockReturnValue({ data: [] });
@@ -425,6 +427,7 @@ describe('ClubCoachDashboardScreen — Bugs 2 & 7', () => {
             full_name: 'Test Athlete',
             position: 'QB',
             school: 'Test HS',
+            custom_url: 'test-athlete',
           },
           priority: 'high',
         },
@@ -440,7 +443,7 @@ describe('ClubCoachDashboardScreen — Bugs 2 & 7', () => {
     fireEvent.press(getByText('View Profile'));
     expect(mockNavigate).toHaveBeenCalledWith(
       'PublicProfileStack',
-      expect.objectContaining({ screen: 'PublicProfile' }),
+      expect.objectContaining({ screen: 'PublicProfile', params: expect.objectContaining({ customUrl: 'test-athlete' }) }),
     );
   });
 });

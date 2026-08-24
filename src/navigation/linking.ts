@@ -129,6 +129,8 @@ export const linking: LinkingOptions<any> = {
           AthleteProfileByUrl: 'athlete/:customUrl',
           ProfileLegacy: 'profile/:customUrl',
           PublicScoutProfile: 'scouts/:scoutId',
+          PublicHSCoachProfile: 'hs-coach/:hsCoachId',
+          PublicAgencyProfile: 'agency/:agencyId',
           InfluencerProfile: 'influencers/:handle',
           InfluencerBlogPost: 'influencers/:handle/blog/:slug',
           InviteShareCard: 'invite/share-card',
