@@ -9,7 +9,7 @@
 //   - Checkbox                       → @/components/ui/Checkbox
 //   - useNavigate (react-router)     → useNavigation (react-navigation)
 //   - sticky bottom bar              → absolutely-positioned View at bottom
-//   - shadcn Sheet/CoachOutreachComposer → PORT-PENDING (composer not opened)
+//   - shadcn Sheet/CoachOutreachComposer → CoachOutreachComposer Modal (wired)
 //   - useAuth.isAuthenticated        → derived from `user` presence
 //
 // Verbatim filter logic preserved 1:1:
@@ -22,9 +22,6 @@
 //   - Sort: name-presence first, then AI matches, then proximity, then alpha.
 //
 // PORT-PENDING stubs (intentional, called out inline):
-//   - CoachOutreachComposer (shadcn Sheet + email composer)  → omitted
-//   - sticky multi-select email button still selectable but
-//     "Email selected" press only logs (no composer modal in RN yet)
 //   - viewerSports overlap filter relies on extractSports — preserved 1:1
 //   - "AI Letters" header button picks the right LetterCenter route per role
 //   - "Saved" header button navigates to "SavedCoaches" if exposed (else no-op)
@@ -78,16 +75,8 @@ import { compareByFullNamePresence } from '@/lib/utils/nameSorting';
 import { extractSports, sportsOverlap } from '@/lib/utils/sportMatching';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
-
-// PORT-PENDING: CoachOutreachComposer (shadcn Sheet + email body builder).
-type OutreachCoach = {
-  id: string;
-  name?: string;
-  school?: string;
-  email?: string;
-  position_coached?: string;
-  sport?: string;
-};
+import { CoachOutreachComposer } from '@/components/CoachOutreachComposer';
+import type { OutreachCoach } from '@/components/CoachOutreachComposer';
 
 // ── State proximity tables (verbatim from Lovable CoachDirectory.tsx) ────────
 const STATE_NEIGHBORS: Record<string, string[]> = {
@@ -199,7 +188,7 @@ export default function CoachDirectoryScreen() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   // PORT-PENDING: composer Sheet — kept stateful for future wire-up.
-  const [, setComposerOpen] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
 
   const { user } = useAuth() as any;
   const isAuthenticated = !!user;
@@ -353,8 +342,6 @@ export default function CoachDirectoryScreen() {
         })),
     [sortedCoaches, selectedIds],
   );
-  void selectedCoaches; // silence unused-warning until composer wires up
-
   const goToLetterCenter = () => {
     // PORT-PENDING: only Letters route in RN today is the shared LetterComposer
     // and ScoutLetters tab. We pick the closest match by viewer role.
@@ -605,7 +592,11 @@ export default function CoachDirectoryScreen() {
         </View>
       ) : null}
 
-      {/* PORT-PENDING: <CoachOutreachComposer ... /> shadcn Sheet */}
+      <CoachOutreachComposer
+        coaches={selectedCoaches}
+        visible={composerOpen}
+        onClose={() => setComposerOpen(false)}
+      />
     </SafeAreaView>
   );
 }
