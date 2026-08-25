@@ -29,7 +29,7 @@ export function CardFooter({ children, style }: { children: React.ReactNode; sty
 const s = StyleSheet.create({
   card: { backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   header: { padding: spacing.md, gap: 4 },
-  title: { fontFamily: typography.fontFamily.heading, fontSize: typography.fontSize.lg, color: colors.foreground, letterSpacing: typography.letterSpacing.heading },
+  title: { fontFamily: typography.fontFamily.heading, fontSize: typography.fontSize.lg, color: colors.cardForeground, letterSpacing: typography.letterSpacing.heading },
   description: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.sm, color: colors.mutedForeground },
   content: { padding: spacing.md, paddingTop: 0 },
   footer: { padding: spacing.md, paddingTop: 0, flexDirection: 'row', alignItems: 'center' },
