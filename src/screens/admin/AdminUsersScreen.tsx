@@ -1,6 +1,8 @@
 // AdminUsersScreen — user management with search + role filter.
 // Part 32 of the conversion guide describes the admin suite.
 //
+// Sub-tabs: All Users | Influencers
+//
 // Query strategy: `profiles` table does not exist in this schema.
 // Email lives in auth.users (Edge Function only; no admin-list-users function deployed).
 // Instead we query user_roles for every user + their role, then fan out to
@@ -26,6 +28,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 import { UserCog } from 'lucide-react-native';
+import AdminInfluencersScreen from '@/screens/admin/AdminInfluencersScreen';
 
 export interface AdminUserRow {
   userId: string;
@@ -112,7 +115,10 @@ async function fetchAdminUsers(): Promise<AdminUserRow[]> {
   return [...merged.values()];
 }
 
+type UsersTab = 'all' | 'influencers';
+
 export default function AdminUsersScreen() {
+  const [tab, setTab] = useState<UsersTab>('all');
   const [search, setSearch] = useState('');
 
   const { data: users = [], isLoading, refetch } = useQuery({
@@ -131,61 +137,108 @@ export default function AdminUsersScreen() {
   return (
     <SafeAreaView style={s.container}>
       <Navbar />
-      <View style={s.header}>
-        <Text style={s.title}>User management</Text>
-        <Text style={s.subtitle}>{filtered.length} users</Text>
+
+      {/* Sub-tab segmented control: All Users | Influencers */}
+      <View style={s.tabRow}>
+        <Pressable
+          onPress={() => setTab('all')}
+          style={[s.tabBtn, tab === 'all' && s.tabBtnActive]}
+          testID="users-tab-all"
+        >
+          <Text style={[s.tabText, tab === 'all' && s.tabTextActive]}>All Users</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setTab('influencers')}
+          style={[s.tabBtn, tab === 'influencers' && s.tabBtnActive]}
+          testID="users-tab-influencers"
+        >
+          <Text style={[s.tabText, tab === 'influencers' && s.tabTextActive]}>Influencers</Text>
+        </Pressable>
       </View>
-      <View style={s.searchRow}>
-        <TextInput
-          style={s.searchInput}
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search by name, role, or user ID…"
-          placeholderTextColor={colors.foregroundSubtle}
-        />
-      </View>
-      <FlashList
-        data={filtered}
-        keyExtractor={(u) => u.userId}
-        contentContainerStyle={s.list}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />}
-        renderItem={({ item }) => (
-          <Card style={s.card}>
-            <View style={s.row}>
-              <Avatar
-                source={item.profile_image_url ? { uri: item.profile_image_url } : null}
-                fallback={item.displayName}
-                size={40}
-              />
-              <View style={s.info}>
-                <Text style={s.name} numberOfLines={1}>{item.displayName}</Text>
-                <Text style={s.userId} numberOfLines={1}>{item.userId}</Text>
-              </View>
-              <Badge variant="outline">{item.role}</Badge>
-              <Pressable
-                onPress={() =>
-                  Alert.alert(
-                    'Not available on mobile',
-                    'User impersonation requires the web admin panel. Open the OfferHound web admin to impersonate this user.',
-                    [{ text: 'OK' }],
-                  )
-                }
-                style={s.impBtn}
-                accessibilityLabel={`Impersonate ${item.displayName}`}
-              >
-                <UserCog size={14} color={colors.primaryForeground} />
-                <Text style={s.impBtnText}>Impersonate</Text>
-              </Pressable>
-            </View>
-          </Card>
-        )}
-      />
+
+      {tab === 'influencers' ? (
+        <AdminInfluencersScreen />
+      ) : (
+        <>
+          <View style={s.header}>
+            <Text style={s.title}>User management</Text>
+            <Text style={s.subtitle}>{filtered.length} users</Text>
+          </View>
+          <View style={s.searchRow}>
+            <TextInput
+              style={s.searchInput}
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Search by name, role, or user ID…"
+              placeholderTextColor={colors.foregroundSubtle}
+            />
+          </View>
+          <FlashList
+            data={filtered}
+            keyExtractor={(u) => u.userId}
+            contentContainerStyle={s.list}
+            refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />}
+            renderItem={({ item }) => (
+              <Card style={s.card}>
+                <View style={s.row}>
+                  <Avatar
+                    source={item.profile_image_url ? { uri: item.profile_image_url } : null}
+                    fallback={item.displayName}
+                    size={40}
+                  />
+                  <View style={s.info}>
+                    <Text style={s.name} numberOfLines={1}>{item.displayName}</Text>
+                    <Text style={s.userId} numberOfLines={1}>{item.userId}</Text>
+                  </View>
+                  <Badge variant="outline">{item.role}</Badge>
+                  <Pressable
+                    onPress={() =>
+                      Alert.alert(
+                        'Not available on mobile',
+                        'User impersonation requires the web admin panel. Open the OfferHound web admin to impersonate this user.',
+                        [{ text: 'OK' }],
+                      )
+                    }
+                    style={s.impBtn}
+                    accessibilityLabel={`Impersonate ${item.displayName}`}
+                  >
+                    <UserCog size={14} color={colors.primaryForeground} />
+                    <Text style={s.impBtnText}>Impersonate</Text>
+                  </Pressable>
+                </View>
+              </Card>
+            )}
+          />
+        </>
+      )}
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  tabRow: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+    borderRadius: radius.md,
+    backgroundColor: colors.muted,
+    padding: 4,
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: radius.sm,
+  },
+  tabBtnActive: { backgroundColor: colors.primary },
+  tabText: {
+    fontFamily: typography.fontFamily.bodySemiBold,
+    fontSize: typography.size.sm,
+    color: colors.foregroundSubtle,
+  },
+  tabTextActive: { color: colors.primaryForeground },
   header: { padding: spacing.md },
   title: {
     fontFamily: typography.fontFamily.heading,

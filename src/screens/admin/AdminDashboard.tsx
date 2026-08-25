@@ -12,9 +12,11 @@ import { StatTile } from '@/components/StatTile';
 import { AdminBadge } from '@/components/AdminBadge';
 import { AdminAnalyticsDashboard } from '@/components/AdminAnalyticsDashboard';
 import { AdminSessionAnalytics } from '@/components/AdminSessionAnalytics';
+import { AdminOnboardingStats } from '@/components/AdminOnboardingStats';
+import AdminHomepageVideoAnalytics from '@/components/AdminHomepageVideoAnalytics';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
-type OverviewTab = 'stats' | 'sessions';
+type OverviewTab = 'stats' | 'sessions' | 'roles' | 'videos';
 
 export default function AdminDashboard() {
   const [tab, setTab] = useState<OverviewTab>('stats');
@@ -57,6 +59,20 @@ export default function AdminDashboard() {
         >
           <Text style={[s.tabText, tab === 'sessions' && s.tabTextActive]}>Sessions</Text>
         </Pressable>
+        <Pressable
+          onPress={() => setTab('roles')}
+          style={[s.tabBtn, tab === 'roles' && s.tabBtnActive]}
+          testID="overview-tab-roles"
+        >
+          <Text style={[s.tabText, tab === 'roles' && s.tabTextActive]}>Roles</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setTab('videos')}
+          style={[s.tabBtn, tab === 'videos' && s.tabBtnActive]}
+          testID="overview-tab-videos"
+        >
+          <Text style={[s.tabText, tab === 'videos' && s.tabTextActive]}>Videos</Text>
+        </Pressable>
       </View>
 
       {tab === 'stats' ? (
@@ -83,9 +99,14 @@ export default function AdminDashboard() {
           {/* Analytics dashboard (previously orphaned) */}
           <AdminAnalyticsDashboard />
         </ScrollView>
-      ) : (
-        /* Sessions analytics — AdminSessionAnalytics is itself a ScrollView */
+      ) : tab === 'sessions' ? (
         <AdminSessionAnalytics />
+      ) : tab === 'roles' ? (
+        <ScrollView contentContainerStyle={s.content}>
+          <AdminOnboardingStats />
+        </ScrollView>
+      ) : (
+        <AdminHomepageVideoAnalytics />
       )}
     </SafeAreaView>
   );

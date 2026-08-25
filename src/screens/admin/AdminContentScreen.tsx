@@ -4,6 +4,7 @@ import React from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, View, Text } from 'react-native';
 import { PodcastTileUpload } from '@/components/admin/PodcastTileUpload';
 import { AdminInvitationCards } from '@/components/AdminInvitationCards';
+import AdminPlatformEmailTemplates from '@/components/AdminPlatformEmailTemplates';
 import { colors, typography, spacing } from '@/lib/theme';
 
 export default function AdminContentScreen() {
@@ -13,12 +14,14 @@ export default function AdminContentScreen() {
         <View style={s.header}>
           <Text style={s.title}>Content</Text>
           <Text style={s.subtitle}>
-            Podcast tile uploads and user invitation cards. Media center, influencers, and letter analytics arrive in a follow-up.
+            Podcast tile uploads, user invitation cards, and athlete transactional email templates. Media center, influencers, and letter analytics arrive in a follow-up.
           </Text>
         </View>
         <PodcastTileUpload />
         <View style={s.divider} />
         <AdminInvitationCards />
+        <View style={s.divider} />
+        <AdminPlatformEmailTemplates />
       </ScrollView>
     </SafeAreaView>
   );
