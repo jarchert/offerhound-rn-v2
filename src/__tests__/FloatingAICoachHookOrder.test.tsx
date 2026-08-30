@@ -12,10 +12,21 @@
  * can invoke them directly — RN's Jest mock doesn't ship a working emitter.
  */
 import React from 'react';
-import { Keyboard } from 'react-native';
+import { Keyboard, Animated } from 'react-native';
 import { render, act } from '@testing-library/react-native';
 
 import { FloatingAICoach } from '@/components/FloatingAICoach';
+
+// Stub Animated.loop — the FAB kicks off a pulse animation on mount and, in
+// the jest environment, RN's Animated tries to attach to a native tree that
+// doesn't exist and throws "Unable to locate attached view in the native
+// tree". Replacing loop with a no-op keeps focus on the hook-order behaviour
+// this test actually cares about.
+jest.spyOn(Animated, 'loop').mockImplementation(() => ({
+  start: jest.fn(),
+  stop: jest.fn(),
+  reset: jest.fn(),
+} as unknown as Animated.CompositeAnimation));
 
 // Minimal AuthContext stub — FloatingAICoach only reads `user` to gate the
 // unauthenticated dropdown/tooltip flow.
