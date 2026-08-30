@@ -49,7 +49,11 @@ type NavItem = {
 
 const allNavItems: NavItem[] = [
   { path: '/home',       route: 'AthleteTabs',        label: 'Home',      icon: Home,            description: 'Your athlete profile', adminOnly: false, athleteOnly: true },
-  { path: '/gallery',    route: 'PublicProfileStack', label: 'Gallery',   icon: ImageIcon,       description: 'Gallery',              adminOnly: false, athleteOnly: true },
+  // Gallery nav targets the Gallery screen inside PublicProfileStack.
+  // Previously this navigated to PublicProfileStack with no screen/params,
+  // which mounted the stack's initial route (PublicProfile) with an empty
+  // customUrl and rendered "Profile Not Found" for every athlete.
+  { path: '/gallery',    route: 'PublicProfileStack', params: { screen: 'Gallery' }, label: 'Gallery',   icon: ImageIcon,       description: 'Gallery',              adminOnly: false, athleteOnly: true },
   { path: '/dashboard',  route: 'AthleteTabs',        label: 'Dashboard', icon: LayoutDashboard, description: 'Dashboard',            adminOnly: false, athleteOnly: true },
   { path: '/messages',   route: 'Messages',           label: 'Messages',  icon: MessageCircle,   description: 'Messages with coaches', adminOnly: false, athleteOnly: true },
   { path: '/activity',   route: 'CoachTabs',          label: 'Coaches',   icon: Users,           description: 'Find the coach and program that is searching for you', adminOnly: false, athleteOnly: true },
