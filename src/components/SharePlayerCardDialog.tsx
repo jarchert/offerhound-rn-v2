@@ -2,6 +2,17 @@
 // Web→RN mapping: shadcn Dialog/ScrollArea/Button → src/components/ui/*;
 // lucide-react → lucide-react-native; Tailwind → StyleSheet @/lib/theme;
 // HTMLDivElement ref → View ref.
+//
+// Bug 3 fix (shareable athlete card cut off): the previous implementation
+// wrapped <ProfileCardGenerator /> in a nested <ScrollArea /> that itself
+// sat inside DialogContent's outer <ScrollView>. RN doesn't cleanly handle
+// nested same-axis vertical scrolls — the inner ScrollView captured gesture
+// focus and its content height exceeded the visible dialog viewport, so
+// the Share buttons at the bottom of ProfileCardGenerator were unreachable
+// on shorter screens. The nested ScrollArea has been removed; the Dialog's
+// own ScrollView now handles scrolling for the whole card. The
+// hideTriggers CardShareActions instance (SMS dialog host) is invisible
+// UI-wise so its DOM position is irrelevant — kept as a sibling.
 import React, { useRef, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import {
@@ -11,7 +22,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/Dialog';
-import { ScrollArea } from '@/components/ui/ScrollArea';
 import { Button } from '@/components/ui/Button';
 import { Share2, MessageSquare } from 'lucide-react-native';
 import { ProfileCardGenerator } from '@/components/ProfileCardGenerator';
@@ -56,11 +66,20 @@ export function SharePlayerCardDialog({
             rightIcon={<MessageSquare size={14} color={colors.foreground} />}
           />
         </DialogHeader>
-        <ScrollArea style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-          <View ref={captureRef} style={styles.capture}>
-            <ProfileCardGenerator />
-          </View>
-        </ScrollArea>
+        {/*
+          NOTE: DialogContent already wraps its children in a ScrollView
+          internally (see @/components/ui/Dialog). Do NOT add another
+          ScrollView / ScrollArea around ProfileCardGenerator — nesting
+          same-axis scrolls hides the Share buttons at the bottom of the
+          card on shorter phones (Bug 3).
+        */}
+        <View
+          ref={captureRef}
+          style={styles.capture}
+          testID="share-player-card-capture"
+        >
+          <ProfileCardGenerator />
+        </View>
         <CardShareActions
           targetRef={captureRef}
           senderName={name}
@@ -100,6 +119,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   scroll: {
+    // Kept for backward-compat should a caller import the style; no longer
+    // applied to a ScrollView. See Bug 3 comment above.
     paddingHorizontal: spacing.md,
   },
   scrollContent: {
