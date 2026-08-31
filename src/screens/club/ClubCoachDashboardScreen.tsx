@@ -10,7 +10,7 @@
 // StaffManager, StaffMessaging, ClubMediaGallery, ClubEventCalendar, ClubSocialLinks,
 // ClubCoachDirectoryTab, TermsAcceptanceGate, CoachNav, plus auxiliary cards.
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, Linking, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, Linking, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -31,6 +31,7 @@ import { colors, spacing, typography } from '@/lib/theme';
 
 import { TermsAcceptanceGate } from '@/components/TermsAcceptanceGate';
 import { CoachNav } from '@/components/CoachNav';
+import { LG_BREAKPOINT } from '@/components/OwnerNav';
 import { ClubTeamManagement } from '@/components/ClubTeamManagement';
 import { ClubCoachCRM } from '@/components/ClubCoachCRM';
 import { ClubCoachMessagingHub } from '@/components/ClubCoachMessagingHub';
@@ -86,6 +87,13 @@ export default function ClubCoachDashboardScreen() {
   const [websiteModalOpen, setWebsiteModalOpen] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const isWeb = !isNativePlatform();
+  // Group 3 #7 ROLE 2 (2026-08-31): CoachNav is now gated to wide layouts.
+  // Every real cross-app verb the club coach reaches for on phone is a
+  // first-class Tab.Screen in ClubCoachTabs (Athletes, Settings, Messages,
+  // ...). The phone-bottom-bar mount was retired; the wide-layout sidebar
+  // still renders below via `isWide && <CoachNav role="club_coach" />`.
+  const { width } = useWindowDimensions();
+  const isWide = width >= LG_BREAKPOINT;
 
   const { data: clubProfile, isLoading: clubLoading } = useQuery({
     queryKey: ['club-coach-profile-full', user?.id],
@@ -195,7 +203,7 @@ export default function ClubCoachDashboardScreen() {
     // which previously caused tab-nav crashes ("Cannot read property city of null").
     return (
       <TermsAcceptanceGate>
-        <CoachNav role="club_coach" />
+        {isWide && <CoachNav role="club_coach" />}
         <View style={[s.loading, { padding: spacing.lg }] }>
           <Text style={[s.headerTitle, { textAlign: 'center', marginBottom: spacing.sm }]}>Finish setting up your club profile</Text>
           <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginBottom: spacing.md }}>
@@ -226,7 +234,7 @@ export default function ClubCoachDashboardScreen() {
 
   return (
     <TermsAcceptanceGate>
-      <CoachNav role="club_coach" />
+      {isWide && <CoachNav role="club_coach" />}
       <ScrollView style={s.root} contentContainerStyle={s.scroll}>
         {/* Header */}
         <View style={s.header}>
