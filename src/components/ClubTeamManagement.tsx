@@ -267,6 +267,10 @@ export function ClubTeamManagement({ clubProfileId, userId, hsCoachProfileId }: 
         level: isHsCoach ? "high_school" : team.level,
         league: team.league,
         description: team.description,
+        // Mirror createTeam: HS coaches never get recruiting_enabled=true,
+        // even if the source team had it. Otherwise inherit the source team's
+        // value so "Duplicate" faithfully copies the club coach's setting.
+        recruiting_enabled: isHsCoach ? false : !!team.recruiting_enabled,
       });
       if (error) throw error;
     },
