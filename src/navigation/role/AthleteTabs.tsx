@@ -10,11 +10,20 @@
 // The OwnerNav wide-screen sidebar (width >= LG_BREAKPOINT = 1024) still
 // renders in its own dashboard mount path — only the phone-bottom-bar mount
 // is retired.
+//
+// Compact grid tab bar (Group 3 #7 follow-up, 2026-08-31):
+// The default react-navigation bottom-tabs single-row bar gets cramped past
+// 5 tabs on narrow phones. We now register a custom `tabBar` renderer
+// (CompactGridTabBar) that lays the 7 tabs out across 2 rows (4 top / 3
+// bottom). Every route still resolves normally through navigation.emit +
+// navigation.navigate, so deep-linking / tabPress / tabLongPress semantics
+// are preserved.
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Home, Trophy, MessageCircle, Mail, Users, CalendarDays, User } from 'lucide-react-native';
 import { roleTabScreenOptions } from '@/navigation/role/roleTabScreenOptions';
 import { ParentAthleteSwitcher } from '@/components/ParentAthleteSwitcher';
+import { CompactGridTabBar } from '@/components/CompactGridTabBar';
 
 import DashboardScreen from '@/screens/shared/DashboardScreen';
 import AthleteMatchesScreen from '@/screens/athlete/AthleteMatchesScreen';
@@ -29,6 +38,7 @@ const Tab = createBottomTabNavigator();
 export default function AthleteTabs() {
   return (
     <Tab.Navigator
+      tabBar={(props) => <CompactGridTabBar {...props} />}
       screenOptions={{
         ...roleTabScreenOptions,
         // Athlete tabs: add ParentAthleteSwitcher in header left when user
