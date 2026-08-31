@@ -1,6 +1,13 @@
 /**
  * AdminCampEventLog.test.tsx
  *
+ * KNOWN FLAKE: the "next / prev pager updates .range() offsets" test
+ * (case 1.e, ~line 303) has an act()-race stability flake, roughly 30% fail
+ * rate under `npx jest --runInBand`. Root cause: back-to-back fireEvent.press
+ * calls without awaiting the async re-render between them. Do NOT silently
+ * `.skip()` this test — fix it properly with `await act(async () => {...})`
+ * or `waitFor(() => getByTestId(...))` around each press. See KNOWN_FLAKES.md.
+ *
  * 1. AdminCampEventLog — real component
  *    a. renders row for each camp_event_log entry
  *    b. shows event label and skipped-reason badge
