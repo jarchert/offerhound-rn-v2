@@ -17,11 +17,11 @@ export function TabsList({ children, style }: { children: React.ReactNode; style
   );
 }
 
-export function TabsTrigger({ value, children, style, textStyle }: { value: string; children: React.ReactNode; style?: ViewStyle; textStyle?: TextStyle }) {
+export function TabsTrigger({ value, children, style, textStyle, testID }: { value: string; children: React.ReactNode; style?: ViewStyle; textStyle?: TextStyle; testID?: string }) {
   const ctx = useContext(Ctx);
   const active = ctx.value === value;
   return (
-    <Pressable style={[s.trigger, active && s.triggerActive, style]} onPress={() => ctx.onValueChange(value)}>
+    <Pressable testID={testID} style={[s.trigger, active && s.triggerActive, style]} onPress={() => ctx.onValueChange(value)}>
       <Text style={[s.triggerText, active && s.triggerTextActive, textStyle]}>{children}</Text>
     </Pressable>
   );

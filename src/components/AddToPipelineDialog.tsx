@@ -122,7 +122,12 @@ export function AddToPipelineDialog({
     try {
       const { data, error } = await supabase
         .from('player_profiles')
-        .select('id, full_name, position, school, profile_image_url')
+        // LEFT JOIN AVS via embedded resource (LEFT JOIN by default). We filter
+        // show_in_recruiter_pipeline in JS: NULL = show (backwards compat),
+        // false = hide.
+        .select(
+          'id, full_name, position, school, profile_image_url, athlete_visibility_settings(show_in_recruiter_pipeline)',
+        )
         .or(
           `full_name.ilike.%${searchQuery}%,school.ilike.%${searchQuery}%,position.ilike.%${searchQuery}%`
         )
@@ -131,7 +136,16 @@ export function AddToPipelineDialog({
         .limit(10);
 
       if (error) throw error;
-      setSearchResults((data as AthleteOption[]) || []);
+      const rows = (data || []) as any[];
+      const filtered = rows.filter((r) => {
+        const avs = Array.isArray(r.athlete_visibility_settings)
+          ? r.athlete_visibility_settings[0]
+          : r.athlete_visibility_settings;
+        return avs?.show_in_recruiter_pipeline !== false;
+      });
+      // Strip the embed off the row shape before storing (keeps AthleteOption typing intact).
+      const stripped: AthleteOption[] = filtered.map(({ athlete_visibility_settings: _avs, ...rest }) => rest);
+      setSearchResults(stripped);
     } catch (error) {
       console.error('Error searching athletes:', error);
       setSearchResults([]);

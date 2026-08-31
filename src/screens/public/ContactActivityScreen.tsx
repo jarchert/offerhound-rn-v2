@@ -8,7 +8,7 @@
 //     CoachRecommendations, TransferPortalFeed are stubs — they render but
 //     have no logic yet. Kept in tree for parity.
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import {
   Mail,
   Phone,
@@ -29,7 +29,7 @@ import { CoachesSection } from '@/components/CoachesSection';
 import { TransferPortalFeed } from '@/components/TransferPortalFeed';
 import { PageBreadcrumb } from '@/components/PageBreadcrumb';
 import { ViewToggle } from '@/components/ViewToggle';
-import { OwnerNav } from '@/components/OwnerNav';
+import { OwnerNav, LG_BREAKPOINT } from '@/components/OwnerNav';
 import { BackButton } from '@/components/BackButton';
 import { Footer } from '@/components/Footer';
 import SEO from '@/components/SEO';
@@ -62,6 +62,8 @@ export default function ContactActivityScreen() {
   const { profile } = usePlayerProfile();
   const updateStatus = useUpdateContactStatus();
   const [isOwnerView, setIsOwnerView] = useState(true);
+  const { width: _dashboardWidth } = useWindowDimensions();
+  const _isWide = _dashboardWidth >= LG_BREAKPOINT;
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -273,7 +275,8 @@ export default function ContactActivityScreen() {
           )}
 
         <Footer />
-        {isOwnerView && <OwnerNav />}
+        {/* Group 3 #7 — OwnerNav only on wide layouts; phone-bottom-bar mount retired. */}
+        {isOwnerView && _isWide && <OwnerNav />}
         <ViewToggle isOwnerView={isOwnerView} onToggle={setIsOwnerView} />
       </ScrollView>
     </View>

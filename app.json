@@ -3,14 +3,14 @@
     "name": "OfferHound",
     "slug": "offerhound-v2",
     "scheme": "offerhoundv2",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#101318"
+      "backgroundColor": "#01030e"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -42,7 +42,7 @@
       "versionCode": 8,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#101318"
+        "backgroundColor": "#01030e"
       },
       "intentFilters": [
         {
@@ -148,6 +148,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "expo-dev-client",
       "expo-font",
       "expo-apple-authentication",
       [

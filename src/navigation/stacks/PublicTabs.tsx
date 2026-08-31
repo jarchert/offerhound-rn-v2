@@ -1,8 +1,14 @@
 // PublicTabs — unauthenticated browse per Part 2 §2.1
-// 4 tabs: Landing, Discover, Podcasts, Account
+// Tabs: Landing, Discover (auth-only), Podcasts, Account
+// Discover is intentionally hidden from unauthenticated users — the tab is
+// not rendered in the tab bar at all (Bug: Group 4 #8). Since PublicTabs is
+// currently only mounted for unauthenticated sessions the tab will always be
+// absent here, but the conditional keeps behaviour correct if the navigator
+// is ever reused in a mixed-auth surface.
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
+import { useAuth } from '@/contexts/AuthContext';
 
 import LandingScreen from '@/screens/auth/LandingScreen';
 import SportPickerScreen from '@/screens/shared/SportPickerScreen';
@@ -18,6 +24,7 @@ import SignInScreen from '@/screens/auth/SignInScreen';
 const Tab = createBottomTabNavigator();
 
 export default function PublicTabs() {
+  const { isAuthenticated } = useAuth();
   return (
     <Tab.Navigator
       screenOptions={{
@@ -35,7 +42,9 @@ export default function PublicTabs() {
         },
       }}>
       <Tab.Screen name="LandingTab" component={LandingScreen} options={{ title: 'Home' }} />
-      <Tab.Screen name="DiscoverTab" component={PublicDiscoverScreen} options={{ title: 'Discover' }} />
+      {isAuthenticated && (
+        <Tab.Screen name="DiscoverTab" component={PublicDiscoverScreen} options={{ title: 'Discover' }} />
+      )}
       <Tab.Screen name="PodcastsTab" component={PodcastScreen} options={{ title: 'Podcasts' }} />
       <Tab.Screen name="AccountTab" component={SignInScreen} options={{ title: 'Account' }} />
     </Tab.Navigator>

@@ -29,7 +29,10 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import AdminCampEventLog from '@/components/AdminCampEventLog';
 import { colors, typography, spacing, radius } from '@/lib/theme';
+
+type AuditTab = 'optouts' | 'camp-events';
 
 const PAGE_SIZE = 25;
 const EXPORT_LIMIT = 1000;
@@ -63,6 +66,7 @@ function formatTs(ts: string): string {
 }
 
 export default function AdminAuditScreen() {
+  const [tab, setTab] = useState<AuditTab>('optouts');
   const [scope, setScope] = useState<ScopeFilter>('all');
   const [action, setAction] = useState<ActionFilter>('all');
   const [userSearch, setUserSearch] = useState('');
@@ -159,9 +163,19 @@ export default function AdminAuditScreen() {
     }
   };
 
+  if (tab === 'camp-events') {
+    return (
+      <SafeAreaView style={s.root}>
+        <SubTabStrip tab={tab} setTab={setTab} />
+        <AdminCampEventLog />
+      </SafeAreaView>
+    );
+  }
+
   if (tableMissing) {
     return (
       <SafeAreaView style={s.root}>
+        <SubTabStrip tab={tab} setTab={setTab} />
         <View style={s.header}>
           <ClipboardList size={20} color={colors.primary} />
           <Text style={s.title}>Opt-out audit</Text>
@@ -179,6 +193,7 @@ export default function AdminAuditScreen() {
 
   return (
     <SafeAreaView style={s.root}>
+      <SubTabStrip tab={tab} setTab={setTab} />
       <View style={s.header}>
         <ClipboardList size={20} color={colors.primary} />
         <Text style={s.title}>Opt-out audit</Text>
@@ -339,6 +354,33 @@ export default function AdminAuditScreen() {
   );
 }
 
+function SubTabStrip({
+  tab,
+  setTab,
+}: {
+  tab: AuditTab;
+  setTab: (t: AuditTab) => void;
+}) {
+  return (
+    <View style={s.subTabRow}>
+      <Pressable
+        onPress={() => setTab('optouts')}
+        style={[s.subTabBtn, tab === 'optouts' && s.subTabBtnActive]}
+        testID="audit-tab-optouts"
+      >
+        <Text style={[s.subTabText, tab === 'optouts' && s.subTabTextActive]}>Opt-outs</Text>
+      </Pressable>
+      <Pressable
+        onPress={() => setTab('camp-events')}
+        style={[s.subTabBtn, tab === 'camp-events' && s.subTabBtnActive]}
+        testID="audit-tab-camp-events"
+      >
+        <Text style={[s.subTabText, tab === 'camp-events' && s.subTabTextActive]}>Camp events</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 function FilterRow({
   label,
   value,
@@ -373,6 +415,27 @@ function FilterRow({
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
+  subTabRow: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.muted,
+    padding: 4,
+  },
+  subTabBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: radius.sm,
+  },
+  subTabBtnActive: { backgroundColor: colors.primary },
+  subTabText: {
+    fontFamily: typography.fontFamily.bodySemiBold,
+    fontSize: typography.fontSize.sm,
+    color: colors.foregroundSubtle,
+  },
+  subTabTextActive: { color: colors.primaryForeground },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

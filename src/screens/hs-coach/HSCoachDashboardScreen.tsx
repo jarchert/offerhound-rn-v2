@@ -13,7 +13,7 @@ import {
   Loader2, Users, Search, Eye, LogOut, LayoutDashboard, MessageSquare,
   UserCog, Trophy, School, Mail, UserPlus, Image as ImageIcon, Calendar, Contact,
   Share2, Star, GraduationCap, Save, Telescope, FileCheck, Film, Award,
-  Sparkles, RefreshCw, Target,
+  Sparkles, RefreshCw, Target, ArrowRightLeft,
 } from 'lucide-react-native';
 import { useQuery } from '@tanstack/react-query';
 
@@ -40,9 +40,14 @@ import { RecruitingPipeline } from '@/components/RecruitingPipeline';
 import { PositionNeedsBoard } from '@/components/PositionNeedsBoard';
 import { CoachProfileImageUpload } from '@/components/CoachProfileImageUpload';
 import { HSCoachEndorsementComposer } from '@/components/hs-coach/HSCoachEndorsementComposer';
+import { HSClubRosterBrowse } from '@/components/hs-coach/HSClubRosterBrowse';
+import { HSTransferRequests } from '@/components/hs-coach/HSTransferRequests';
 import { HSCoachReferralPanel } from '@/components/hs-coach/HSCoachReferralPanel';
 import { HSCoachTranscriptVerificationTab } from '@/components/hs-coach/HSCoachTranscriptVerificationTab';
 import { HSCoachFilmVerificationTab } from '@/components/hs-coach/HSCoachFilmVerificationTab';
+import { FootballProgramTab } from '@/components/football/FootballProgramTab';
+import { FootballRosterTab } from '@/components/football/FootballRosterTab';
+import { FootballEmailBlockTab } from '@/components/football/FootballEmailBlockTab';
 import { ShareRoleCardDialog } from '@/components/ShareRoleCardDialog';
 import { AthleteMatchCard } from '@/components/athlete/AthleteMatchCard';
 
@@ -232,7 +237,7 @@ export default function HSCoachDashboardScreen() {
               ) : null}
             </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-              <Button size="sm" leftIcon={<Search size={14} color={colors.primaryForeground} />}>
+              <Button size="sm" leftIcon={<Search size={14} color={colors.primaryForeground} />} onPress={() => nav.navigate('AthleteSearch' as never)}>
                 Search Athletes
               </Button>
               <Button
@@ -280,6 +285,10 @@ export default function HSCoachDashboardScreen() {
               <TabsTrigger value="messaging"><TabLabel icon={MessageSquare} label="Messaging" /></TabsTrigger>
               <TabsTrigger value="media"><TabLabel icon={ImageIcon} label="Media" /></TabsTrigger>
               <TabsTrigger value="discover"><TabLabel icon={Telescope} label="Coaches & Scouts" /></TabsTrigger>
+              {profileAny.sport === 'football' && (
+                <TabsTrigger value="football-hub"><TabLabel icon={Trophy} label="Football Hub" /></TabsTrigger>
+              )}
+              <TabsTrigger value="club-roster"><TabLabel icon={ArrowRightLeft} label="Club Athletes" /></TabsTrigger>
               <TabsTrigger value="athletes"><TabLabel icon={Star} label="Saved" /></TabsTrigger>
               <TabsTrigger value="profile"><TabLabel icon={Eye} label="Profile" /></TabsTrigger>
             </TabsList>
@@ -351,10 +360,10 @@ export default function HSCoachDashboardScreen() {
                   <CardContent>
                     <View style={s.quickGrid}>
                       <QuickAction icon={Users} label="Manage Roster" onPress={() => setActiveTab('roster')} />
-                      <QuickAction icon={Search} label="Find Athletes" onPress={() => {/* PORT-PENDING: navigate to /athletes */}} />
+                      <QuickAction icon={Search} label="Find Athletes" onPress={() => nav.navigate('AthleteSearch' as never)} />
                       <QuickAction icon={FileCheck} label="AI Letters" onPress={() => nav.navigate('LetterComposer' as never)} />
                       <QuickAction icon={Mail} label="Messages" onPress={() => nav.navigate('Messages' as never)} />
-                      <QuickAction icon={GraduationCap} label="College Coaches" onPress={() => {/* PORT-PENDING: /coaches route */}} />
+                      <QuickAction icon={GraduationCap} label="College Coaches" onPress={() => nav.navigate('CoachDirectory' as never)} />
                     </View>
                   </CardContent>
                 </Card>
@@ -364,7 +373,7 @@ export default function HSCoachDashboardScreen() {
             {/* Roster Tab */}
             <TabsContent value="roster">
               {user && hsProfile ? (
-                <ClubTeamManagement clubProfileId={profileAny.id} userId={user.id} />
+                <ClubTeamManagement hsCoachProfileId={profileAny.id} userId={user.id} />
               ) : null}
             </TabsContent>
 
@@ -407,6 +416,7 @@ export default function HSCoachDashboardScreen() {
                         variant="outline" size="sm"
                         leftIcon={<Search size={14} color={colors.primary} />}
                         style={{ marginTop: spacing.md }}
+                        onPress={() => nav.navigate('AthleteSearch' as never)}
                       >
                         Search Athletes
                       </Button>
@@ -479,6 +489,28 @@ export default function HSCoachDashboardScreen() {
               <ClubCoachDirectoryTab clubProfile={{ sport: profileAny.sport, state: profileAny.school_state }} />
             </TabsContent>
 
+            {profileAny.sport === 'football' && (
+              <TabsContent value="football-hub">
+                <FootballHubTabs />
+              </TabsContent>
+            )}
+
+            {/* Club Athletes — browse + claim */}
+            <TabsContent value="club-roster">
+              <View style={{ gap: spacing.lg }}>
+                <HSClubRosterBrowse hsProfileId={profileAny.id} />
+                <Card>
+                  <CardHeader>
+                    <CardTitle>My Transfer Requests</CardTitle>
+                    <CardDescription>Track and cancel outgoing transfer requests</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <HSTransferRequests />
+                  </CardContent>
+                </Card>
+              </View>
+            </TabsContent>
+
             {/* Saved Athletes Tab */}
             <TabsContent value="athletes">
               <Card>
@@ -506,7 +538,7 @@ export default function HSCoachDashboardScreen() {
                               </Badge>
                             </View>
                           </View>
-                          <Button variant="outline" size="sm" style={{ marginTop: spacing.sm }}>
+                          <Button variant="outline" size="sm" style={{ marginTop: spacing.sm }} onPress={() => (nav as any).navigate('PublicProfileStack', { screen: 'PublicProfile', params: { profileId: saved.athlete?.id } })}>
                             View Profile
                           </Button>
                         </View>
@@ -517,7 +549,7 @@ export default function HSCoachDashboardScreen() {
                       <Users size={36} color={colors.foregroundSubtle} />
                       <Text style={[s.empTitle, { marginTop: spacing.sm }]}>No saved athletes</Text>
                       <Text style={s.muted}>Search for athletes to recommend to college programs.</Text>
-                      <Button leftIcon={<Search size={14} color={colors.primaryForeground} />} style={{ marginTop: spacing.md }}>
+                      <Button leftIcon={<Search size={14} color={colors.primaryForeground} />} style={{ marginTop: spacing.md }} onPress={() => nav.navigate('AthleteSearch' as never)}>
                         Search Athletes
                       </Button>
                     </View>
@@ -538,6 +570,23 @@ export default function HSCoachDashboardScreen() {
         </ScrollView>
       </SafeAreaView>
     </TermsAcceptanceGate>
+  );
+}
+
+// ---------- Football Hub Sub-component ----------
+function FootballHubTabs() {
+  const [tab, setTab] = useState('program');
+  return (
+    <Tabs value={tab} onValueChange={setTab}>
+      <TabsList>
+        <TabsTrigger value="program"><TabLabel icon={Trophy} label="Program" /></TabsTrigger>
+        <TabsTrigger value="roster"><TabLabel icon={Users} label="Roster" /></TabsTrigger>
+        <TabsTrigger value="email-block"><TabLabel icon={Mail} label="Email Block" /></TabsTrigger>
+      </TabsList>
+      <TabsContent value="program"><FootballProgramTab /></TabsContent>
+      <TabsContent value="roster"><FootballRosterTab /></TabsContent>
+      <TabsContent value="email-block"><FootballEmailBlockTab /></TabsContent>
+    </Tabs>
   );
 }
 

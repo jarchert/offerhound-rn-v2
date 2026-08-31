@@ -18,7 +18,7 @@
 
 import React, { useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Copy, MapPin, GraduationCap, Ruler, Weight, Zap } from 'lucide-react-native';
+import { Copy, MapPin, GraduationCap, Ruler, Weight, Zap, Mail, Phone, Shield, Star } from 'lucide-react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
@@ -26,11 +26,41 @@ import { Button } from '@/components/ui/Button';
 import { toast } from '@/components/ui/toast';
 import { AthletePerformanceRadar } from '@/components/AthletePerformanceRadar';
 import { EventsTable } from '@/components/athlete/SportStatsEditor';
-import { isEventBasedSport } from '@/lib/data/sportPositions';
+import { isEventBasedSport, SPORT_METRICS } from '@/lib/data/sportPositions';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { copyToClipboard, getProfileUrl } from '@/lib/utils';
 import { CardShareActions } from '@/components/CardShareActions';
+import { buildMecard } from '@/lib/mecard';
+import { socialIcons, collectSocials } from '@/lib/socialCardIcons';
 import { colors, typography, spacing, radius } from '@/lib/theme';
+
+// Card theming (Tier 3 #7)
+// card_theme maps a preset name to an accent hex; accent_color is a free-form
+// hex override stored directly on player_profiles. Resolution order:
+//   1. accent_color (freeform hex, wins if present)
+//   2. card_theme  (preset name → hex lookup)
+//   3. colors.primary (fallback — matches pre-Tier-3 behavior)
+const CARD_THEME_PRESETS: Record<string, string> = {
+  classic: colors.primary,       // default brand colour
+  midnight: '#1e3a5f',           // deep navy
+  forest:   '#2d6a4f',           // deep green
+  ocean:    '#0077b6',           // ocean blue
+  flame:    '#d62828',           // bold red
+  gold:     '#f4a261',           // warm amber
+  slate:    '#475569',           // cool grey
+  rose:     '#be185d',           // deep rose
+};
+
+function resolveAccent(cardTheme: unknown, accentColor: unknown): string {
+  if (typeof accentColor === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(accentColor.trim())) {
+    return accentColor.trim();
+  }
+  if (typeof cardTheme === 'string' && cardTheme.trim()) {
+    const preset = CARD_THEME_PRESETS[cardTheme.trim().toLowerCase()];
+    if (preset) return preset;
+  }
+  return colors.primary;
+}
 
 export const ProfileCardGenerator = () => {
   const { profile } = usePlayerProfile() as any;
@@ -61,13 +91,101 @@ export const ProfileCardGenerator = () => {
     { label: 'GPA', value: profile.gpa, icon: GraduationCap },
   ].filter((m) => m.value);
 
+  // Card theming (Tier 3 #7) — resolved once per render; used inline on accent
+  // bar and verified-shield so the static StyleSheet stays intact for perf.
+  const accentColor = resolveAccent(profile.card_theme, profile.accent_color);
+
+  // Contact-visibility gating (Tier 3 #1): show email/phone on the card only
+  // when BOTH the field is non-empty AND the athlete has explicitly opted in
+  // via share_email_publicly / share_phone_publicly on player_profiles.
+  // If neither survives the gate, the entire contact section is omitted so
+  // captured/shared images never leak contact info the athlete hasn't shared.
+  const visibleEmail =
+    profile.share_email_publicly === true && typeof profile.email === 'string' && profile.email.trim()
+      ? profile.email.trim()
+      : null;
+  const visiblePhone =
+    profile.share_phone_publicly === true && typeof profile.phone === 'string' && profile.phone.trim()
+      ? profile.phone.trim()
+      : null;
+  type ContactRow = {
+    key: string;
+    label: string;
+    value: string;
+    icon: (size: number, color: string) => React.ReactNode;
+  };
+  const contactRows: ContactRow[] = [
+    visibleEmail && {
+      key: 'email',
+      label: 'Email',
+      value: visibleEmail,
+      icon: (size: number, color: string) => <Mail size={size} color={color} />,
+    },
+    visiblePhone && {
+      key: 'phone',
+      label: 'Phone',
+      value: visiblePhone,
+      icon: (size: number, color: string) => <Phone size={size} color={color} />,
+    },
+  ].filter(Boolean) as ContactRow[];
+
+  // Verified shield + star rating (Tier 3 #2). Both are optional adornments
+  // on the header. Star rating is a Postgres integer (probe: eq.5.0 → 22P02),
+  // so we clamp to [0,5] and only render when the rounded value is > 0.
+  const isVerified = profile.is_verified === true;
+  const rawStars = typeof profile.star_rating === 'number' ? profile.star_rating : 0;
+  const starCount = Math.max(0, Math.min(5, Math.round(rawStars)));
+
+  // MECARD QR payload (Tier 3 #3). Uses the shared helper so this file and
+  // RoleCardGenerator stay in lockstep. Critically, we pass ONLY the gated
+  // visibleEmail / visiblePhone values from Tier 3 #1 — so the QR never
+  // encodes contact info the athlete hasn't opted to share. When neither
+  // survives the gate, the payload is just N:<name>;URL:<profileUrl>;; and
+  // the QR still functions as a link, matching the pre-Tier-3 behavior.
+  const qrPayload = buildMecard({
+    name,
+    phone: visiblePhone,
+    email: visibleEmail,
+    organization: profile.school ?? null,
+    title: profile.position ?? null,
+    location:
+      profile.city && profile.state ? `${profile.city}, ${profile.state}` : profile.state ?? null,
+    url: profileUrl,
+  });
+
+  // Social links (Tier 3 #4). Reads player_profiles.social_links (JSON) —
+  // the exact column SocialLinksManager writes to — through the shared
+  // helper so RoleCardGenerator and this file stay in lockstep. No new
+  // data source is introduced. `twitter` fallback handled by the helper.
+  const socials = collectSocials(profile.social_links, profile.twitter ?? null);
+
+  // Sport-stat strip (Tier 3 #5). For stat-based sports, take the sport's
+  // SPORT_METRICS ordering and pluck values out of profile.sport_stats. Event-
+  // based sports (track/swimming) already render an EventsTable below, so
+  // we skip the strip there. Capped at 4 populated entries to stay compact.
+  const statStripEntries: { key: string; label: string; value: string }[] = (() => {
+    if (!profile.sport || isEventBasedSport(profile.sport)) return [];
+    const metrics = SPORT_METRICS[profile.sport] || [];
+    const raw = (profile.sport_stats as Record<string, unknown> | null | undefined) || {};
+    const out: { key: string; label: string; value: string }[] = [];
+    for (const m of metrics) {
+      const v = raw[m.key];
+      if (v === null || v === undefined || v === '') continue;
+      const s2 = String(v).trim();
+      if (!s2) continue;
+      out.push({ key: m.key, label: m.label, value: s2 });
+      if (out.length >= 4) break;
+    }
+    return out;
+  })();
+
   return (
     <View style={s.wrap}>
       {/* Capture region: card + radar */}
       <View ref={cardRef} collapsable={false} style={s.capture}>
         {/* Player Card Header */}
         <View style={s.header}>
-          <View style={s.accentBar} />
+          <View style={[s.accentBar, { backgroundColor: accentColor }]} />
           <View style={s.headerBody}>
             <View style={s.identityRow}>
               <Avatar
@@ -76,9 +194,19 @@ export const ProfileCardGenerator = () => {
                 fallback={initials}
               />
               <View style={s.identityMeta}>
-                <Text style={s.name} numberOfLines={1}>
-                  {name}
-                </Text>
+                <View style={s.nameRow}>
+                  <Text style={s.name} numberOfLines={1}>
+                    {name}
+                  </Text>
+                  {isVerified && (
+                    <Shield
+                      size={16}
+                      color={accentColor}
+                      style={s.verifiedShield}
+                      accessibilityLabel="Verified athlete"
+                    />
+                  )}
+                </View>
                 <View style={s.metaRow}>
                   {!!profile.position && <Text style={s.position}>{profile.position}</Text>}
                   {!!profile.position && !!profile.graduation_year && (
@@ -107,6 +235,29 @@ export const ProfileCardGenerator = () => {
               </View>
             </View>
 
+            {/* Star rating (Tier 3 #2) — renders 5 stars, first N filled based on
+                player_profiles.star_rating (integer, clamped to [0,5]). Hidden
+                when rating is 0/null/absent. Placed under identity meta so it
+                reads as a credential, not a decoration. */}
+            {starCount > 0 && (
+              <View
+                style={s.starRow}
+                accessibilityLabel={`Rated ${starCount} out of 5 stars`}
+              >
+                {[0, 1, 2, 3, 4].map((i) => {
+                  const filled = i < starCount;
+                  return (
+                    <Star
+                      key={i}
+                      size={14}
+                      color={accentColor}
+                      fill={filled ? accentColor : 'transparent'}
+                    />
+                  );
+                })}
+              </View>
+            )}
+
             {/* Badges */}
             <View style={s.badgeRow}>
               {!!profile.sport && <Badge>{profile.sport}</Badge>}
@@ -125,8 +276,71 @@ export const ProfileCardGenerator = () => {
                 ))}
               </View>
             )}
+
+            {/* Bio line (Tier 3 #6) — player_profiles.bio rendered inside the
+                header card so captured images include the athlete's own blurb.
+                Clamped to 3 lines; hidden entirely when absent or empty. */}
+            {!!profile.bio && (
+              <Text style={s.bio} numberOfLines={3}>
+                {String(profile.bio).trim()}
+              </Text>
+            )}
           </View>
         </View>
+
+        {/* Contact info (Tier 3 #1) — gated by share_email_publicly / share_phone_publicly.
+            Rendered inside the capture region so the QR image reflects visible contact state.
+            When both flags are off, the whole section is skipped. */}
+        {contactRows.length > 0 && (
+          <View style={s.contactGrid}>
+            {contactRows.map((item) => (
+              <View key={item.key} style={s.contactRow}>
+                <View style={s.contactInner}>
+                  {item.icon(14, colors.mutedForeground)}
+                  <View style={s.contactText}>
+                    <Text style={s.contactLabel}>{item.label}</Text>
+                    <Text style={s.contactValue} numberOfLines={1}>{item.value}</Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Social links (Tier 3 #4) — rendered inside the capture region
+            so the shared image includes the athlete's social handles.
+            Icons come from FontAwesome via the shared @/lib/socialCardIcons
+            map; platforms without an icon render text-only. Section is
+            hidden entirely when social_links is empty/absent. */}
+        {socials.length > 0 && (
+          <View style={s.socialsBox}>
+            <Text style={s.socialsLabel}>Social</Text>
+            <View style={s.socialsRow}>
+              {socials.map((social, index) => {
+                const renderIcon = socialIcons[social.platform];
+                return (
+                  <View key={`${social.platform}-${index}`} style={s.socialPill}>
+                    {renderIcon ? renderIcon(12, colors.foreground) : null}
+                    <Text style={s.socialText}>{social.platform}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {/* Sport-stat strip (Tier 3 #5) — compact headline stats for stat-based
+            sports. Event-based sports use the EventsTable below instead. */}
+        {statStripEntries.length > 0 && (
+          <View style={s.statStrip}>
+            {statStripEntries.map((entry) => (
+              <View key={entry.key} style={s.statStripCell}>
+                <Text style={s.statStripValue} numberOfLines={1}>{entry.value}</Text>
+                <Text style={s.statStripLabel} numberOfLines={1}>{entry.label}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Events Table — Track & Field / Swimming */}
         {isEventBasedSport(profile.sport) && profile.sport_stats && (
@@ -155,13 +369,13 @@ export const ProfileCardGenerator = () => {
         {/* QR Code (inside capture) */}
         <View style={s.qrRow}>
           <View style={s.qrBox}>
-            <QRCode value={profileUrl} size={72} color={colors.foreground} backgroundColor={colors.card} />
+            <QRCode value={qrPayload} size={72} color={colors.foreground} backgroundColor={colors.card} />
           </View>
           <View style={s.qrMeta}>
             <Text style={s.qrUrl} numberOfLines={1}>
               {profileUrl}
             </Text>
-            <Text style={s.qrHint}>Scan to view full profile</Text>
+            <Text style={s.qrHint}>Scan to save contact</Text>
           </View>
         </View>
       </View>
@@ -199,12 +413,16 @@ const s = StyleSheet.create({
 
   identityRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   identityMeta: { flex: 1, minWidth: 0, gap: 2 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minWidth: 0 },
+  verifiedShield: { marginTop: 1 },
   name: {
+    flexShrink: 1,
     fontFamily: typography.fontFamily.heading,
     fontSize: typography.fontSize.xl,
     color: colors.foreground,
     letterSpacing: typography.letterSpacing.heading,
   },
+  starRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.xs },
   position: {
     fontFamily: typography.fontFamily.bodyMedium,
@@ -246,6 +464,103 @@ const s = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.foreground,
     textAlign: 'center',
+  },
+
+  bio: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.sm,
+    lineHeight: 20,
+    color: colors.mutedForeground,
+  },
+
+  contactGrid: { gap: spacing.xs },
+  contactRow: {
+    minWidth: 0,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 8,
+  },
+  contactInner: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, minWidth: 0 },
+  contactText: { flex: 1, minWidth: 0 },
+  contactLabel: {
+    fontFamily: typography.fontFamily.bodySemiBold,
+    fontSize: 10,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    color: colors.mutedForeground,
+  },
+  contactValue: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: 13,
+    lineHeight: 17,
+    color: colors.foreground,
+  },
+
+  socialsBox: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 8,
+  },
+  socialsLabel: {
+    fontFamily: typography.fontFamily.bodySemiBold,
+    fontSize: 10,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    color: colors.mutedForeground,
+    marginBottom: 8,
+  },
+  socialsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  socialPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.muted,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  socialText: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: 11,
+    color: colors.foreground,
+  },
+
+  statStrip: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.muted,
+    paddingVertical: 8,
+  },
+  statStripCell: {
+    flexGrow: 1,
+    flexBasis: '25%',
+    minWidth: 80,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    alignItems: 'center',
+  },
+  statStripValue: {
+    fontFamily: typography.fontFamily.bodyBold,
+    fontSize: typography.fontSize.base,
+    color: colors.foreground,
+  },
+  statStripLabel: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: 10,
+    color: colors.mutedForeground,
+    textAlign: 'center',
+    marginTop: 2,
   },
 
   eventsWrap: {
