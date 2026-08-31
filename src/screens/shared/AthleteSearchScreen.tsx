@@ -464,7 +464,7 @@ const s = StyleSheet.create({
     fontFamily: typography.fontFamily.body,
     fontSize: typography.fontSize.sm,
   },
-  resultsCol: { gap: spacing.sm },
+  resultsCol: { gap: spacing.sm2 },
   footerCount: {
     textAlign: 'center',
     marginTop: spacing.md,
