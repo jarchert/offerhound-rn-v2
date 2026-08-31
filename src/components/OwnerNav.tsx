@@ -67,7 +67,7 @@ const allNavItems: NavItem[] = [
 const NAV_COLLAPSED_KEY = 'ownerNavCollapsed';
 
 // Breakpoint matches Tailwind `lg:` = 1024px. At/above, show sidebar; below, show bottom nav.
-const LG_BREAKPOINT = 1024;
+export const LG_BREAKPOINT = 1024;
 
 export function OwnerNav() {
   const navigation = useNavigation<any>();

@@ -1,7 +1,7 @@
 // DashboardScreen — RN port of Lovable web src/pages/Dashboard.tsx (athlete/parent landing).
 // Phase 1-2 parity port. The source page also redirected admin/coach/scout to their dashboards;
 // in RN those role splits live in role tab navigators, so this screen targets the athlete/parent role.
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   TextInput,
   SafeAreaView,
+  useWindowDimensions,
 } from 'react-native';
 import {
   useNavigation,
@@ -97,7 +98,8 @@ import { ProfileCompletionTracker } from '@/components/ProfileCompletionTracker'
 import { SubscriptionStatus } from '@/components/SubscriptionStatus';
 import { ReferralCard } from '@/components/ReferralCard';
 import { ViewToggle } from '@/components/ViewToggle';
-import { OwnerNav } from '@/components/OwnerNav';
+import { OwnerNav, LG_BREAKPOINT } from '@/components/OwnerNav';
+import { NotificationBell } from '@/components/NotificationBell';
 import { ScrollToTop } from '@/components/ScrollToTop';
 import { TermsAcceptanceBanner } from '@/components/TermsAcceptanceBanner';
 import { OfflineBanner } from '@/components/OfflineBanner';
@@ -161,6 +163,22 @@ export default function DashboardScreen() {
   const { toast } = useToast();
 
   const [isOwnerView, setIsOwnerView] = useState(true);
+  const { width } = useWindowDimensions();
+  const isWide = width >= LG_BREAKPOINT;
+
+  // Group 3 #7 — lift ViewToggle to the tab navigator header (headerRight).
+  // Preserves the existing NotificationBell to the right of the toggle so
+  // roleTabHeaderRight parity is kept on this screen.
+  useLayoutEffect(() => {
+    nav.setOptions({
+      headerRight: () => (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 8 }}>
+          <ViewToggle isOwnerView={isOwnerView} onToggle={setIsOwnerView} />
+          <NotificationBell />
+        </View>
+      ),
+    });
+  }, [nav, isOwnerView]);
   const initialTab = (route.params?.tab as string) || 'activity';
   const [activeTab, setActiveTab] = useState(initialTab);
   useEffect(() => {
@@ -1095,8 +1113,10 @@ export default function DashboardScreen() {
       </ScrollView>
 
       <ScrollToTop visible={false} onPress={() => {}} />
-      {isOwnerView && <OwnerNav />}
-      <ViewToggle isOwnerView={isOwnerView} onToggle={setIsOwnerView} />
+      {/* Group 3 #7 — OwnerNav only renders on wide layouts (>= LG_BREAKPOINT).
+          The phone-bottom-bar mount was retired; every real cross-app verb is
+          now a first-class tab in AthleteTabs. */}
+      {isOwnerView && isWide && <OwnerNav />}
 
       {/* Edit coach notes dialog */}
       <Dialog open={!!editingCoachId} onOpenChange={(o) => !o && setEditingCoachId(null)}>

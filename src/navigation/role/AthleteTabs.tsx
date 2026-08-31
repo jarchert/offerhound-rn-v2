@@ -1,9 +1,18 @@
-// AthleteTabs — 5 tabs per Part 2 §2.1: Home, Matches, Messages, Letters, Profile
-// Part 3 of the conversion guide describes this navigator in detail.
+// AthleteTabs — merged single-tab-bar navigation (Group 3 #7, Option C variant b).
+//
+// Before: 5 tabs (Home, Matches, Messages, Letters, Profile) with a separate
+// OwnerNav phone-bottom-bar overlay mounted from DashboardScreen. That
+// produced a dual-bar system on phone with Gallery / Coaches / Camps / News /
+// Settings sitting behind tab-bar-styled buttons on a *second* bar.
+//
+// After: every real cross-app verb the athlete used to reach via OwnerNav's
+// phone bottom bar is now a first-class Tab.Screen in this single navigator.
+// The OwnerNav wide-screen sidebar (width >= LG_BREAKPOINT = 1024) still
+// renders in its own dashboard mount path — only the phone-bottom-bar mount
+// is retired.
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { colors, typography } from '@/lib/theme';
-import { Home, Trophy, MessageCircle, Mail, User } from 'lucide-react-native';
+import { Home, Trophy, MessageCircle, Mail, Users, CalendarDays, User } from 'lucide-react-native';
 import { roleTabScreenOptions } from '@/navigation/role/roleTabScreenOptions';
 import { ParentAthleteSwitcher } from '@/components/ParentAthleteSwitcher';
 
@@ -12,6 +21,8 @@ import AthleteMatchesScreen from '@/screens/athlete/AthleteMatchesScreen';
 import LettersScreen from '@/screens/athlete/LettersScreen';
 import MessagesScreen from '@/screens/shared/MessagesScreen';
 import ProfileScreen from '@/screens/shared/ProfileScreen';
+import CoachDirectoryScreen from '@/screens/shared/CoachDirectoryScreen';
+import CampStack from '@/navigation/stacks/CampStack';
 
 const Tab = createBottomTabNavigator();
 
@@ -28,6 +39,10 @@ export default function AthleteTabs() {
       <Tab.Screen name="MatchesTab" component={AthleteMatchesScreen} options={{ title: 'Matches', tabBarIcon: ({ color, size }) => <Trophy size={size} color={color} /> }} />
       <Tab.Screen name="MessagesTab" component={MessagesScreen} options={{ title: 'Messages', tabBarIcon: ({ color, size }) => <MessageCircle size={size} color={color} /> }} />
       <Tab.Screen name="LettersTab" component={LettersScreen} options={{ title: 'Letters', tabBarIcon: ({ color, size }) => <Mail size={size} color={color} /> }} />
+      {/* CoachesTab — lifted from OwnerNav (was Root Stack navigate('CoachDirectory')). */}
+      <Tab.Screen name="CoachesTab" component={CoachDirectoryScreen} options={{ title: 'Coaches', tabBarIcon: ({ color, size }) => <Users size={size} color={color} /> }} />
+      {/* CampsTab — lifted from OwnerNav (was Root Stack navigate('CampStack')). */}
+      <Tab.Screen name="CampsTab" component={CampStack} options={{ title: 'Camps', headerShown: false, tabBarIcon: ({ color, size }) => <CalendarDays size={size} color={color} /> }} />
       <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ title: 'Profile', tabBarIcon: ({ color, size }) => <User size={size} color={color} /> }} />
     </Tab.Navigator>
   );
