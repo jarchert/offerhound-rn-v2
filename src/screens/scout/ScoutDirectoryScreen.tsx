@@ -37,6 +37,8 @@ import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { useCoachProfile } from '@/hooks/useCoachProfile';
 import { useScoutProfile } from '@/hooks/useScoutProfile';
 import { useHSCoachProfile } from '@/hooks/useHSCoachProfile';
+import { useAuth } from '@/hooks/useAuth';
+import { RegisterSearchGate } from '@/components/RegisterSearchGate';
 import { partitionByFullName } from '@/lib/utils/nameSorting';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
@@ -44,6 +46,9 @@ import type { RootStackParamList } from '@/navigation/RootNavigator';
 export default function ScoutDirectoryScreen() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
   const [search, setSearch] = useState('');
+
+  const { user } = useAuth() as any;
+  const isAuthenticated = !!user;
 
   const { profile: athleteProfile } = usePlayerProfile() as any;
   const { data: coachProfile } = useCoachProfile();
@@ -121,6 +126,13 @@ export default function ScoutDirectoryScreen() {
       <ScrollView contentContainerStyle={s.content}>
         <BackButton />
 
+        {!isAuthenticated ? (
+          <>
+            <RegisterSearchGate message="Register to connect with verified scouts" />
+            <Footer />
+          </>
+        ) : (
+        <>
         <Text style={s.title}>Scout Directory</Text>
         <Text style={s.subtitle}>
           Browse verified scouts and recruiting professionals. Tap a card to
@@ -177,6 +189,8 @@ export default function ScoutDirectoryScreen() {
         )}
 
         <Footer />
+        </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

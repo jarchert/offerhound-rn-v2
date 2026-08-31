@@ -48,6 +48,8 @@ import { useScoutProfile } from '@/hooks/useScoutProfile';
 import { useCoachProfile } from '@/hooks/useCoachProfile';
 import { useHSCoachProfile } from '@/hooks/useHSCoachProfile';
 import { useScoutSavedAthletes, useScoutSaveAthlete } from '@/hooks/useScoutSavedAthletes';
+import { useAuth } from '@/hooks/useAuth';
+import { RegisterSearchGate } from '@/components/RegisterSearchGate';
 import { compareByFullNamePresence } from '@/lib/utils/nameSorting';
 import { stateProximityScore, proximityLabel as proxLabelFn } from '@/lib/utils/stateProximity';
 import { AthleteMatchCard } from '@/components/athlete/AthleteMatchCard';
@@ -108,6 +110,11 @@ export default function AthleteSearchScreen() {
   const needPosition = params.position || '';
   const needGradYear = params.gradYear || '';
   const needPriority = params.needPriority || '';
+
+  // Auth gate flag — the actual gate is rendered inline in the return so
+  // that all other hooks run unconditionally (hook order must be stable).
+  const { user } = useAuth() as any;
+  const isAuthenticated = !!user;
 
   const [search, setSearch] = useState('');
   const [position, setPosition] = useState(
@@ -258,6 +265,13 @@ export default function AthleteSearchScreen() {
       <Navbar />
       <ScrollView contentContainerStyle={s.content}>
         <BackButton />
+        {!isAuthenticated ? (
+          <>
+            <RegisterSearchGate message="Register to find your AI matched players" />
+            <Footer />
+          </>
+        ) : (
+        <>
         <Text style={s.title}>Athlete Search</Text>
         <Text style={s.subtitle}>
           Find athletes by name, position, or graduation year.
@@ -387,6 +401,8 @@ export default function AthleteSearchScreen() {
 
         <Text style={s.footerCount}>{sortedAthletes.length} athletes found</Text>
         <Footer />
+        </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

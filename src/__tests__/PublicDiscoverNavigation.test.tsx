@@ -316,7 +316,10 @@ describe('PublicDiscoverScreen tile navigation — stack screens', () => {
     await act(async () => { fireEvent.press(await findByText('Browse Coaches')); });
     await waitFor(() => {
       expect(queryByText('Profile Not Found')).toBeNull();
-      expect(getByText('Coach Directory')).toBeTruthy();
+      // Unauth navigates to the CoachDirectory screen but the auth gate
+      // (RegisterSearchGate) replaces the search UI — assert on the gate
+      // headline, which is unique to the coach directory unauth branch.
+      expect(getByText('Register to find your coach and program match')).toBeTruthy();
     });
     unmount();
   });
@@ -326,7 +329,7 @@ describe('PublicDiscoverScreen tile navigation — stack screens', () => {
     await act(async () => { fireEvent.press(await findByText('Browse Athletes')); });
     await waitFor(() => {
       expect(queryByText('Profile Not Found')).toBeNull();
-      expect(getByText('Athlete Search')).toBeTruthy();
+      expect(getByText('Register to find your AI matched players')).toBeTruthy();
     });
     unmount();
   });
@@ -336,7 +339,7 @@ describe('PublicDiscoverScreen tile navigation — stack screens', () => {
     await act(async () => { fireEvent.press(await findByText('Scout Agencies')); });
     await waitFor(() => {
       expect(queryByText('Profile Not Found')).toBeNull();
-      expect(getByText('Scout Directory')).toBeTruthy();
+      expect(getByText('Register to connect with verified scouts')).toBeTruthy();
     });
     unmount();
   });

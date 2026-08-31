@@ -77,6 +77,7 @@ import { colors, typography, spacing, radius } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 import { CoachOutreachComposer } from '@/components/CoachOutreachComposer';
 import type { OutreachCoach } from '@/components/CoachOutreachComposer';
+import { RegisterSearchGate } from '@/components/RegisterSearchGate';
 
 // ── State proximity tables (verbatim from Lovable CoachDirectory.tsx) ────────
 const STATE_NEIGHBORS: Record<string, string[]> = {
@@ -370,6 +371,13 @@ export default function CoachDirectoryScreen() {
           ) : null}
         </View>
 
+        {!isAuthenticated ? (
+          <>
+            <RegisterSearchGate message="Register to find your coach and program match" />
+            <Footer />
+          </>
+        ) : (
+        <>
         <Text style={s.title}>Coach Directory</Text>
         <Text style={s.subtitle}>Search college coaches across all divisions and sports.</Text>
         {userState ? (
@@ -567,6 +575,8 @@ export default function CoachDirectoryScreen() {
 
         <Text style={s.footerCount}>{`${sortedCoaches.length} coaches found`}</Text>
         <Footer />
+        </>
+        )}
       </ScrollView>
 
       {/* Sticky multi-select action bar */}
