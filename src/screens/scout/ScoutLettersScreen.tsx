@@ -166,7 +166,7 @@ export default function ScoutLettersScreen() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onPress={() => nav.navigate?.('Directory' as never)}>
+                      onPress={() => (nav as any).getParent?.()?.navigate('SearchTab')}>  {/* was: 'Directory' (dead nav — no such route in RootNavigator); fixed to SearchTab which AthleteSearchScreen mounts in both ScoutTabs and AgencyTabs */
                       Search Athletes
                     </Button>
                   </View>
