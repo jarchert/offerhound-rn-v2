@@ -1,13 +1,6 @@
 /**
  * AdminCampEventLog.test.tsx
  *
- * KNOWN FLAKE: the "next / prev pager updates .range() offsets" test
- * (case 1.e, ~line 303) has an act()-race stability flake, roughly 30% fail
- * rate under `npx jest --runInBand`. Root cause: back-to-back fireEvent.press
- * calls without awaiting the async re-render between them. Do NOT silently
- * `.skip()` this test — fix it properly with `await act(async () => {...})`
- * or `waitFor(() => getByTestId(...))` around each press. See KNOWN_FLAKES.md.
- *
  * 1. AdminCampEventLog — real component
  *    a. renders row for each camp_event_log entry
  *    b. shows event label and skipped-reason badge
@@ -306,6 +299,12 @@ describe('AdminCampEventLog — real component', () => {
     });
     await waitFor(() => expect(captures.rangeCalls.length).toBeGreaterThanOrEqual(2));
     expect(captures.rangeCalls[captures.rangeCalls.length - 1]).toEqual([50, 99]);
+
+    // Wait for the pager to re-mount after the query refetch completes.
+    // React Query briefly returns undefined during refetch, which unmounts
+    // the pager (rendered only when rows.length > 0). Without this wait,
+    // camp-events-prev may not be in the tree when we try to press it.
+    await waitFor(() => utils.getByTestId('camp-events-prev'));
 
     await act(async () => {
       fireEvent.press(utils.getByTestId('camp-events-prev'));
