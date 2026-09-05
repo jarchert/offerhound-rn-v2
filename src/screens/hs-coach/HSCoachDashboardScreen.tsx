@@ -74,7 +74,15 @@ function LetterButton({
       size={size || 'sm'}
       leftIcon={<Mail size={14} color={colors.primary} />}
       onPress={() => nav.navigate('LetterComposer', {
-        seed: { athlete, surface },
+        seed: {
+          // Flat recipient shape — the composer's extractRecipientSeed reads
+          // these directly. Nested `seed: { athlete }` was silently dropped.
+          recipientName: athlete?.full_name || athlete?.name || '',
+          recipientRole: 'Athlete',
+          schoolName: athlete?.school || '',
+          prefillAthleteId: athlete?.id,
+          prefillAthleteName: athlete?.full_name || athlete?.name || '',
+        },
       })}
     >
       Letter
