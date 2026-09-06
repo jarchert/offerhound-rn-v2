@@ -311,10 +311,20 @@ describe('Fix 2 — PublicProfileScreen: is_published gate', () => {
 
     const { queryByText } = await render(<PublicProfileScreen />, { wrapper: makeWrapper() });
 
-    await waitFor(() => {
-      // Profile renders, gate screen does not
-      expect(queryByText('Profile Not Found')).toBeNull();
-    });
+    // Wait for the ActivityIndicator (isLoading branch) to be gone AND for the
+    // 'Profile Not Found' gate to be absent. Previously this test only asserted
+    // the negative directly, which raced with the transient `!profile` guard
+    // during React Query's loading → committed transition. Under high CPU
+    // pressure (all 59 suites running back-to-back in --runInBand) the
+    // promise-resolution-to-commit window could exceed waitFor's default 4.5s,
+    // producing an intermittent ~20% flake rate. Waiting on the loading indicator
+    // being gone anchors the assertion to the post-query-resolved state.
+    await waitFor(
+      () => {
+        expect(queryByText('Profile Not Found')).toBeNull();
+      },
+      { timeout: 8000, interval: 25 },
+    );
   });
 
   it('renders the profile normally when is_published=true regardless of viewer', async () => {
@@ -330,8 +340,13 @@ describe('Fix 2 — PublicProfileScreen: is_published gate', () => {
 
     const { queryByText } = await render(<PublicProfileScreen />, { wrapper: makeWrapper() });
 
-    await waitFor(() => {
-      expect(queryByText('Profile Not Found')).toBeNull();
-    });
+    // Same rationale as the previous test — explicit longer timeout and tighter
+    // poll interval to eliminate the CPU-pressure race.
+    await waitFor(
+      () => {
+        expect(queryByText('Profile Not Found')).toBeNull();
+      },
+      { timeout: 8000, interval: 25 },
+    );
   });
 });
