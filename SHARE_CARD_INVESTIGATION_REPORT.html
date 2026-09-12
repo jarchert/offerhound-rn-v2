@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Share Card Scrollability Investigation</title>
+<style>
+:root{color-scheme:dark;--bg:#111318;--panel:#1b1f27;--line:#303642;--text:#edf0f4;--muted:#aab2bf;--ok:#7ee2a8;--warn:#ffd479;--accent:#8fc7ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:960px;margin:0 auto;padding:28px 18px 52px}h1{font-size:28px;line-height:1.2;margin:0 0 8px}h2{font-size:20px;margin:30px 0 10px;border-bottom:1px solid var(--line);padding-bottom:6px}h3{font-size:16px;margin:20px 0 6px}.meta{color:var(--muted);margin-bottom:24px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.box{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px}.label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}.value{font-size:18px;margin-top:3px}.ok{color:var(--ok)}.warn{color:var(--warn)}code,pre{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}code{color:var(--accent)}pre{white-space:pre-wrap;background:#0c0e12;border:1px solid var(--line);border-radius:6px;padding:12px;overflow:auto;font-size:13px}ul{padding-left:22px}.small{color:var(--muted);font-size:13px}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:9px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--muted);font-weight:600}@media(max-width:600px){main{padding:20px 12px}h1{font-size:24px}.value{font-size:16px}}
+</style>
+</head>
+<body><main>
+<h1>Share Card Scrollability Investigation</h1>
+<div class="meta">OfferHound RN · 2026-09-12 · HEAD before this change: <code>b43e00f</code></div>
+
+<div class="grid">
+<div class="box"><div class="label">Prior fix cd10343</div><div class="value ok">Intact</div><div class="small">Ancestor of HEAD; no later edits to target files</div></div>
+<div class="box"><div class="label">Product files changed</div><div class="value">1</div><div class="small"><code>ShareRoleCardDialog.tsx</code></div></div>
+<div class="box"><div class="label">New tests</div><div class="value ok">17 passing</div><div class="small">9 role-dialog + 4 inline + 4 tall athlete-dialog</div></div>
+<div class="box"><div class="label">Full suite</div><div class="value ok">544 / 544</div><div class="small">62 / 62 suites, --runInBand</div></div>
+</div>
+
+<h2>Real Findings</h2>
+<table><thead><tr><th>Scenario</th><th>Finding</th><th>Evidence</th></tr></thead><tbody>
+<tr><td>(a) Different component</td><td class="ok"><strong>True, primary cause</strong></td><td><code>ShareRoleCardDialog</code> is a separate raw Modal/bottom sheet used for scout, club_coach, and hs_coach. It was not covered by <code>cd10343</code>. The athlete Profile tab also has a separate inline <code>SocialLinksManager</code> path.</td></tr>
+<tr><td>(b) Later regression</td><td class="ok"><strong>False</strong></td><td><code>git log cd10343..HEAD -- [share files]</code> returned no commits. Layer 2/nav/letter changes did not touch the share-card components.</td></tr>
+<tr><td>(c) Device/content edge case</td><td class="warn"><strong>Possible, coverage gap</strong></td><td>The prior athlete test only checked ScrollView structure with a tiny stub. A tall populated card with radar/bio/social/QR content was not exercised.</td></tr>
+</tbody></table>
+
+<h2>Changes</h2>
+<h3>1. ShareRoleCardDialog</h3>
+<p>Added <code>flexGrow: 1</code> and <code>paddingBottom: spacing.xl + spacing.md</code> (48pt) to the single ScrollView's content container. The sheet remains capped at 85%, while its card and Share/Copy action row remain in the same scrollable region.</p>
+<pre>content: {
+  padding: spacing.lg,
+  flexGrow: 1,
+  gap: spacing.lg,
+  paddingBottom: spacing.xl + spacing.md,
+}</pre>
+<p>Coverage runs the component for all three real roles: <code>scout</code>, <code>club_coach</code>, and <code>hs_coach</code>. It verifies one ScrollView, Share and Copy Link descendants inside it, and the style invariants. Reverting the product change caused 3 of 9 tests to fail; restoring it returned 9 of 9.</p>
+
+<h3>2. SocialLinksManager inline athlete card</h3>
+<p>No product-code change was warranted. The actual chain is:</p>
+<pre>DashboardScreen outer ScrollView
+  -> renderProfileTab()
+    -> SocialLinksManager
+      -> ProfileCardGenerator (including radar and its action bar)
+      -> section-level CardShareActions</pre>
+<p>There are no nested vertical scroll containers, no fixed-height ancestor, and no ancestor combining <code>overflow:hidden</code> with a height constraint. The existing Card's rounded-corner overflow is unconstrained and does not clip normal-flow children. Four regression tests lock in these facts using a 1200pt tall card stub.</p>
+
+<h3>3. SharePlayerCardDialog tall-content variant</h3>
+<p>The original <code>cd10343</code> implementation remains correct: ProfileCardGenerator is a direct child of the capture View, inside DialogContent's single ScrollView. A new stress test uses a 2000pt tall stub representing populated bio/social/radar/QR content and verifies top, middle, and bottom sentinels all remain descendants of the one ScrollView, with no nested vertical scroll or fixed-point clipping ancestor.</p>
+
+<h2>Verification</h2>
+<pre>ShareRoleCardDialogBottomReachability.test.tsx
+  9 passed, 9 total
+
+SocialLinksManagerShareCardReachability.test.tsx
+  4 passed, 4 total
+
+SharePlayerCardDialogBug3TallContent.test.tsx
+  4 passed, 4 total
+
+Full suite (--runInBand)
+  Test Suites: 62 passed, 62 total
+  Tests:       544 passed, 544 total</pre>
+
+<h2>Files</h2>
+<ul>
+<li><code>src/components/ShareRoleCardDialog.tsx</code> — production fix</li>
+<li><code>src/__tests__/ShareRoleCardDialogBottomReachability.test.tsx</code> — all three roles</li>
+<li><code>src/__tests__/SocialLinksManagerShareCardReachability.test.tsx</code> — inline athlete path</li>
+<li><code>src/__tests__/SharePlayerCardDialogBug3TallContent.test.tsx</code> — tall athlete modal path</li>
+<li><code>SHARE_CARD_INVESTIGATION.md</code> — prior written investigation</li>
+</ul>
+<p class="small">Unit tests validate the native component tree and scroll ownership. Real-device gesture/viewport behavior still merits a short-device smoke test when a device is available; the code paths and regression invariants are covered here.</p>
+</main></body></html>

@@ -1,4 +1,15 @@
 // ShareRoleCardDialog — RN port of Lovable ShareRoleCardDialog.tsx + RoleCardGenerator.tsx
+//
+// Bug fix (parity with cd10343 SharePlayerCardDialog Bug 3): the modal sheet
+// caps at maxHeight: '85%' and contains a header + a single <ScrollView> for
+// card+actions. On short devices with bottom safe-area insets (iPhone home
+// indicator, Android nav bar) the Share/Copy action buttons sat flush against
+// the sheet's bottom edge, which on real hardware landed behind the system
+// bar, making them tap-unreachable and creating the reported "cut off at
+// bottom, no scroll" symptom. The fix: give the ScrollView contentContainer
+// flexGrow:1 (so it always claims the sheet's usable height even when content
+// is short) plus a generous paddingBottom that clears typical device safe-area
+// insets, mirroring the discipline applied to SharePlayerCardDialog.
 // Renders a modal bottom sheet with role-specific contact card + QR code + native share.
 // Roles: athlete | coach | club_coach | hs_coach | scout | influencer
 import React, { useMemo } from 'react';
@@ -251,7 +262,13 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
+    // Bug fix (parity with SharePlayerCardDialog cd10343): flexGrow:1 makes the
+    // ScrollView's content column claim the full available height inside the
+    // maxHeight-capped sheet, and paddingBottom clears bottom safe-area insets
+    // so the Share/Copy action buttons remain reachable on every device.
+    flexGrow: 1,
     gap: spacing.lg,
+    paddingBottom: spacing.xl + spacing.md,
   },
   card: {
     backgroundColor: colors.background,
