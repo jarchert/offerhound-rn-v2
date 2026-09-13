@@ -20,6 +20,7 @@ import {
   type ShareFormat,
 } from '@/lib/shareCard';
 import { colors, spacing, typography } from '@/lib/theme';
+import { toE164 } from '@/lib/phone';
 
 interface CardShareActionsProps {
   /** ref of the View to capture as image */
@@ -94,13 +95,27 @@ export function CardShareActions({
       toast.error(channel === 'email' ? 'Enter an email address' : 'Enter a phone number');
       return;
     }
+    // SMS #2 fix (Sep 2026): normalize phone to E.164 before send-share-card
+    // → Twilio, matching the E.164 hint already shown next to the input.
+    let recipientForSend = recipient.trim();
+    if (channel === 'sms') {
+      const normalized = toE164(recipient);
+      if (!normalized) {
+        toast.error(
+          'Invalid phone number',
+          'Enter a valid US number (e.g. 555-123-4567) or an international number in +CountryCode format.',
+        );
+        return;
+      }
+      recipientForSend = normalized;
+    }
     // SMS: PNG only
     const fmtForSend: ShareFormat = channel === 'sms' ? 'png' : format;
     await withCapture(fmtForSend, async (cap) => {
       try {
         await sendShareCard({
           channel,
-          recipient: recipient.trim(),
+          recipient: recipientForSend,
           senderName,
           fileName: `${safeName}.${cap.extension}`,
           mimeType: cap.mimeType,

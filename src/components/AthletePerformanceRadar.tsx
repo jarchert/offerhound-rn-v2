@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import Svg, { Polygon, Line, Circle, Text as SvgText, G } from 'react-native-svg';
 import { Activity, TrendingUp, TrendingDown, Minus, AlertCircle, Sparkles } from 'lucide-react-native';
@@ -333,7 +333,10 @@ const RatingIcon: React.FC<{ icon: 'up' | 'down' | 'neutral'; color: string; siz
 };
 
 // ---------- Main component ----------
-export function AthletePerformanceRadar({ athlete, style }: AthletePerformanceRadarProps) {
+// Perf fix (Sep 2026): wrapped in React.memo so parent re-renders (e.g.
+// SharePlayerCardDialog's smsOpen toggle, or dashboard scroll updates) do
+// not cascade into the entire radar Card + 44+ SVG children.
+function AthletePerformanceRadarImpl({ athlete, style }: AthletePerformanceRadarProps) {
   const athletePositions = useMemo(
     () => parsePositions(athlete.position, athlete.positions),
     [athlete.position, athlete.positions],
@@ -424,31 +427,16 @@ export function AthletePerformanceRadar({ athlete, style }: AthletePerformanceRa
     ];
   }, [athlete, benchmarks]);
 
-  // Animation: start at zero, then tween to real values over ~600ms
-  const [animatedData, setAnimatedData] = useState<ChartDatum[]>(() =>
-    chartData.map((item) => ({ ...item, athlete: 0 })),
-  );
-
-  useEffect(() => {
-    const zeroData = chartData.map((item) => ({ ...item, athlete: 0 }));
-    setAnimatedData(zeroData);
-    const start = Date.now();
-    const duration = 600;
-    let raf: any;
-    const tick = () => {
-      const t = Math.min(1, (Date.now() - start) / duration);
-      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
-      setAnimatedData(chartData.map((item) => ({ ...item, athlete: item.athlete * eased })));
-      if (t < 1) raf = requestAnimationFrame(tick);
-    };
-    const initTimer = setTimeout(() => {
-      raf = requestAnimationFrame(tick);
-    }, 100);
-    return () => {
-      clearTimeout(initTimer);
-      if (raf) cancelAnimationFrame(raf);
-    };
-  }, [chartData, primaryCategory]);
+  // Perf fix (Sep 2026): the previous implementation ran a hand-rolled
+  // requestAnimationFrame loop that called setAnimatedData(...) on every frame
+  // for 600 ms after mount (~36 setState calls, each re-rendering the entire
+  // radar Card + 44+ SVG child elements). The tween competed with the
+  // ScrollView gesture thread and caused the reported "first drag feels
+  // sticky" symptom on shareable-card mounts. The chart now renders directly
+  // from chartData with no entry animation — users see the final state as
+  // their first impression, which is the value-conveying frame anyway. If a
+  // future entry animation is wanted, it should use react-native Animated
+  // with useNativeDriver so it doesn't touch the JS thread each frame.
 
   const dataWithValues = chartData.filter((d) => d.hasData);
   const hasAnyData = dataWithValues.length > 0;
@@ -465,7 +453,8 @@ export function AthletePerformanceRadar({ athlete, style }: AthletePerformanceRa
   const missingMetricsCount = missingMetrics.length;
 
   const chartSize = 320; // matches "h-[320px]" in Lovable
-  const displayData = animatedData.length > 0 ? animatedData : chartData;
+  // Perf fix (Sep 2026): render chartData directly — no separate animated state.
+  const displayData = chartData;
 
   return (
     <Card style={{ ...styles.cardGradient, ...((style as any) || {}) }}>
@@ -579,6 +568,8 @@ export function AthletePerformanceRadar({ athlete, style }: AthletePerformanceRa
     </Card>
   );
 }
+
+export const AthletePerformanceRadar = React.memo(AthletePerformanceRadarImpl);
 
 export default AthletePerformanceRadar;
 

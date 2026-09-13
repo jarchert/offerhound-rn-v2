@@ -62,7 +62,7 @@ function resolveAccent(cardTheme: unknown, accentColor: unknown): string {
   return colors.primary;
 }
 
-export const ProfileCardGenerator = () => {
+export const ProfileCardGenerator = React.memo(() => {
   const { profile } = usePlayerProfile() as any;
   const cardRef = useRef<View>(null);
 
@@ -393,7 +393,8 @@ export const ProfileCardGenerator = () => {
       </View>
     </View>
   );
-};
+});
+ProfileCardGenerator.displayName = 'ProfileCardGenerator';
 
 export default ProfileCardGenerator;
 
