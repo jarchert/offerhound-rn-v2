@@ -1,6 +1,7 @@
-// LetterComposerScreen — AI-driven letter authoring with streaming response and
-// native sharing. Wires to the `generate-letter` edge function (Lovable parity).
-// Part 4 §4.x of the conversion guide describes this screen.
+// LetterComposerScreen — AI-driven letter authoring with native sharing.
+// Wires to the `generate-coach-scout-letter` edge function (MAIN parity — this
+// is the "Universal Letter Center" that handles every sender role, not just
+// coach/scout). Part 4 §4.x of the conversion guide describes this screen.
 //
 // Sender-profile parity note (2026-09-05):
 // MAIN's <LetterDashboard> loads the authenticated user's role-specific profile
@@ -11,8 +12,18 @@
 // the appropriate profile hook and displays it as a read-only "Sending as"
 // header. Fixes the athlete-tapping-Contact-on-own-profile UX bug (they no
 // longer have to retype their own name/position/school every time) and includes
-// the same sender context in the generate-letter edge function payload so the
-// AI generation matches MAIN's quality.
+// the same sender context in the edge function payload so the AI generation
+// matches MAIN's quality.
+//
+// Edge-function migration note (2026-09-14):
+// Previously called the legacy `generate-letter` endpoint which required an
+// `athleteProfile` field this screen never sent, causing every AI generation
+// attempt to 400. Migrated to `generate-coach-scout-letter` (the correct
+// universal endpoint) and routed the payload through
+// `buildGenerateLetterPayload` to guarantee the request shape matches the
+// edge function's validation contract. Also fixed the incidental
+// error-surfacing bug (the old code only read resp.status, never resp.json(),
+// so users saw "Edge function returned 400" instead of the real message).
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
@@ -33,6 +44,7 @@ import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { useCoachProfile } from '@/hooks/useCoachProfile';
 import { useScoutProfile } from '@/hooks/useScoutProfile';
 import { useHSCoachProfile } from '@/hooks/useHSCoachProfile';
+import { buildGenerateLetterPayload } from '@/lib/generateLetterPayload';
 import { Navbar } from '@/components/Navbar';
 import { BackButton } from '@/components/BackButton';
 import { Card } from '@/components/ui/Card';
@@ -100,49 +112,77 @@ export default function LetterComposerScreen() {
       Alert.alert('Missing details', 'Recipient name and school are required.');
       return;
     }
+
+    // Infer recipientCategory from the free-text recipient role. The seed
+    // extractor sets recipientRole = 'Athlete' when the seed came from a
+    // coach/scout/HS-coach dashboard's athlete card; every other surface B
+    // callsite is an outreach to a college coach.
+    const recipientRoleTrim = draft.recipientRole.trim().toLowerCase();
+    const recipientCategoryHint: 'athlete' | 'college-coach' =
+      recipientRoleTrim === 'athlete' ? 'athlete' : 'college-coach';
+
+    // Fold tone into customContext so the AI model still receives it — the
+    // edge function has no dedicated tone field; the old generate-letter
+    // payload passed it as a top-level key, which was silently ignored.
+    const contextParts: string[] = [];
+    if (draft.tone) contextParts.push(`Preferred tone: ${draft.tone}.`);
+    if (draft.keyPoints && draft.keyPoints.trim()) contextParts.push(draft.keyPoints.trim());
+    const customContext = contextParts.length > 0 ? contextParts.join('\n\n') : undefined;
+
+    const built = buildGenerateLetterPayload({
+      role: userRole,
+      letterType: draft.letterType,
+      recipientCategoryHint,
+      senderProfile: senderProfile ?? undefined,
+      recipientInfo: {
+        name: draft.recipientName,
+        title: draft.recipientRole || undefined,
+        organization: draft.schoolName,
+      },
+      customContext,
+    });
+
+    if (!built.payload) {
+      Alert.alert('Cannot generate letter', built.reason);
+      return;
+    }
+
     setIsGenerating(true);
     setGenerated('');
     try {
-      // Invoke streaming edge function via fetch (Supabase client wraps non-streaming).
       const { data: { session } } = await supabase.auth.getSession();
-      const url = `${(supabase as any).supabaseUrl}/functions/v1/generate-letter`;
-      // Payload includes senderProfile (MAIN parity — the generate-letter edge
-      // function on MAIN accepts and uses the sender fields to personalize
-      // the AI-generated letter).
-      const payload = {
-        ...draft,
-        senderProfile: senderProfile ?? undefined,
-      };
+      const url = `${(supabase as any).supabaseUrl}/functions/v1/generate-coach-scout-letter`;
       const resp = await fetch(url, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${session?.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(built.payload),
       });
-      if (!resp.ok) throw new Error(`Edge function returned ${resp.status}`);
+      if (!resp.ok) {
+        // Surface the real edge-function error body — the previous code only
+        // read resp.status and threw a generic message.
+        let msg = `Edge function returned ${resp.status}`;
+        try {
+          const errBody = await resp.json();
+          if (errBody?.error && typeof errBody.error === 'string') msg = errBody.error;
+        } catch {
+          // Body was not JSON — keep the status-based fallback message.
+        }
+        throw new Error(msg);
+      }
 
-      const reader = (resp.body as any)?.getReader?.();
-      if (!reader) {
-        const text = await resp.text();
-        setGenerated(text);
-        return;
-      }
-      const decoder = new TextDecoder();
-      let buffered = '';
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffered += decoder.decode(value, { stream: true });
-        setGenerated(buffered);
-      }
+      const data = await resp.json();
+      const letter = typeof data?.letter === 'string' ? data.letter : '';
+      if (!letter) throw new Error('No letter returned from AI.');
+      setGenerated(letter);
     } catch (e: any) {
       Alert.alert('Generation failed', e?.message ?? 'Unable to generate letter.');
     } finally {
       setIsGenerating(false);
     }
-  }, [draft, senderProfile]);
+  }, [draft, senderProfile, userRole]);
 
   const handleSave = useCallback(async () => {
     if (!generated.trim() || !user) return;
