@@ -13,8 +13,8 @@
 // own ScrollView now handles scrolling for the whole card. The
 // hideTriggers CardShareActions instance (SMS dialog host) is invisible
 // UI-wise so its DOM position is irrelevant — kept as a sibling.
-import React, { useRef, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useRef, useState, useEffect } from 'react';
+import { View, ActivityIndicator, InteractionManager, StyleSheet } from 'react-native';
 import {
   Dialog,
   DialogContent,
@@ -47,6 +47,31 @@ export function SharePlayerCardDialog({
   const setOpen = onOpenChange ?? setInternalOpen;
   const [smsOpen, setSmsOpen] = useState(false);
   const captureRef = useRef<View>(null);
+  // Defer mounting the heavy ProfileCardGenerator (SVG radar, gradient card,
+  // QR code, expo-image avatar) until after the modal open animation and any
+  // other in-flight interactions have settled. Mounting all of that
+  // synchronously on the same tick the dialog opens visibly janks the fade-in
+  // animation on lower-end devices. A lightweight ActivityIndicator skeleton
+  // fills the capture slot in the meantime; note the skeleton lives *inside*
+  // the same <View ref={captureRef}> so captureRef stays valid across the
+  // swap (CardShareActions guards against a null ref, but the ref itself
+  // never changes here).
+  const [heavyReady, setHeavyReady] = useState(false);
+  useEffect(() => {
+    if (!open) {
+      setHeavyReady(false);
+      return;
+    }
+    let cancelled = false;
+    const handle = InteractionManager.runAfterInteractions(() => {
+      if (!cancelled) setHeavyReady(true);
+    });
+    return () => {
+      cancelled = true;
+      // handle is a { cancel } object on RN; cancel if the dialog closes fast.
+      (handle as any)?.cancel?.();
+    };
+  }, [open]);
   const { profile } = usePlayerProfile();
   const name = profile?.full_name || 'Athlete';
   const safe = name.replace(/[^a-z0-9-_]/gi, '-').toLowerCase();
@@ -78,7 +103,13 @@ export function SharePlayerCardDialog({
           style={styles.capture}
           testID="share-player-card-capture"
         >
-          <ProfileCardGenerator />
+          {heavyReady ? (
+            <ProfileCardGenerator />
+          ) : (
+            <View style={styles.skeleton} testID="share-player-card-skeleton">
+              <ActivityIndicator size="large" color={colors.mutedForeground} />
+            </View>
+          )}
         </View>
         <CardShareActions
           targetRef={captureRef}
@@ -128,5 +159,11 @@ const styles = StyleSheet.create({
   },
   capture: {
     minWidth: 0,
+  },
+  skeleton: {
+    minHeight: 320,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xl,
   },
 });

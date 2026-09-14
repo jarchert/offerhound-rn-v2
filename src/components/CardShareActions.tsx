@@ -4,7 +4,7 @@
 // the mobile client (the lib supports png/jpg only), so the format menu is
 // limited to PNG and JPEG. SMS still forces PNG, matching the web behavior.
 import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, InteractionManager } from 'react-native';
 import { Download, Mail, MessageSquare, FileImage, Send } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -71,6 +71,13 @@ export function CardShareActions({
     }
     setBusy(true);
     try {
+      // Yield one InteractionManager tick so React commits the busy=true
+      // state (spinner paints on the triggering button) before captureRef
+      // kicks the native view-shot bridge, which can briefly stall the UI
+      // thread on lower-end devices while it measures + rasterizes the
+      // captured View. Without this yield, users tapping PNG / JPEG / Send
+      // see the button appear to "hang" for a moment with no feedback.
+      await new Promise<void>((resolve) => InteractionManager.runAfterInteractions(() => resolve()));
       const cap = await captureCardImage(targetRef.current, fmt);
       return await fn(cap);
     } catch (e: any) {
