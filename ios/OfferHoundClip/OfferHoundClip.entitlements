@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:offerhound.app</string>
+		<string>applinks:www.offerhound.app</string>
+		<string>appclips:offerhound.app</string>
+		<string>appclips:www.offerhound.app</string>
+	</array>
+	<key>com.apple.developer.parent-application-identifiers</key>
+	<array>
+		<string>$(AppIdentifierPrefix)com.emergentmindlab.offerhoundv2</string>
+	</array>
+	<key>com.apple.developer.on-demand-install-capable</key>
+	<true/>
+</dict>
+</plist>

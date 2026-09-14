@@ -49,6 +49,12 @@ export type CampStackParamList = {
   CampEvaluatorScoring: { campId: string };
   CampLeaderboardEmbed: { campId: string; metric?: string; limit?: number | string; theme?: string };
   UnsubscribeCampAlerts: { email?: string } | undefined;
+  // Legacy alias for the stale /camps/unsubscribe URL. MAIN moved to
+  // /unsubscribe/camp-alerts, but older emails may still carry the old
+  // path. This alias silently routes those hits to the real unsubscribe
+  // screen instead of falling through to CampDetail's :campId pattern
+  // (which would try to load a camp with id='unsubscribe').
+  UnsubscribeCampAlertsLegacy: { email?: string } | undefined;
 };
 
 const Stack = createNativeStackNavigator<CampStackParamList>();
@@ -73,6 +79,7 @@ export default function CampStack() {
       <Stack.Screen name="CampEvaluatorScoring" component={CampEvaluatorScoring} />
       <Stack.Screen name="CampLeaderboardEmbed" component={CampLeaderboardEmbed} />
       <Stack.Screen name="UnsubscribeCampAlerts" component={UnsubscribeCampAlerts} />
+      <Stack.Screen name="UnsubscribeCampAlertsLegacy" component={UnsubscribeCampAlerts} />
     </Stack.Navigator>
   );
 }

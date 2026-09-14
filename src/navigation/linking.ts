@@ -53,6 +53,8 @@ export const linking: LinkingOptions<any> = {
           SignUp: 'signup',
           BetaRegister: 'beta-register',
           ParentalConsent: 'parental-consent',
+          RosterTransferConsent: 'roster-transfer-consent',
+          VisibilityDecision: 'visibility-decision/:proposalId',
           DeleteAccount: 'delete-account',
           PasswordReset: 'reset-password',
         },
@@ -94,6 +96,12 @@ export const linking: LinkingOptions<any> = {
           CampEvaluatorScoring: 'coach/camps/:campId/evaluate',
           CampLeaderboardEmbed: 'embed/leaderboard/:campId',
           UnsubscribeCampAlerts: 'unsubscribe/camp-alerts',
+          // Legacy alias for the stale /camps/unsubscribe URL used before
+          // MAIN moved to /unsubscribe/camp-alerts. Without this, the bare
+          // path falls through to CampDetail's 'camps/:campId' param
+          // pattern and tries to load a camp with id='unsubscribe'.
+          // Silent recovery: same UnsubscribeCampAlertsScreen component.
+          UnsubscribeCampAlertsLegacy: 'camps/unsubscribe',
         },
       },
 
@@ -121,6 +129,8 @@ export const linking: LinkingOptions<any> = {
           AthleteProfileByUrl: 'athlete/:customUrl',
           ProfileLegacy: 'profile/:customUrl',
           PublicScoutProfile: 'scouts/:scoutId',
+          PublicHSCoachProfile: 'hs-coach/:hsCoachId',
+          PublicAgencyProfile: 'agency/:agencyId',
           InfluencerProfile: 'influencers/:handle',
           InfluencerBlogPost: 'influencers/:handle/blog/:slug',
           InviteShareCard: 'invite/share-card',
@@ -214,6 +224,9 @@ export const linking: LinkingOptions<any> = {
           ModerationTab: 'admin/moderation',
           ContentTab: 'admin/content',
           AuditTab: 'admin/audit',
+          LettersAnalyticsTab: 'admin/letter-analytics',
+          SocialTab: 'admin/social',
+          BetaTab: 'admin/beta',
           SettingsTab: 'admin/settings',
         },
       },
@@ -239,6 +252,10 @@ export const linking: LinkingOptions<any> = {
 
       // Fallback not-found (optional; RN v7 supports this)
       NotFound: '*',
+
+      // Minor-safe parent profile creation — token from invite email
+      // Matches MAIN's /minor-invite/:token route.
+      MinorInvite: 'minor-invite/:token',
     },
   },
 };

@@ -1,11 +1,10 @@
-// AdminContentScreen — thin wrapper around the ported PodcastTileUpload component.
-// Lovable parity (AdminMediaCenter / AdminPodcasts / AdminInfluencers): the most-ported
-// piece of the admin Content surface today is the podcast tile uploader. The remaining
-// pieces (media center, influencer roster admin, letter analytics) are tracked as
-// PORT-PENDING in the AdminContent stack and will replace this wrapper as they land.
+// AdminContentScreen — podcast tile uploads + invitation cards.
+// Wave 1 wiring: AdminInvitationCards appended below PodcastTileUpload in same scroll.
 import React from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, View, Text } from 'react-native';
 import { PodcastTileUpload } from '@/components/admin/PodcastTileUpload';
+import { AdminInvitationCards } from '@/components/AdminInvitationCards';
+import AdminPlatformEmailTemplates from '@/components/AdminPlatformEmailTemplates';
 import { colors, typography, spacing } from '@/lib/theme';
 
 export default function AdminContentScreen() {
@@ -15,10 +14,14 @@ export default function AdminContentScreen() {
         <View style={s.header}>
           <Text style={s.title}>Content</Text>
           <Text style={s.subtitle}>
-            Podcast tile uploads. Media center, influencers, and letter analytics arrive in a follow-up.
+            Podcast tile uploads, user invitation cards, and athlete transactional email templates. Media center, influencers, and letter analytics arrive in a follow-up.
           </Text>
         </View>
         <PodcastTileUpload />
+        <View style={s.divider} />
+        <AdminInvitationCards />
+        <View style={s.divider} />
+        <AdminPlatformEmailTemplates />
       </ScrollView>
     </SafeAreaView>
   );
@@ -39,5 +42,10 @@ const s = StyleSheet.create({
     fontFamily: typography.fontFamily.body,
     fontSize: typography.size.sm,
     color: colors.foregroundSubtle,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.xl,
   },
 });

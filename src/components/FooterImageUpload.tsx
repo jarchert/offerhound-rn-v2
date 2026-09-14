@@ -10,6 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Image as ImageIcon } from 'lucide-react-native';
 import { Label } from '@/components/ui/Label';
 import { supabase } from '@/integrations/supabase/client';
+import { isMinorSafeAthlete } from '@/lib/isMinorSafeAthlete';
 import { useToast } from '@/hooks/use-toast';
 import { colors, typography, spacing } from '@/lib/theme';
 
@@ -17,14 +18,26 @@ interface Props {
   athleteId: string;
   currentImageUrl?: string | null;
   onImageUpdated?: (url: string | null) => void;
+  /** When true, all uploads are blocked (under-13 minor-safe profile). */
+  isMinorSafe?: boolean;
 }
 
-export function FooterImageUpload({ athleteId, currentImageUrl, onImageUpdated }: Props) {
+export function FooterImageUpload({ athleteId, currentImageUrl, onImageUpdated, isMinorSafe = false }: Props) {
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentImageUrl || null);
   const { toast } = useToast();
 
   const pickAndUpload = async () => {
+    // Minor-Safe guard (prop fast-path + DB verification).
+    const minorSafeLocked = isMinorSafe || (await isMinorSafeAthlete(athleteId));
+    if (minorSafeLocked) {
+      toast({
+        title: 'Upload Locked',
+        description: 'Footer images cannot be uploaded until a parent completes the consent process for this minor athlete.',
+        variant: 'destructive',
+      });
+      return;
+    }
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {

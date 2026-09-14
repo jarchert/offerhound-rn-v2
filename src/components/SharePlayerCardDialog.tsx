@@ -2,8 +2,19 @@
 // Web→RN mapping: shadcn Dialog/ScrollArea/Button → src/components/ui/*;
 // lucide-react → lucide-react-native; Tailwind → StyleSheet @/lib/theme;
 // HTMLDivElement ref → View ref.
-import React, { useRef, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+//
+// Bug 3 fix (shareable athlete card cut off): the previous implementation
+// wrapped <ProfileCardGenerator /> in a nested <ScrollArea /> that itself
+// sat inside DialogContent's outer <ScrollView>. RN doesn't cleanly handle
+// nested same-axis vertical scrolls — the inner ScrollView captured gesture
+// focus and its content height exceeded the visible dialog viewport, so
+// the Share buttons at the bottom of ProfileCardGenerator were unreachable
+// on shorter screens. The nested ScrollArea has been removed; the Dialog's
+// own ScrollView now handles scrolling for the whole card. The
+// hideTriggers CardShareActions instance (SMS dialog host) is invisible
+// UI-wise so its DOM position is irrelevant — kept as a sibling.
+import React, { useRef, useState, useEffect } from 'react';
+import { View, ActivityIndicator, InteractionManager, StyleSheet } from 'react-native';
 import {
   Dialog,
   DialogContent,
@@ -11,7 +22,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/Dialog';
-import { ScrollArea } from '@/components/ui/ScrollArea';
 import { Button } from '@/components/ui/Button';
 import { Share2, MessageSquare } from 'lucide-react-native';
 import { ProfileCardGenerator } from '@/components/ProfileCardGenerator';
@@ -37,6 +47,31 @@ export function SharePlayerCardDialog({
   const setOpen = onOpenChange ?? setInternalOpen;
   const [smsOpen, setSmsOpen] = useState(false);
   const captureRef = useRef<View>(null);
+  // Defer mounting the heavy ProfileCardGenerator (SVG radar, gradient card,
+  // QR code, expo-image avatar) until after the modal open animation and any
+  // other in-flight interactions have settled. Mounting all of that
+  // synchronously on the same tick the dialog opens visibly janks the fade-in
+  // animation on lower-end devices. A lightweight ActivityIndicator skeleton
+  // fills the capture slot in the meantime; note the skeleton lives *inside*
+  // the same <View ref={captureRef}> so captureRef stays valid across the
+  // swap (CardShareActions guards against a null ref, but the ref itself
+  // never changes here).
+  const [heavyReady, setHeavyReady] = useState(false);
+  useEffect(() => {
+    if (!open) {
+      setHeavyReady(false);
+      return;
+    }
+    let cancelled = false;
+    const handle = InteractionManager.runAfterInteractions(() => {
+      if (!cancelled) setHeavyReady(true);
+    });
+    return () => {
+      cancelled = true;
+      // handle is a { cancel } object on RN; cancel if the dialog closes fast.
+      (handle as any)?.cancel?.();
+    };
+  }, [open]);
   const { profile } = usePlayerProfile();
   const name = profile?.full_name || 'Athlete';
   const safe = name.replace(/[^a-z0-9-_]/gi, '-').toLowerCase();
@@ -56,11 +91,26 @@ export function SharePlayerCardDialog({
             rightIcon={<MessageSquare size={14} color={colors.foreground} />}
           />
         </DialogHeader>
-        <ScrollArea style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-          <View ref={captureRef} style={styles.capture}>
+        {/*
+          NOTE: DialogContent already wraps its children in a ScrollView
+          internally (see @/components/ui/Dialog). Do NOT add another
+          ScrollView / ScrollArea around ProfileCardGenerator — nesting
+          same-axis scrolls hides the Share buttons at the bottom of the
+          card on shorter phones (Bug 3).
+        */}
+        <View
+          ref={captureRef}
+          style={styles.capture}
+          testID="share-player-card-capture"
+        >
+          {heavyReady ? (
             <ProfileCardGenerator />
-          </View>
-        </ScrollArea>
+          ) : (
+            <View style={styles.skeleton} testID="share-player-card-skeleton">
+              <ActivityIndicator size="large" color={colors.mutedForeground} />
+            </View>
+          )}
+        </View>
         <CardShareActions
           targetRef={captureRef}
           senderName={name}
@@ -100,6 +150,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   scroll: {
+    // Kept for backward-compat should a caller import the style; no longer
+    // applied to a ScrollView. See Bug 3 comment above.
     paddingHorizontal: spacing.md,
   },
   scrollContent: {
@@ -107,5 +159,11 @@ const styles = StyleSheet.create({
   },
   capture: {
     minWidth: 0,
+  },
+  skeleton: {
+    minHeight: 320,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xl,
   },
 });

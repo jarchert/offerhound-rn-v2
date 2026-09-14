@@ -6,6 +6,16 @@
 //   - lucide-react → lucide-react-native
 //   - Desktop sidebar shown on wide (≥1024) screens; phones/narrow → bottom nav.
 // Mirrors OwnerNav.tsx pattern exactly.
+//
+// Group 3 #7 ROLE 2 (Club Coach) follow-up (2026-08-31): CoachNav accepts an
+// optional `role` prop so club-coach mounts don't blow the TS type-check.
+// Prior to this pass ClubCoachDashboardScreen mounted <CoachNav role="club_coach" />
+// twice, but the component's signature had no `role` prop — a pre-existing
+// TS error. The prop is currently informational (it does not switch the item
+// list — both the college-coach and club-coach roles get the same cross-app
+// nav items today); making it an explicit optional keeps the type-check green
+// without changing runtime behavior. Future item-list branching can hang off
+// `role` when Lovable ships the equivalent split.
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
@@ -55,7 +65,19 @@ const NAV_COLLAPSED_KEY = 'coachNavCollapsed';
 // Breakpoint matches Tailwind `lg:` = 1024px.
 const LG_BREAKPOINT = 1024;
 
-export function CoachNav() {
+export type CoachNavRole = 'coach' | 'club_coach';
+
+export interface CoachNavProps {
+  /**
+   * Which coach-flavored role is mounting this nav. Optional. Both
+   * college-coach and club-coach mounts get the same cross-app nav items
+   * today; the prop is accepted so callers can annotate intent without a
+   * TS error, and to leave a hook for future role-specific item lists.
+   */
+  role?: CoachNavRole;
+}
+
+export function CoachNav(_props: CoachNavProps = {}) {
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();

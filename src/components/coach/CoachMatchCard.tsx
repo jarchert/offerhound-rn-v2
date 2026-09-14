@@ -59,6 +59,11 @@ export interface CoachMatchCardProps {
   onDismiss?: () => void;
   onContact?: () => void;
   /**
+   * When true, the Contact button is hidden entirely. Use for unauthenticated
+   * contexts where the LetterComposer flow requires a signed-in session.
+   */
+  disableContact?: boolean;
+  /**
    * When provided, tapping the card header (avatar/name block) opens the coach
    * profile. Mirrors Lovable web CoachSearch, where the whole card navigates to
    * `/coaches/:id`. Opt-in so score/match surfaces keep their existing behavior.
@@ -118,6 +123,7 @@ export function CoachMatchCard({
   onToggleSave,
   onDismiss,
   onContact,
+  disableContact = false,
   onOpenProfile,
   proximityLabel,
   viewerRole = 'athlete',
@@ -279,14 +285,16 @@ export function CoachMatchCard({
         <FullScores />
 
         <View style={s.actionsRow}>
-          <Button
-            size="sm"
-            variant="outline"
-            onPress={handleContact}
-            style={{ flex: 1 }}
-          >
-            Contact
-          </Button>
+          {!disableContact ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onPress={handleContact}
+              style={{ flex: 1 }}
+            >
+              Contact
+            </Button>
+          ) : null}
           {onToggleSave && hasScore ? (
             <Pressable onPress={() => onToggleSave(coach.id)} style={s.iconBtn} hitSlop={8}>
               {isSaved ? (
@@ -334,14 +342,16 @@ export function CoachMatchCard({
             </View>
           ) : null}
           <View style={s.desktopActions}>
-            <Button
-              size="sm"
-              variant="ghost"
-              onPress={handleContact}
-              leftIcon={<Mail size={12} color={colors.foreground} />}
-            >
-              Contact
-            </Button>
+            {!disableContact ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                onPress={handleContact}
+                leftIcon={<Mail size={12} color={colors.foreground} />}
+              >
+                Contact
+              </Button>
+            ) : null}
             {onToggleSave ? (
               <Pressable onPress={() => onToggleSave(coach.id)} style={s.iconBtnSm} hitSlop={8}>
                 {isSaved ? (

@@ -145,6 +145,20 @@ export default function AgencyDashboardScreen() {
             >
               Trends
             </Button>
+            {isOwner && !!(org as any)?.id && (
+              <Button
+                variant="outline" size="sm"
+                leftIcon={<Eye size={14} color={colors.primary} />}
+                onPress={() =>
+                  (nav as any).navigate('PublicProfileStack', {
+                    screen: 'PublicAgencyProfile',
+                    params: { agencyId: (org as any).id },
+                  })
+                }
+              >
+                View Public Profile
+              </Button>
+            )}
           </View>
         </View>
 

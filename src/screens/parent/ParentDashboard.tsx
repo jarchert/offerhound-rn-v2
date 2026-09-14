@@ -139,6 +139,9 @@ export default function ParentDashboard() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Pending visibility proposals awaiting this parent's decision
+  const [pendingProposals, setPendingProposals] = useState<Array<{ id: string; athlete_profile_id: string; proposed_state: string | null; proposed_at: string }>>([]);
+
   // Redirect to AuthStack if logged out (parity with Lovable navigate('/auth'))
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -230,6 +233,25 @@ export default function ParentDashboard() {
   useEffect(() => {
     if (user) fetchAthletes();
   }, [user, fetchAthletes]);
+
+  // ─── Pending proposals query ────────────────────────────────────────────────
+  const fetchPendingProposals = useCallback(async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await (supabase.from as any)('athlete_visibility_proposals')
+        .select('id, athlete_profile_id, proposed_state, proposed_at')
+        .eq('awaiting_parent_user_id', user.id)
+        .in('status', ['pending', 'pending_parent_invite'])
+        .order('proposed_at', { ascending: false });
+      if (!error) setPendingProposals(data || []);
+    } catch (err) {
+      console.error('[ParentDashboard] fetchPendingProposals failed', err);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) fetchPendingProposals();
+  }, [user, fetchPendingProposals]);
 
   const selectedAthlete = useMemo(
     () => athletes.find((a) => a.id === selectedAthleteId) ?? null,
@@ -357,6 +379,37 @@ export default function ParentDashboard() {
             </Text>
           </View>
         </View>
+
+        {/* Pending visibility-decision banners */}
+        {pendingProposals.map((proposal) => {
+          const athlete = athletes.find((a) => a.id === proposal.athlete_profile_id);
+          return (
+            <Pressable
+              key={proposal.id}
+              style={s.proposalBanner}
+              onPress={() =>
+                (nav as any).navigate('AuthStack', {
+                  screen: 'VisibilityDecision',
+                  params: { proposalId: proposal.id },
+                })
+              }
+              accessibilityRole="button"
+              accessibilityLabel="Review visibility decision"
+            >
+              <AlertTriangle size={18} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={s.proposalBannerTitle}>
+                  Visibility decision needed
+                </Text>
+                <Text style={s.proposalBannerBody}>
+                  {athlete?.full_name ?? 'Your athlete'}'s profile is awaiting your
+                  approval to become {proposal.proposed_state ?? 'publicly visible'}.
+                </Text>
+              </View>
+              <ChevronRight size={16} color={colors.primary} />
+            </Pressable>
+          );
+        })}
 
         {/* Athlete switcher (multiple linked) */}
         {athletes.length > 1 && (
@@ -744,4 +797,26 @@ const s = StyleSheet.create({
   },
   safetyTitle: { fontFamily: typography.fontFamily.bodySemiBold, fontSize: typography.fontSize.base, color: colors.foreground },
   dangerCard: { borderColor: 'rgba(220,40,40,0.4)' },
+  proposalBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: `${colors.primary}12`,
+    borderWidth: 1,
+    borderColor: `${colors.primary}40`,
+    borderRadius: 12,
+    padding: spacing.md,
+  },
+  proposalBannerTitle: {
+    fontFamily: typography.fontFamily.bodySemiBold,
+    fontSize: typography.fontSize.sm,
+    color: colors.foreground,
+  },
+  proposalBannerBody: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.xs,
+    color: colors.mutedForeground,
+    marginTop: 2,
+    lineHeight: 16,
+  },
 });

@@ -7,15 +7,15 @@ import { useNavigation } from '@react-navigation/native';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
 const TILES = [
-  { label: 'Browse Coaches',   desc: 'Find college coaches by sport, division and conference', accent: '#3b82f6',  Icon: Users,      route: 'PublicProfileStack' },
-  { label: 'Browse Athletes',  desc: 'Discover high school athletes seeking recruitment',    accent: '#10b981', Icon: Search,     route: 'PublicProfileStack' },
-  { label: 'Scout Agencies',   desc: 'Explore independent scouts and recruiting agencies',   accent: '#f59e0b', Icon: Building2,  route: 'PublicProfileStack' },
+  { label: 'Browse Coaches',   desc: 'Find college coaches by sport, division and conference', accent: '#3b82f6',  Icon: Users,      route: 'CoachDirectory' },
+  { label: 'Browse Athletes',  desc: 'Discover high school athletes seeking recruitment',    accent: '#10b981', Icon: Search,     route: 'AthleteSearch' },
+  { label: 'Scout Agencies',   desc: 'Explore independent scouts and recruiting agencies',   accent: '#f59e0b', Icon: Building2,  route: 'ScoutDirectory' },
   { label: 'Camp Discovery',   desc: 'Find prospect camps, showcases and clinics near you',  accent: '#c9a84c', Icon: Tent,       route: 'CampStack' },
   { label: 'News and Learn',   desc: 'Recruiting news, NIL updates and how-to guides',       accent: '#8b5cf6', Icon: Newspaper,  route: 'NILIntelligence' },
   { label: 'Podcasts',         desc: 'Recruiting insider podcasts and interviews',            accent: '#ec4899', Icon: Mic,        route: 'PodcastsTab' },
-  { label: 'Influencers',      desc: 'Sports media creators covering high school recruiting', accent: '#f97316', Icon: Star,       route: 'PublicProfileStack' },
+  { label: 'Influencers',      desc: 'Sports media creators covering high school recruiting', accent: '#f97316', Icon: Star,       route: 'InfluencerBoard' },
   { label: 'NIL Intelligence', desc: 'AI-powered NIL deal insights and trends',               accent: '#22c55e', Icon: Sparkles,   route: 'NILIntelligence' },
-  { label: 'Sample Athlete',   desc: 'See what a full athlete profile looks like',             accent: '#d97706', Icon: Trophy,     route: 'PublicProfileStack' },
+  { label: 'Sample Athlete',   desc: 'See what a full athlete profile looks like',             accent: '#d97706', Icon: Trophy,     route: 'SampleAthlete' },
   { label: 'Pricing',          desc: 'See plans and features for athletes, coaches and scouts',accent: '#64748b', Icon: DollarSign, route: 'Pricing' },
 ] as const;
 
@@ -23,7 +23,19 @@ export default function PublicDiscoverScreen() {
   const nav = useNavigation<any>();
 
   const goTo = (route: string) => {
-    try { nav.navigate(route as any); } catch {}
+    try {
+      if (route === 'PodcastsTab') {
+        // PodcastsTab is a sibling tab in PublicTabs (BottomTabNavigator).
+        // PublicDiscoverScreen is a direct tab child, so nav IS already scoped
+        // to the tab navigator — nav.navigate() switches the active tab directly.
+        nav.navigate('PodcastsTab' as any);
+        return;
+      }
+      nav.navigate(route as any);
+    } catch (e) {
+      // Log navigation failures in dev so broken tile routes surface immediately.
+      if (__DEV__) console.warn('[PublicDiscoverScreen] navigate failed for route:', route, e);
+    }
   };
 
   return (

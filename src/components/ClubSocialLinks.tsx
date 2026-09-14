@@ -2,7 +2,7 @@
 // - lucide-react           → lucide-react-native
 // - shadcn Card/Button/Input/Label/Badge → @/components/ui/* (PascalCase RN)
 // - useToast               → @/hooks/use-toast (RN compat shim)
-// - QRCodeSVG (qrcode.react) → placeholder (no RN QR lib installed; kept as parity stub)
+// - QRCodeSVG (qrcode.react) → react-native-qrcode-svg (SVG-based, same visual)
 // - window.location.origin → Linking.createURL (expo-linking) for deep link
 // - navigator.clipboard    → expo-clipboard
 // - navigator.share        → React Native Share API
@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/Label';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/use-toast';
 import { Share2, QrCode, Globe, Copy, ExternalLink } from 'lucide-react-native';
+import QRCode from 'react-native-qrcode-svg';
 import { SocialSyndicationCenter } from '@/components/SocialSyndicationCenter';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
@@ -144,9 +145,13 @@ export function ClubSocialLinks() {
 
         {showQR && (
           <View style={s.qrBox}>
-            {/* TODO: swap for react-native-qrcode-svg when added to deps */}
-            <Text style={s.qrPlaceholder}>QR code for:</Text>
-            <Text style={s.qrUrl}>{profileUrl}</Text>
+            <QRCode
+              value={profileUrl}
+              size={200}
+              backgroundColor="#ffffff"
+              color="#101318"
+            />
+            <Text style={[s.qrUrl, { marginTop: 8 }]}>{profileUrl}</Text>
           </View>
         )}
 

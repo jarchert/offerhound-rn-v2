@@ -72,7 +72,12 @@ export default function ProfileScreen() {
 
           <Button
             variant="outline"
-            onPress={() => nav.navigate('SettingsStack' as any)}
+            onPress={() =>
+              // Athletes have a dedicated profile editor; other roles use account Settings.
+              userRole === 'athlete'
+                ? nav.navigate('AthleteProfileEdit' as any)
+                : nav.navigate('SettingsStack' as any)
+            }
             leftIcon={<Edit size={16} color={colors.foreground} />}
           >
             Edit Profile

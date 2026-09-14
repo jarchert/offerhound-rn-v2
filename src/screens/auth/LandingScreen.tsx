@@ -109,9 +109,6 @@ export default function LandingScreen() {
         {/* ── Hero section ── */}
         <ImageBackground source={heroBg} style={s.hero} imageStyle={s.heroImage}>
           <View style={s.heroOverlay} />
-          {/* Decorative blobs */}
-          <View style={[s.blob, s.blobTL]} />
-          <View style={[s.blob, s.blobBR]} />
           {/* Grid pattern overlay */}
           <View style={s.gridOverlay} />
 
@@ -188,7 +185,7 @@ export default function LandingScreen() {
           onCookies={() => nav.navigate('CookiesPolicy')}
           onCCPA={() => nav.navigate('CCPARights')}
           onDeleteAccount={() => nav.navigate('DeleteAccount')}
-          onScouts={() => nav.navigate('PublicSportStack')}
+          onScouts={() => nav.navigate('LandingTab' as any)}
           onSupport={() => nav.navigate('Support')}
           onGetStarted={() => nav.navigate('AuthStack')}
         />
@@ -450,13 +447,6 @@ const s = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.background + 'B3',
   },
-  blob: {
-    position: 'absolute',
-    borderRadius: 9999,
-    backgroundColor: colors.primary + '1A',
-  },
-  blobTL: { top: 128, left: 40, width: 288, height: 288 },
-  blobBR: { bottom: 80, right: 40, width: 384, height: 384 },
   gridOverlay: {
     ...StyleSheet.absoluteFillObject,
     opacity: 0.05,

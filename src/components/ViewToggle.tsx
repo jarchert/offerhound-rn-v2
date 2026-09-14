@@ -7,7 +7,13 @@
 //   - Tailwind className   → StyleSheet
 //
 // Behavior preserved verbatim: two-state pill with EyeOff/Switch/Eye and a
-// dynamic "Owner View" / "Public View" label.
+// dynamic "My View" / "Public View" label.
+//
+// Label change (Group 3 #7 follow-up, 2026-08-31): 'Owner View' → 'My View'.
+// Reasoning: matches the approved dashboard header pill copy — the label is
+// user-facing (visible in every role's Dashboard header on phone), and
+// "My View" reads more naturally to end-users than the internal-sounding
+// "Owner View".  Public View label unchanged.
 
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
@@ -33,7 +39,7 @@ export const ViewToggle = ({ isOwnerView, onToggle }: ViewToggleProps) => {
       >
         <Eye size={16} color={colors.foreground} />
         <Text style={s.labelText}>
-          {isOwnerView ? 'Owner View' : 'Public View'}
+          {isOwnerView ? 'My View' : 'Public View'}
         </Text>
       </Pressable>
     </View>

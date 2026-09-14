@@ -182,7 +182,17 @@ export default function ScoutDashboard() {
     (nav as any).navigate('PublicProfileStack', { screen: 'PublicProfile', params: { slug } });
   };
   const goLetter = (athlete: any) => {
-    (nav as any).navigate('LetterComposer', { seed: { athlete } });
+    // Flat recipient shape — see CoachDashboard.tsx for the same fix. The nested
+    // `seed: { athlete }` shape was silently dropped by LetterComposerScreen.
+    (nav as any).navigate('LetterComposer', {
+      seed: {
+        recipientName: athlete?.full_name || athlete?.name || '',
+        recipientRole: 'Athlete',
+        schoolName: athlete?.school || '',
+        prefillAthleteId: athlete?.id,
+        prefillAthleteName: athlete?.full_name || athlete?.name || '',
+      },
+    });
   };
   const goMessages = (recipientName?: string) => {
     (nav as any).navigate('Messages', recipientName ? { recipientName } : undefined);

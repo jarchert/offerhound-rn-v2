@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, ScrollView, Pressable, TextInput, Switch as RNSwitch, Linking, Platform } from "react-native";
+import { View, Text, ScrollView, Pressable, TextInput, Switch as RNSwitch, Platform } from "react-native";
 import { useNavigation } from '@react-navigation/native';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -208,7 +208,7 @@ export function CampManagerDashboard({ sport = "football" }: CampManagerDashboar
           <Button variant="ghost" size="sm" onPress={() => setOpsCamp(null)} leftIcon={<ArrowLeft size={16} color={colors.foreground} />}>Back to Camps</Button>
           <Button variant="outline" size="sm" onPress={() => nav.navigate('CampStack' as any, { screen: 'CampMobileCheckin', params: { campId: opsCamp.id } })}>📱 Mobile check-in</Button>
           <Button variant="outline" size="sm" onPress={() => nav.navigate('CampStack' as any, { screen: 'CampEvaluatorScoring', params: { campId: opsCamp.id } })}>🏃 Evaluator scoring</Button>
-          <Button variant="outline" size="sm" onPress={() => Linking.openURL(`/camps/${opsCamp.id}/leaderboard`)}>🏆 Live leaderboard</Button>
+          <Button variant="outline" size="sm" onPress={() => nav.navigate('CampStack' as any, { screen: 'CampLeaderboard', params: { campId: opsCamp.id } })}>🏆 Live leaderboard</Button>
         </View>
         <CampCheckInOps campId={opsCamp.id} campName={opsCamp.name} drillStations={(opsCamp as any).drill_stations || []} positions={opsCamp.positions || []} />
       </ScrollView>

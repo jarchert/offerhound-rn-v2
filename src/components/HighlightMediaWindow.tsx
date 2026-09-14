@@ -146,7 +146,7 @@ export function HighlightMediaWindow({
   const renderVideoContent = () => {
     if (videoType === 'youtube') {
       const videoId = getYouTubeVideoId(videoSrc);
-      const src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&modestbranding=1&rel=0&playsinline=1`;
+      const src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&modestbranding=1&rel=0&playsinline=1`;
       return (
         <WebView
           source={{ html: embedHtml(src) }}

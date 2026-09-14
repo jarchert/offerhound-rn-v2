@@ -1,4 +1,15 @@
 // ShareRoleCardDialog — RN port of Lovable ShareRoleCardDialog.tsx + RoleCardGenerator.tsx
+//
+// Bug fix (parity with cd10343 SharePlayerCardDialog Bug 3): the modal sheet
+// caps at maxHeight: '85%' and contains a header + a single <ScrollView> for
+// card+actions. On short devices with bottom safe-area insets (iPhone home
+// indicator, Android nav bar) the Share/Copy action buttons sat flush against
+// the sheet's bottom edge, which on real hardware landed behind the system
+// bar, making them tap-unreachable and creating the reported "cut off at
+// bottom, no scroll" symptom. The fix: give the ScrollView contentContainer
+// flexGrow:1 (so it always claims the sheet's usable height even when content
+// is short) plus a generous paddingBottom that clears typical device safe-area
+// insets, mirroring the discipline applied to SharePlayerCardDialog.
 // Renders a modal bottom sheet with role-specific contact card + QR code + native share.
 // Roles: athlete | coach | club_coach | hs_coach | scout | influencer
 import React, { useMemo } from 'react';
@@ -16,9 +27,6 @@ import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCoachProfile } from '@/hooks/useCoachProfile';
-import { useScoutProfile } from '@/hooks/useScoutProfile';
-import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 import { useToast } from '@/hooks/use-toast';
@@ -52,9 +60,64 @@ export function ShareRoleCardDialog({ role, visible, onClose, children }: ShareR
   };
   const { user } = useAuth();
   const { toast } = useToast();
-  const { data: coachProfile } = useCoachProfile();
-  const { data: scoutProfile } = useScoutProfile();
-  const { profile: playerProfile } = usePlayerProfile();
+
+  // Perf fix (Sep 2026): the previous implementation unconditionally called
+  // useCoachProfile() + useScoutProfile() + usePlayerProfile() at the top of
+  // this component. Because ShareRoleCardDialog is rendered eagerly in the
+  // Scout/ClubCoach/HSCoach dashboards, every dashboard mount fired 3 concurrent
+  // Supabase RTTs, 2 of which always returned null for a given user. Now we
+  // gate each query on the actual role prop so only the relevant one runs.
+  // Query keys match the shared hooks so react-query cache stays consistent
+  // if the user later navigates to a screen that uses those hooks directly.
+  const isCoachRole = role === 'coach' || role === 'club_coach' || role === 'hs_coach';
+  const isScoutRole = role === 'scout';
+  const isAthleteRole = role === 'athlete';
+  const isInfluencerRole = role === 'influencer';
+
+  const { data: coachProfile } = useQuery({
+    queryKey: ['coach-profile', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from('coach_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user && isCoachRole,
+  });
+
+  const { data: scoutProfile } = useQuery({
+    queryKey: ['scout-profile', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await (supabase as any)
+        .from('scout_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!user && isScoutRole,
+  });
+
+  const { data: playerProfile } = useQuery({
+    queryKey: ['player-profile', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from('player_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user && isAthleteRole,
+  });
 
   const { data: influencerProfile } = useQuery({
     queryKey: ['influencer-profile-share', user?.id],
@@ -63,7 +126,7 @@ export function ShareRoleCardDialog({ role, visible, onClose, children }: ShareR
       const { data } = await (supabase as any).from('influencer_profiles').select('*').eq('user_id', user.id).maybeSingle();
       return data;
     },
-    enabled: !!user && role === 'influencer',
+    enabled: !!user && isInfluencerRole,
   });
 
   const card = useMemo(() => {
@@ -251,7 +314,13 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
+    // Bug fix (parity with SharePlayerCardDialog cd10343): flexGrow:1 makes the
+    // ScrollView's content column claim the full available height inside the
+    // maxHeight-capped sheet, and paddingBottom clears bottom safe-area insets
+    // so the Share/Copy action buttons remain reachable on every device.
+    flexGrow: 1,
     gap: spacing.lg,
+    paddingBottom: spacing.xl + spacing.md,
   },
   card: {
     backgroundColor: colors.background,

@@ -58,6 +58,7 @@ import {
   Send,
 } from 'lucide-react-native';
 import { colors, spacing, typography, radius } from '@/lib/theme';
+import { toE164 } from '@/lib/phone';
 
 const STAFF_ROLES = [
   { value: 'assistant_coach', label: 'Assistant Coach' },
@@ -191,7 +192,20 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
       if (!user) throw new Error('Not authenticated');
       const channels: ('email' | 'sms')[] = [];
       if (sendEmail && form.email) channels.push('email');
-      if (sendSms && form.phone) channels.push('sms');
+
+      // SMS #2 fix (Sep 2026): normalize phone to E.164 before storing +
+      // handing to send-staff-invitation → Twilio, so common inputs like
+      // "(555) 123-4567" don't silently fail with Twilio error 21211.
+      let normalizedPhone: string | null = null;
+      if (form.phone && form.phone.trim()) {
+        normalizedPhone = toE164(form.phone);
+        if (sendSms && !normalizedPhone) {
+          throw new Error(
+            'Invalid phone number. Enter a valid US number (e.g. 555-123-4567) or use +CountryCode format.',
+          );
+        }
+      }
+      if (sendSms && normalizedPhone) channels.push('sms');
 
       const { data: inserted, error } = await supabase
         .from('coaching_staff')
@@ -199,7 +213,7 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
           owner_user_id: user.id,
           name: form.name,
           email: form.email || null,
-          phone: form.phone || null,
+          phone: normalizedPhone,
           role: form.role,
           title: form.title || null,
           notes: form.notes || null,
@@ -218,7 +232,7 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
               channels,
               staffName: form.name,
               staffEmail: form.email || null,
-              staffPhone: form.phone || null,
+              staffPhone: normalizedPhone,
               role: form.role,
               customMessage: inviteMessage || null,
             },
@@ -256,13 +270,27 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
   const resendInvitation = async (member: any, channels: ('email' | 'sms')[]) => {
     setResendingId(member.id);
     try {
+      // SMS #2 fix (Sep 2026): re-normalize the stored member.phone in case it
+      // was written to the DB before this fix (older rows can still contain
+      // "(555) 123-4567"-style strings).
+      const normalizedPhone = member.phone ? toE164(member.phone) : null;
+      if (channels.includes('sms') && !normalizedPhone) {
+        toast({
+          title: 'Invalid phone number',
+          description:
+            'Cannot resend by SMS — stored phone is not a valid E.164 or US number. Edit the staff record to fix.',
+          variant: 'destructive',
+        });
+        setResendingId(null);
+        return;
+      }
       const { data, error } = await supabase.functions.invoke('send-staff-invitation', {
         body: {
           staffId: member.id,
           channels,
           staffName: member.name,
           staffEmail: member.email,
-          staffPhone: member.phone,
+          staffPhone: normalizedPhone,
           role: member.role,
         },
       });

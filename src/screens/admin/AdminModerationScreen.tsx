@@ -1,5 +1,7 @@
 // AdminModerationScreen — content moderation queue (Build 31).
-// Reads `user_reports` and offers Resolve/Dismiss actions per row.
+// Wave 1 wiring: outer segmented control "Reports" | "Camps" added.
+// "Reports" renders existing user_reports queue (unchanged).
+// "Camps" renders AdminCampModeration component.
 import React, { useState } from 'react';
 import {
   View,
@@ -17,8 +19,10 @@ import { AlertTriangle, ShieldCheck, Trash2 } from 'lucide-react-native';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { AdminCampModeration } from '@/components/AdminCampModeration';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
+type Section = 'reports' | 'camps';
 type StatusFilter = 'all' | 'pending' | 'resolved' | 'dismissed';
 
 interface Report {
@@ -47,7 +51,7 @@ function formatTs(ts: string): string {
   }
 }
 
-export default function AdminModerationScreen() {
+function ReportsTab() {
   const [status, setStatus] = useState<StatusFilter>('pending');
   const [tableMissing, setTableMissing] = useState(false);
   const qc = useQueryClient();
@@ -87,30 +91,19 @@ export default function AdminModerationScreen() {
 
   if (tableMissing) {
     return (
-      <SafeAreaView style={s.root}>
-        <View style={s.header}>
-          <AlertTriangle size={20} color={colors.primary} />
-          <Text style={s.title}>Moderation</Text>
-        </View>
-        <View style={s.empty}>
-          <Text style={s.emptyTitle}>Moderation queue not configured</Text>
-          <Text style={s.emptyBody}>
-            No `user_reports` table found in this Supabase project. Once the schema migration runs,
-            user-submitted reports will appear here for review.
-          </Text>
-        </View>
-      </SafeAreaView>
+      <View style={s.empty}>
+        <Text style={s.emptyTitle}>Moderation queue not configured</Text>
+        <Text style={s.emptyBody}>
+          No `user_reports` table found in this Supabase project. Once the schema migration runs,
+          user-submitted reports will appear here for review.
+        </Text>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={s.root}>
-      <View style={s.header}>
-        <AlertTriangle size={20} color={colors.primary} />
-        <Text style={s.title}>Moderation</Text>
-      </View>
-
-      <View style={s.tabs}>
+    <>
+      <View style={s.statusTabs}>
         {(['all', 'pending', 'resolved', 'dismissed'] as StatusFilter[]).map((t) => {
           const active = status === t;
           return (
@@ -144,6 +137,7 @@ export default function AdminModerationScreen() {
           data={rows}
           keyExtractor={(r) => r.id}
           contentContainerStyle={s.list}
+          estimatedItemSize={120}
           ItemSeparatorComponent={() => <View style={{ height: spacing.xs }} />}
           refreshControl={
             <RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />
@@ -212,6 +206,50 @@ export default function AdminModerationScreen() {
           )}
         />
       )}
+    </>
+  );
+}
+
+export default function AdminModerationScreen() {
+  const [section, setSection] = useState<Section>('reports');
+
+  return (
+    <SafeAreaView style={s.root}>
+      {/* Screen header */}
+      <View style={s.header}>
+        <AlertTriangle size={20} color={colors.primary} />
+        <Text style={s.title}>Moderation</Text>
+      </View>
+
+      {/* Outer section segmented control: Reports | Camps */}
+      <View style={s.sectionRow}>
+        <Pressable
+          onPress={() => setSection('reports')}
+          style={[s.sectionBtn, section === 'reports' && s.sectionBtnActive]}
+          testID="mod-section-reports"
+        >
+          <Text style={[s.sectionText, section === 'reports' && s.sectionTextActive]}>
+            Reports
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setSection('camps')}
+          style={[s.sectionBtn, section === 'camps' && s.sectionBtnActive]}
+          testID="mod-section-camps"
+        >
+          <Text style={[s.sectionText, section === 'camps' && s.sectionTextActive]}>
+            Camps
+          </Text>
+        </Pressable>
+      </View>
+
+      {section === 'reports' ? (
+        <ReportsTab />
+      ) : (
+        <View style={s.campsWrap}>
+          <AdminCampModeration />
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -230,7 +268,36 @@ const s = StyleSheet.create({
     color: colors.foreground,
     letterSpacing: typography.letterSpacing.heading,
   },
-  tabs: { flexDirection: 'row', gap: spacing.xs, paddingHorizontal: spacing.md, paddingBottom: spacing.sm },
+  // Outer section control (Reports / Camps)
+  sectionRow: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  sectionBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    backgroundColor: colors.card,
+  },
+  sectionBtnActive: { backgroundColor: colors.primary },
+  sectionText: {
+    fontFamily: typography.fontFamily.bodySemiBold,
+    fontSize: typography.fontSize.sm,
+    color: colors.foreground,
+  },
+  sectionTextActive: { color: colors.primaryForeground },
+  // Inner status filter (Reports sub-tab)
+  statusTabs: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
+  },
   tab: {
     paddingHorizontal: spacing.sm + 2,
     paddingVertical: 6,
@@ -303,4 +370,5 @@ const s = StyleSheet.create({
     color: colors.foregroundSubtle,
     textAlign: 'center',
   },
+  campsWrap: { flex: 1, padding: spacing.md },
 });

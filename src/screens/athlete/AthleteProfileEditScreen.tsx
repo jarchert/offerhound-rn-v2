@@ -27,6 +27,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { AlertTriangle } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -65,6 +66,10 @@ export default function AthleteProfileEditScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
+
+  // Minor-Safe: when is_minor_safe is set (under-13, parent-created profile),
+  // bio, video, stats, socials, custom URL, and publish are all hidden/blocked.
+  const isMinorSafe = !!(profile as any)?.is_minor_safe;
 
   // Local form state mirrors the persisted profile.
   const [form, setForm] = useState<any>({});
@@ -128,6 +133,15 @@ export default function AthleteProfileEditScreen() {
 
   const handlePublishToggle = async (next: boolean) => {
     if (!athleteId) return;
+    // Minor-Safe: publishing blocked until parent consent clears the flag.
+    if (next && isMinorSafe) {
+      toast({
+        title: 'Profile cannot be published',
+        description: 'This profile is protected for an athlete under 13. A parent must complete the consent process before the profile can be made public.',
+        variant: 'destructive',
+      });
+      return;
+    }
     if (next && !(profile as any)?.subscription_active) {
       // Open paywall — actual paywall flow handled there.
       setPaywallOpen(true);
@@ -191,6 +205,19 @@ export default function AthleteProfileEditScreen() {
         contentContainerStyle={s.content}
         refreshControl={<RefreshControl refreshing={refreshing_} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
+        {/* Minor-Safe banner */}
+        {isMinorSafe && (
+          <View style={s.minorSafeBanner}>
+            <AlertTriangle size={16} color={colors.destructive} />
+            <View style={{ flex: 1 }}>
+              <Text style={s.minorSafeTitle}>Minor-Safe Profile</Text>
+              <Text style={s.minorSafeBody}>
+                This athlete is under 13. Bio, stats, videos, social links, and contact info are hidden until a parent completes the consent process.
+              </Text>
+            </View>
+          </View>
+        )}
+
         <Tabs value={section} onValueChange={(v) => setSection(v as Section)}>
           <TabsList>
             <TabsTrigger value="media">Media</TabsTrigger>
@@ -213,6 +240,7 @@ export default function AthleteProfileEditScreen() {
                     currentImageUrl={form.profile_image_url}
                     athleteName={athleteName}
                     onImageUpdated={(url) => updateField({ profile_image_url: url })}
+                    isMinorSafe={isMinorSafe}
                   />
                 </CardContent>
               </Card>
@@ -226,6 +254,7 @@ export default function AthleteProfileEditScreen() {
                     athleteId={athleteId}
                     currentImageUrl={form.banner_image_url}
                     onImageUpdated={(url) => updateField({ banner_image_url: url })}
+                    isMinorSafe={isMinorSafe}
                   />
                 </CardContent>
               </Card>
@@ -239,22 +268,26 @@ export default function AthleteProfileEditScreen() {
                     athleteId={athleteId}
                     galleryImages={form.gallery_images}
                     onImagesUpdated={(images) => updateField({ gallery_images: images })}
+                    isMinorSafe={isMinorSafe}
                   />
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Highlight Video</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <HighlightVideoUpload
-                    athleteId={athleteId}
-                    currentVideoUrl={form.highlight_video_url}
-                    onVideoUpdated={(url) => updateField({ highlight_video_url: url })}
-                  />
-                </CardContent>
-              </Card>
+              {/* Minor-Safe: highlight video hidden for under-13 */}
+              {!isMinorSafe && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Highlight Video</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <HighlightVideoUpload
+                      athleteId={athleteId}
+                      currentVideoUrl={form.highlight_video_url}
+                      onVideoUpdated={(url) => updateField({ highlight_video_url: url })}
+                    />
+                  </CardContent>
+                </Card>
+              )}
 
               <Card>
                 <CardHeader>
@@ -265,6 +298,7 @@ export default function AthleteProfileEditScreen() {
                     athleteId={athleteId}
                     currentImageUrl={form.family_image_url}
                     onImageUpdated={(url) => updateField({ family_image_url: url })}
+                    isMinorSafe={isMinorSafe}
                   />
                 </CardContent>
               </Card>
@@ -278,6 +312,7 @@ export default function AthleteProfileEditScreen() {
                     athleteId={athleteId}
                     currentImageUrl={form.action_image_url}
                     onImageUpdated={(url) => updateField({ action_image_url: url })}
+                    isMinorSafe={isMinorSafe}
                   />
                 </CardContent>
               </Card>
@@ -291,6 +326,7 @@ export default function AthleteProfileEditScreen() {
                     athleteId={athleteId}
                     currentImageUrl={form.footer_image_url}
                     onImageUpdated={(url) => updateField({ footer_image_url: url })}
+                    isMinorSafe={isMinorSafe}
                   />
                 </CardContent>
               </Card>
@@ -318,18 +354,27 @@ export default function AthleteProfileEditScreen() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Stats — {primarySport}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <SportStatsEditor
-                    sport={primarySport}
-                    value={form.sport_stats || {}}
-                    onChange={(next) => updateField({ sport_stats: next })}
-                  />
-                </CardContent>
-              </Card>
+              {/* Minor-Safe: measurable stats hidden for under-13 */}
+              {!isMinorSafe ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Stats — {primarySport}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <SportStatsEditor
+                      sport={primarySport}
+                      value={form.sport_stats || {}}
+                      onChange={(next) => updateField({ sport_stats: next })}
+                    />
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardContent>
+                    <Text style={s.helper}>Stats and measurables are not available for athletes under 13. A parent can unlock this section after completing the consent process.</Text>
+                  </CardContent>
+                </Card>
+              )}
             </View>
           </TabsContent>
 
@@ -377,82 +422,103 @@ export default function AthleteProfileEditScreen() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Social Links</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <View style={{ gap: spacing.sm }}>
-                    <Input
-                      label="Twitter / X URL"
-                      value={form.twitter_url}
-                      onChangeText={(t) => updateField({ twitter_url: t })}
-                      placeholder="https://x.com/..."
-                      autoCapitalize="none"
-                    />
-                    <Input
-                      label="Instagram URL"
-                      value={form.instagram_url}
-                      onChangeText={(t) => updateField({ instagram_url: t })}
-                      placeholder="https://instagram.com/..."
-                      autoCapitalize="none"
-                    />
-                  </View>
-                </CardContent>
-              </Card>
+              {/* Minor-Safe: social links hidden for under-13 */}
+              {!isMinorSafe && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Social Links</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <View style={{ gap: spacing.sm }}>
+                      <Input
+                        label="Twitter / X URL"
+                        value={form.twitter_url}
+                        onChangeText={(t) => updateField({ twitter_url: t })}
+                        placeholder="https://x.com/..."
+                        autoCapitalize="none"
+                      />
+                      <Input
+                        label="Instagram URL"
+                        value={form.instagram_url}
+                        onChangeText={(t) => updateField({ instagram_url: t })}
+                        placeholder="https://instagram.com/..."
+                        autoCapitalize="none"
+                      />
+                    </View>
+                  </CardContent>
+                </Card>
+              )}
             </View>
           </TabsContent>
 
           {/* ────────────────────── SHARE & PUBLISH ────────────────────── */}
           <TabsContent value="share">
             <View style={s.sectionStack}>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Custom URL</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Input
-                    label="Profile Slug"
-                    value={form.custom_url}
-                    onChangeText={(t) => updateField({ custom_url: t.replace(/[^a-z0-9-]/gi, '').toLowerCase() })}
-                    placeholder="jordan-brown"
-                    autoCapitalize="none"
-                  />
-                  <Text style={s.helper}>
-                    Your public profile will be at offerhound.com/athlete/{form.custom_url || '<slug>'}
-                  </Text>
-                </CardContent>
-              </Card>
+              {/* Minor-Safe: custom URL and QR removed for under-13 — no public profile until consent */}
+              {!isMinorSafe && (
+                <>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Custom URL</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Input
+                        label="Profile Slug"
+                        value={form.custom_url}
+                        onChangeText={(t) => updateField({ custom_url: t.replace(/[^a-z0-9-]/gi, '').toLowerCase() })}
+                        placeholder="jordan-brown"
+                        autoCapitalize="none"
+                      />
+                      <Text style={s.helper}>
+                        Your public profile will be at offerhound.com/athlete/{form.custom_url || '<slug>'}
+                      </Text>
+                    </CardContent>
+                  </Card>
 
-              <QRShareCard customUrl={form.custom_url} athleteName={athleteName} />
+                  <QRShareCard customUrl={form.custom_url} athleteName={athleteName} />
+                </>
+              )}
 
               <Card>
                 <CardHeader>
                   <CardTitle>Publish</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <View style={s.publishRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.publishTitle}>
-                        {form.is_published ? 'Profile is live' : 'Profile is private'}
-                      </Text>
-                      <Text style={s.helper}>
-                        {form.is_published
-                          ? 'Coaches can find you in search and see your full profile.'
-                          : 'Toggle on to make your profile visible. Subscription required.'}
+                  {isMinorSafe ? (
+                    <View style={s.minorSafeBanner}>
+                      <AlertTriangle size={14} color={colors.destructive} />
+                      <Text style={[s.minorSafeBody, { flex: 1 }]}>
+                        Publishing is locked for athletes under 13. A parent must complete the consent process to unlock.
                       </Text>
                     </View>
-                    <Switch value={!!form.is_published} onValueChange={handlePublishToggle} />
-                  </View>
-                  <Separator />
-                  <Button
-                    variant="default"
-                    onPress={handleSave}
-                    loading={saving}
-                    style={{ marginTop: spacing.sm }}
-                  >
-                    Save All Changes
-                  </Button>
+                  ) : (
+                    <View style={s.publishRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.publishTitle}>
+                          {form.is_published ? 'Profile is live' : 'Profile is private'}
+                        </Text>
+                        <Text style={s.helper}>
+                          {form.is_published
+                            ? 'Coaches can find you in search and see your full profile.'
+                            : 'Toggle on to make your profile visible. Subscription required.'}
+                        </Text>
+                      </View>
+                      <Switch value={!!form.is_published} onValueChange={handlePublishToggle} />
+                    </View>
+                  )}
+                  {!isMinorSafe && (
+                    <>
+                      <Separator />
+                      <Button
+                        variant="default"
+                        onPress={handleSave}
+                        loading={saving}
+                        style={{ marginTop: spacing.sm }}
+                      >
+                        Save All Changes
+                      </Button>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </View>
@@ -509,5 +575,28 @@ const s = StyleSheet.create({
     fontFamily: typography.fontFamily.body,
     fontSize: typography.fontSize.sm,
     color: colors.mutedForeground,
+  },
+  minorSafeBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    backgroundColor: `${colors.destructive}15`,
+    borderWidth: 1,
+    borderColor: colors.destructive,
+    borderRadius: 8,
+    padding: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  minorSafeTitle: {
+    fontFamily: typography.fontFamily.bodySemiBold,
+    fontSize: typography.fontSize.sm,
+    color: colors.destructive,
+    marginBottom: 2,
+  },
+  minorSafeBody: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.fontSize.xs,
+    color: colors.mutedForeground,
+    lineHeight: 18,
   },
 });

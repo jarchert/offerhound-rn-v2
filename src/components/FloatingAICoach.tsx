@@ -68,17 +68,24 @@ export function FloatingAICoach({
     return () => loop.stop();
   }, [pulse]);
 
-  if (keyboardVisible) return null;
-  if (activeRoute === hideOnRoute) return null;
-
   // Sync active route on a polling interval — lightweight since this component
   // only needs to know if it's on the AICoach screen to hide itself.
+  //
+  // NOTE: this effect MUST be declared before any conditional early return
+  // below. Placing it after `if (...) return null` produced a "Rendered fewer
+  // hooks than expected" React error as soon as the keyboard opened or the
+  // route changed to AICoach — the hook was skipped on those renders,
+  // corrupting the hook order and crashing the AI Coach screen (which in turn
+  // made its TextInput/chip taps appear dead).
   React.useEffect(() => {
     const id = setInterval(() => {
       setActiveRoute(getCurrentRouteName());
     }, 300);
     return () => clearInterval(id);
   }, []);
+
+  if (keyboardVisible) return null;
+  if (activeRoute === hideOnRoute) return null;
 
   const handlePress = () => {
     try {

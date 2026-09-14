@@ -5,6 +5,7 @@ import { Camera, Loader2, Trash2, User } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { supabase } from '@/integrations/supabase/client';
+import { isMinorSafeAthlete } from '@/lib/isMinorSafeAthlete';
 import { useToast } from '@/hooks/use-toast';
 import { colors, typography, spacing } from '@/lib/theme';
 
@@ -14,6 +15,8 @@ interface AthleteProfileImageUploadProps {
   athleteName: string;
   onImageUpdated: (newUrl: string | null) => void;
   size?: 'sm' | 'md' | 'lg';
+  /** When true, all uploads are blocked (under-13 minor-safe profile). */
+  isMinorSafe?: boolean;
 }
 
 export function AthleteProfileImageUpload({
@@ -22,6 +25,7 @@ export function AthleteProfileImageUpload({
   athleteName,
   onImageUpdated,
   size = 'lg',
+  isMinorSafe = false,
 }: AthleteProfileImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -32,6 +36,20 @@ export function AthleteProfileImageUpload({
   const iconPx = { sm: 24, md: 32, lg: 48 }[size];
 
   const pickAndUpload = async () => {
+    // Minor-Safe guard (prop fast-path + DB verification).
+    // Prop check runs first for zero-latency UI responsiveness.
+    // DB check runs second so the guard fires even if the caller forgot the prop.
+    // isMinorSafeAthlete() is fail-open: lookup errors return false, never blocking
+    // a normal upload due to a transient network/DB issue.
+    const minorSafeLocked = isMinorSafe || (await isMinorSafeAthlete(athleteId));
+    if (minorSafeLocked) {
+      toast({
+        title: 'Upload Locked',
+        description: 'Profile photos cannot be uploaded until a parent completes the consent process for this minor athlete.',
+        variant: 'destructive',
+      });
+      return;
+    }
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {

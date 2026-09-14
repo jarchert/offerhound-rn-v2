@@ -39,6 +39,7 @@ import {
   Link2,
   Send,
 } from 'lucide-react-native';
+import { VisibilityProposalControl } from '@/components/club/VisibilityProposalControl';
 import { colors, spacing, typography } from '@/lib/theme';
 
 interface RosterRow {
@@ -366,6 +367,17 @@ export function TeamRosterAthleteCard({
             </>
           ) : null}
         </View>
+
+        {/* Visibility proposal — teen athletes only, club coach manage view */}
+        {canManage && roster.athlete_profile_id ? (
+          <View style={{ marginTop: spacing.xs }}>
+            <VisibilityProposalControl
+              athleteProfileId={roster.athlete_profile_id}
+              athleteName={displayName}
+              onInviteParent={() => onParentInvite(roster.id, roster.parent_email || null)}
+            />
+          </View>
+        ) : null}
       </CardContent>
     </Card>
   );

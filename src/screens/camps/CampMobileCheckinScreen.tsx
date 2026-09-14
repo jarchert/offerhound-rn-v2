@@ -1,13 +1,11 @@
 // CampMobileCheckinScreen — RN port of Lovable web src/pages/CampMobileCheckin.tsx (433 LOC).
 // Coach-side mobile check-in: scan athlete QR, manual token entry, walk-up registration.
 //
-// PORT-PENDING (camera/QR scan):
-//   Web uses BarcodeDetector + getUserMedia. RN equivalent is `expo-barcode-scanner` or
-//   `expo-camera`'s onBarCodeScanned, but neither is currently in package.json. For now
-//   the "Scan" tab renders a stub explaining the limitation and pushes users to the
-//   "Manual" token-entry tab. When expo-barcode-scanner is installed, replace
-//   <ScanStub /> with a real <BarCodeScanner /> wrapper.
-//
+// Scan tab uses expo-camera's CameraView + onBarcodeScanned. On mount of the scan
+// tab, camera permission is requested via Camera.requestCameraPermissionsAsync().
+// Denied state offers a Settings deep-link (iOS app-settings:, Android openSettings).
+// Decoded barcode string is passed straight to handleScanned() which handles
+// URL-vs-raw-token parsing and enrollment matching.
 //
 // PORT-PENDING (walk-up registration):
 //   CampWalkupRegistration component is web-only. We render an inline placeholder card
@@ -21,7 +19,8 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Pressable,
-  TextInput,
+  Linking,
+  Platform,
 } from 'react-native';
 import { useNavigation, useRoute, type NavigationProp, type RouteProp } from '@react-navigation/native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -37,10 +36,12 @@ import {
   Wifi,
   WifiOff,
 } from 'lucide-react-native';
+import { Camera, CameraView } from 'expo-camera';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useCampCheckinSync } from '@/hooks/useCampCheckinSync';
 import { enqueueOp } from '@/lib/checkinQueue';
+import { CampWalkupRegistration } from '@/components/CampWalkupRegistration';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -77,10 +78,25 @@ export default function CampMobileCheckinScreen() {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState('scan');
   const [manualToken, setManualToken] = useState('');
+  const [cameraPermission, setCameraPermission] = useState<'undetermined' | 'granted' | 'denied'>(
+    'undetermined',
+  );
+  const [lastScannedAt, setLastScannedAt] = useState<number>(0);
+
+  const requestCameraPermission = async () => {
+    const { status } = await Camera.requestCameraPermissionsAsync();
+    setCameraPermission(status === 'granted' ? 'granted' : 'denied');
+  };
 
   const { isOnline, queueCount, isFlushing, flushNow, refreshQueue } = useCampCheckinSync(
     campId ?? '',
   );
+
+  useEffect(() => {
+    if (tab === 'scan' && cameraPermission === 'undetermined') {
+      requestCameraPermission();
+    }
+  }, [tab, cameraPermission]);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -333,25 +349,58 @@ export default function CampMobileCheckinScreen() {
                 <CardTitle>Scan athlete QR</CardTitle>
               </CardHeader>
               <CardContent>
-                {/* PORT-PENDING: when expo-camera/expo-barcode-scanner is added to package.json,
-                    replace this stub with a real <BarCodeScanner onBarCodeScanned={...} />.
-                    On mount, request permission via
-                      const { status } = await Camera.requestCameraPermissionsAsync();
-                    Handle "granted" / "denied" states with user-facing messaging and a
-                    Settings deep-link. Decoded string should be passed to handleScanned(). */}
-                <View style={styles.scanStub}>
-                  <QrCode size={48} color={colors.mutedForeground} />
-                  <Text style={[styles.muted, { textAlign: 'center', marginTop: 12 }]}>
-                    Camera-based QR scanning is not yet wired in the native app. Use the Manual tab
-                    to paste a token.
-                  </Text>
-                  <Button
-                    variant="outline"
-                    style={{ marginTop: 12 }}
-                    onPress={() => setTab('manual')}>
-                    Open manual entry
-                  </Button>
-                </View>
+                {cameraPermission === 'denied' ? (
+                  <View style={styles.scanStub}>
+                    <QrCode size={48} color={colors.mutedForeground} />
+                    <Text style={[styles.muted, { textAlign: 'center', marginTop: 12 }]}>
+                      Camera access was denied. Enable it in Settings to scan QR codes.
+                    </Text>
+                    <Button
+                      variant="outline"
+                      style={{ marginTop: 12 }}
+                      onPress={() =>
+                        Platform.OS === 'ios'
+                          ? Linking.openURL('app-settings:')
+                          : Linking.openSettings()
+                      }>
+                      Open Settings
+                    </Button>
+                    <Button
+                      variant="outline"
+                      style={{ marginTop: 8 }}
+                      onPress={() => setTab('manual')}>
+                      Open manual entry
+                    </Button>
+                  </View>
+                ) : cameraPermission === 'undetermined' ? (
+                  <View style={styles.scanStub}>
+                    <QrCode size={48} color={colors.mutedForeground} />
+                    <Text style={[styles.muted, { textAlign: 'center', marginTop: 12 }]}>
+                      Camera permission is required to scan QR codes.
+                    </Text>
+                    <Button
+                      variant="outline"
+                      style={{ marginTop: 12 }}
+                      onPress={requestCameraPermission}>
+                      Grant Camera Access
+                    </Button>
+                  </View>
+                ) : (
+                  <CameraView
+                    style={styles.cameraView}
+                    facing="back"
+                    barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+                    onBarcodeScanned={({ data }) => {
+                      // Debounce: same tab remounts + continuous scanning fires
+                      // rapidly; throttle to one scan per ~1.5s to avoid duplicate mutations.
+                      const now = Date.now();
+                      if (now - lastScannedAt < 1500) return;
+                      setLastScannedAt(now);
+                      handleScanned(data);
+                    }}
+                    testID="qr-camera-view"
+                  />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -423,15 +472,14 @@ export default function CampMobileCheckinScreen() {
           </TabsContent>
 
           <TabsContent value="walkup">
-            {/* PORT-PENDING: Lovable CampWalkupRegistration not yet ported to RN. */}
-            <Card>
-              <CardContent style={{ paddingVertical: 24 }}>
-                <Text style={[styles.muted, { textAlign: 'center' }]}>
-                  Walk-up registration form is coming soon to the native app. For now, register the
-                  athlete on the web dashboard, then check them in here.
-                </Text>
-              </CardContent>
-            </Card>
+            <CampWalkupRegistration
+              campId={campId ?? ''}
+              positions={camp.positions ?? []}
+              isOnline={isOnline}
+              onRegistered={() =>
+                queryClient.invalidateQueries({ queryKey: ['camp-ops-enrollments', campId] })
+              }
+            />
           </TabsContent>
         </Tabs>
 
@@ -534,6 +582,12 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  cameraView: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 8,
+    overflow: 'hidden',
   },
   tokenRow: { flexDirection: 'row', alignItems: 'center' },
   label: {

@@ -9,3 +9,7 @@ web-build/
 
 # Runtime verification evidence (kept on disk, not in git)
 parity-audit/screenshots/
+
+# Service account keys (Google Play, etc.)
+*.p8
+offerhound-76972-*
