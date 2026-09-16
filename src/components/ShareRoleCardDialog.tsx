@@ -10,6 +10,19 @@
 // flexGrow:1 (so it always claims the sheet's usable height even when content
 // is short) plus a generous paddingBottom that clears typical device safe-area
 // insets, mirroring the discipline applied to SharePlayerCardDialog.
+//
+// Perf fix (Sep 2026, follow-up to 383e098 T2.C — which was investigate-only):
+// per explicit build-cycle instruction, apply the same lazy-mount discipline
+// used for SharePlayerCardDialog's heavy ProfileCardGenerator (T2.A) and the
+// Dialog radar-chart deferral. The outer <ShareRoleCardDialog> keeps all four
+// role-gated useQuery declarations at the top level (this preserves the
+// hook-order contract and the role-gated-queries test), but the heavy card
+// composition (useMemo over profile → card view, QRCode SVG, action row JSX)
+// now lives inside <ShareRoleCardDialogContent>, a child component that is
+// only mounted when `open === true`. That way, every dashboard re-render
+// (Agency / ClubCoach / HSCoach) touches only the tiny outer shell — the
+// useMemo body and QRCode element creation are not paid until the sheet
+// actually opens.
 // Renders a modal bottom sheet with role-specific contact card + QR code + native share.
 // Roles: athlete | coach | club_coach | hs_coach | scout | influencer
 import React, { useMemo } from 'react';
@@ -129,6 +142,66 @@ export function ShareRoleCardDialog({ role, visible, onClose, children }: ShareR
     enabled: !!user && isInfluencerRole,
   });
 
+  return (
+    <>
+      {/* Uncontrolled: render the child as the trigger */}
+      {!isControlled && children ? (
+        <Pressable onPress={handleOpen} accessibilityRole="button">
+          {children}
+        </Pressable>
+      ) : null}
+
+      {/*
+        Lazy-mount the heavy modal content (useMemo card composition, QRCode
+        SVG, action row JSX). When open === false the entire Modal element is
+        omitted from the React tree — dashboard re-renders don't pay for
+        creating those elements. When open flips to true, the content mounts
+        fresh; when it flips back to false, React unmounts and drops its state.
+        This matches the T2.A pattern already used for SharePlayerCardDialog.
+      */}
+      {open ? (
+        <ShareRoleCardDialogContent
+          role={role}
+          onClose={handleClose}
+          user={user}
+          toast={toast}
+          coachProfile={coachProfile}
+          scoutProfile={scoutProfile}
+          playerProfile={playerProfile}
+          influencerProfile={influencerProfile}
+        />
+      ) : null}
+    </>
+  );
+}
+
+// ── Heavy inner content — only mounted while the sheet is open ─────────────
+// Split out from ShareRoleCardDialog so dashboard re-renders don't pay for
+// the useMemo card composition + QRCode element creation when the sheet is
+// closed. The outer component still declares the four useQuery hooks so
+// the query registration + role-gated cache warming behavior is unchanged
+// (see ShareRoleCardDialogRoleGatedQueries.test.tsx contract).
+interface ShareRoleCardDialogContentProps {
+  role: ShareRole;
+  onClose: () => void;
+  user: { id?: string; email?: string | null } | null | undefined;
+  toast: (opts: { title: string }) => void;
+  coachProfile: any;
+  scoutProfile: any;
+  playerProfile: any;
+  influencerProfile: any;
+}
+
+function ShareRoleCardDialogContent({
+  role,
+  onClose,
+  user,
+  toast,
+  coachProfile,
+  scoutProfile,
+  playerProfile,
+  influencerProfile,
+}: ShareRoleCardDialogContentProps) {
   const card = useMemo(() => {
     const coach = coachProfile as any;
     const scout = scoutProfile as any;
@@ -216,21 +289,13 @@ export function ShareRoleCardDialog({ role, visible, onClose, children }: ShareR
   };
 
   return (
-    <>
-      {/* Uncontrolled: render the child as the trigger */}
-      {!isControlled && children ? (
-        <Pressable onPress={handleOpen} accessibilityRole="button">
-          {children}
-        </Pressable>
-      ) : null}
-
-      <Modal visible={open} transparent animationType="slide" onRequestClose={handleClose}>
-        <Pressable style={styles.backdrop} onPress={handleClose}>
+    <Modal visible={true} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={() => {}}>
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>{titleMap[role]}</Text>
-            <Pressable onPress={handleClose} hitSlop={8}><X size={20} color={colors.mutedForeground} /></Pressable>
+            <Pressable onPress={onClose} hitSlop={8}><X size={20} color={colors.mutedForeground} /></Pressable>
           </View>
 
           <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -278,7 +343,6 @@ export function ShareRoleCardDialog({ role, visible, onClose, children }: ShareR
         </Pressable>
       </Pressable>
     </Modal>
-    </>
   );
 }
 
