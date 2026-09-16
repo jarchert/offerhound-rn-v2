@@ -26,6 +26,7 @@ import { colors, typography, spacing, radius } from '@/lib/theme';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { toE164 } from '@/lib/phone';
 
 // ---------- Inlined hook (parity port of useParentInvitation) ----------
 export interface ParentRelationship {
@@ -219,16 +220,38 @@ export function ParentInviteModal({ athleteProfileId }: ParentInviteModalProps) 
   const [inviteMethod, setInviteMethod] = useState<'email' | 'sms'>('email');
   const [duplicateAlert, setDuplicateAlert] = useState<DuplicateAlert | null>(null);
   const { relationships, inviteParent, removeParent, canInviteMore, maxParents } = useParentInvitation(athleteProfileId);
+  // SMS #2 fix (Sep 2026): local toast for E.164 validation errors on the SMS tab.
+  const { toast } = useToast();
 
   const handleSubmit = async () => {
     setDuplicateAlert(null);
     if (inviteMethod === 'email' && !email.trim()) return;
     if (inviteMethod === 'sms' && !phone.trim()) return;
 
+    // SMS #2 fix (Sep 2026): normalize the user-typed phone to E.164 before
+    // handing it to the inviteParent → send-parent-sms-invitation edge fn →
+    // Twilio pipeline. Common human formats like "(555) 123-4567" previously
+    // hit Twilio error 21211 and surfaced only as a generic "delivery may
+    // have failed" toast.
+    let normalizedPhone: string | undefined;
+    if (inviteMethod === 'sms') {
+      const normalized = toE164(phone);
+      if (!normalized) {
+        toast({
+          title: 'Invalid phone number',
+          description:
+            'Please enter a valid US phone number (e.g. 555-123-4567) or an international number in +CountryCode format.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      normalizedPhone = normalized;
+    }
+
     setIsSending(true);
     const result = await inviteParent(
       inviteMethod === 'email' ? email.trim() : undefined,
-      inviteMethod === 'sms' ? phone.trim() : undefined,
+      inviteMethod === 'sms' ? normalizedPhone : undefined,
     );
 
     if (result.success) {

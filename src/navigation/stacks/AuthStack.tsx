@@ -1,5 +1,5 @@
 // AuthStack — signed-out flows per Part 2 §2.1
-// Screens: Auth (signin+signup), BetaRegister, ParentalConsent, DeleteAccount, PasswordReset
+// Screens: Auth (signin+signup), BetaRegister, ParentalConsent, RosterTransferConsent, DeleteAccount, PasswordReset
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { colors } from '@/lib/theme';
@@ -9,6 +9,8 @@ import SignUpScreen from '@/screens/auth/SignUpScreen';
 import LandingScreen from '@/screens/auth/LandingScreen';
 import AuthScreen from '@/screens/auth/AuthScreen';
 import ParentalConsentScreen from '@/screens/auth/ParentalConsentScreen';
+import ConsentVisibilityScreen from '@/screens/auth/ConsentVisibilityScreen';
+import VisibilityDecisionScreen from '@/screens/parent/VisibilityDecisionScreen';
 import BetaRegisterScreen from '@/screens/auth/BetaRegisterScreen';
 import PasswordResetScreen from '@/screens/auth/PasswordResetScreen';
 import DeleteAccountScreen from '@/screens/shared/DeleteAccountScreen';
@@ -27,6 +29,8 @@ export type AuthStackParamList = {
   SignUp: undefined;
   BetaRegister: undefined;
   ParentalConsent: undefined;
+  RosterTransferConsent: { token: string };
+  VisibilityDecision: { proposalId: string };
   DeleteAccount: undefined;
   PasswordReset: undefined;
   PrivacyPolicy: undefined;
@@ -55,6 +59,8 @@ export default function AuthStack() {
       <Stack.Screen name="SignUp" component={SignUpScreen} />
       <Stack.Screen name="BetaRegister" component={BetaRegisterScreen} />
       <Stack.Screen name="ParentalConsent" component={ParentalConsentScreen} />
+      <Stack.Screen name="RosterTransferConsent" component={ConsentVisibilityScreen} />
+      <Stack.Screen name="VisibilityDecision" component={VisibilityDecisionScreen} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
       <Stack.Screen name="PasswordReset" component={PasswordResetScreen} />
       {/* Legal screens — reachable directly from Footer deep-links */}

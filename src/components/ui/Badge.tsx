@@ -8,13 +8,14 @@ interface BadgeProps {
   children: React.ReactNode;
   variant?: BadgeVariant;
   style?: ViewStyle;
+  testID?: string;
 }
 
-export function Badge({ children, variant = 'default', style }: BadgeProps) {
+export function Badge({ children, variant = 'default', style, testID }: BadgeProps) {
   const variantStyle = variantStyles[variant];
   const textColor = variantTextColors[variant];
   return (
-    <View style={[s.badge, variantStyle, style]}>
+    <View style={[s.badge, variantStyle, style]} testID={testID}>
       <Text style={[s.text, { color: textColor }]}>{children}</Text>
     </View>
   );

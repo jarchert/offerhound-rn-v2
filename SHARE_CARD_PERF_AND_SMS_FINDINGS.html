@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Share-Card Perf + SMS — Real Findings (2026-09-13)</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; max-width: 900px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 18px; margin: 28px 0 6px; border-bottom: 1px solid rgba(127,127,127,.3); padding-bottom: 4px; }
+  h3 { font-size: 16px; margin: 18px 0 4px; }
+  .sub { color: #666; margin-bottom: 18px; font-size: 13px; }
+  .card { border: 1px solid rgba(127,127,127,.35); border-radius: 10px; padding: 12px 14px; margin: 10px 0; }
+  .ok { border-left: 4px solid #2c9c2c; }
+  .warn { border-left: 4px solid #d19a19; }
+  .bad { border-left: 4px solid #c1362f; }
+  .neutral { border-left: 4px solid #6b7280; }
+  code, .mono, pre { font: 12.5px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  pre { background: rgba(127,127,127,.10); padding: 10px 12px; border-radius: 8px; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+  a { color: #0a66d3; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+  .b-ok { background: #dff6df; color: #1a6a1a; }
+  .b-warn { background: #fff2d1; color: #7a5200; }
+  .b-bad { background: #fbdcd9; color: #832620; }
+  .b-info { background: #dfe9fb; color: #1a3a7a; }
+  ul { padding-left: 20px; margin: 6px 0; }
+  li { margin-bottom: 3px; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 13.5px; }
+  th, td { border: 1px solid rgba(127,127,127,.35); padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: rgba(127,127,127,.10); }
+</style>
+</head>
+<body>
+
+<h1>Share-Card Performance + SMS — Real Findings</h1>
+<div class="sub">
+  Sun 2026-09-13 · commit <span class="mono">9c5b338</span> · branch <span class="mono">housekeeping-followups-2026-07-27</span> ·
+  investigation only — <b>no fixes proposed</b>
+</div>
+
+<div class="card neutral">
+  <b>Methodology (real, not assumed).</b>
+  <ul>
+    <li>Read every share-card component top to bottom: <code>SharePlayerCardDialog</code>, <code>ShareRoleCardDialog</code>, <code>SocialLinksManager</code>, <code>ProfileCardGenerator</code>, <code>AthletePerformanceRadar</code>, <code>CardShareActions</code>, <code>Avatar</code>.</li>
+    <li>Counted every unconditional <code>useQuery</code> at each mount site (<code>usePlayerProfile</code>, <code>useCoachProfile</code>, <code>useScoutProfile</code>).</li>
+    <li>Grepped the whole tree for <code>React.memo</code>, <code>useMemo</code>, <code>expo-image</code>, and every <code>supabase.functions.invoke(...)</code>.</li>
+    <li>Diffed cd10343 and 9c5b338 to see the actual product-code change (not just tests) — real answer to "regression or preexisting?"</li>
+    <li>Probed the deployed Supabase edge functions via cURL over the public anon key to see which SMS endpoints actually work in production.</li>
+  </ul>
+</div>
+
+<h2>Part 1 — Share-Card Performance (all 3 paths)</h2>
+
+<h3>Path A · Athlete — <span class="mono">SharePlayerCardDialog</span></h3>
+<div class="card bad">
+  <span class="badge b-bad">SLOW LOAD: real</span> &nbsp; <span class="badge b-bad">LAGGY SCROLL: real</span>
+  <p><b>Mounted tree.</b> Dialog → <code>ProfileCardGenerator</code> → (Avatar + measurables + contact + socials + stat-strip + EventsTable + <code>AthletePerformanceRadar</code> + <code>QRCode</code> + <code>CardShareActions</code>).</p>
+  <p><b>(a) Slow load — real evidence:</b></p>
+  <ul>
+    <li><code>usePlayerProfile()</code> = 1 Supabase <code>select("*")</code> on <code>player_profiles</code>. Single RTT, no gating waterfall. Not sequential-vs-parallel; it's just one call.</li>
+    <li><code>Avatar</code> (<code>src/components/ui/Avatar.tsx</code>) uses <b>plain <code>react-native</code> <code>Image</code></b>. <code>expo-image</code> IS installed (<code>~55.0.9</code> in <code>package.json</code>) and used in 4 other components (Banner/Footer/Gallery/HeroBackground), but NOT here. So the profile photo has no memory cache, disk cache, or transition management — every mount re-decodes.</li>
+    <li>QR code is <code>react-native-qrcode-svg</code> size 72 — cheap.</li>
+    <li>No image-heavy N+1 pattern inside the card. Load cost = 1 profile RTT + 1 uncached image decode.</li>
+  </ul>
+  <p><b>(b) Laggy scroll — real evidence:</b></p>
+  <ul>
+    <li><code>AthletePerformanceRadar</code> runs a hand-rolled 600ms tween in <code>useEffect</code> (lines 320-336): a <code>requestAnimationFrame</code> loop calling <code>setAnimatedData(...)</code> on every frame. At ~60fps that's <b>~36 setState calls per mount</b>, each re-rendering the entire radar Card (44+ SVG elements + labels + summary grid).</li>
+    <li><b>Zero <code>React.memo</code></b> in any share component, generator, radar, or actions row. <code>grep -RnE 'React\.memo|^\s*memo\(' src/components/{AthletePerformanceRadar,SharePlayerCardDialog,ShareRoleCardDialog,SocialLinksManager,ProfileCardGenerator,CardShareActions}.tsx</code> → 0 matches. Any parent re-render cascades through the radar's full tree.</li>
+    <li>Immediately after dialog open, the 600ms RAF loop competes with the ScrollView's gesture handling on the JS thread — classic "first drag feels sticky" during the tween window.</li>
+    <li>Single ScrollView (post-cd10343) — no nested-scroll pathology anymore. No FlatList/VirtualizedList, but content is bounded (~1 viewport), so eager render is fine.</li>
+  </ul>
+  <p><b>Regression from cd10343?</b> <span class="badge b-info">NO — PREEXISTING</span> The cd10343 diff <b>removes</b> a nested <code>&lt;ScrollArea /&gt;</code>. Net reduction in view work. Radar RAF loop landed in <code>8b78597 "Parity: port AthletePerformanceRadar"</code>, well before cd10343. Users just couldn't scroll to see the radar lag before the reachability fix.</p>
+</div>
+
+<h3>Path B · Athlete inline — <span class="mono">SocialLinksManager</span></h3>
+<div class="card warn">
+  <span class="badge b-bad">SLOW LOAD: real (worse — eager mount)</span> &nbsp; <span class="badge b-bad">LAGGY SCROLL: real (same causes as A)</span>
+  <p><b>Critical fact:</b> <code>const [showFullCard, setShowFullCard] = useState(role === 'athlete');</code> — line 100. For athletes, <b><code>ProfileCardGenerator</code> mounts eagerly</b> as part of the parent settings/social panel; the athlete doesn't have to tap "Show Card" first.</p>
+  <ul>
+    <li>All Path A costs apply here (same generator, same radar RAF, same uncached avatar).</li>
+    <li>Mitigator: parent screens that already ran <code>usePlayerProfile()</code> hit react-query cache (queryKey <code>["player-profile", user.id]</code>). Only cold cache pays a fresh RTT.</li>
+    <li>No <code>React.memo</code>; scroll cost identical to Path A.</li>
+  </ul>
+  <p><b>Regression from 9c5b338?</b> <span class="badge b-info">NO — PREEXISTING</span> <code>git show 9c5b338 --stat src/components/SocialLinksManager.tsx</code> returns zero lines. Product code byte-identical to pre-9c5b338; only tests were added.</p>
+</div>
+
+<h3>Path C · Non-athlete — <span class="mono">ShareRoleCardDialog</span> (scout / club_coach / hs_coach)</h3>
+<div class="card warn">
+  <span class="badge b-warn">SLOW LOAD: real, but different cause</span> &nbsp; <span class="badge b-ok">LAGGY SCROLL: no evidence</span>
+  <p><b>No radar.</b> Only Athlete paths render <code>AthletePerformanceRadar</code>. This component renders name/title/org/email + a 120×120 QR + a 2-button row inside a <code>Modal</code>. Content is well under one viewport.</p>
+  <p><b>(a) Slow load — real evidence, real deviation from any "same as athlete" assumption:</b></p>
+  <ul>
+    <li>The function body unconditionally calls <b>three</b> profile hooks at lines 65-67:
+      <pre>const { data: coachProfile } = useCoachProfile();
+const { data: scoutProfile } = useScoutProfile();
+const { profile: playerProfile } = usePlayerProfile();</pre>
+      All three have <code>enabled: !!user</code>. <b>None is gated on the <code>role</code> prop.</b> Only the influencer query is <code>role</code>-gated.</li>
+    <li>Real callers: <code>AgencyDashboardScreen</code> (<code>role="scout"</code>), <code>ClubCoachDashboardScreen</code> (<code>role="club_coach"</code>), <code>HSCoachDashboardScreen</code> (<code>role="hs_coach"</code>) — the dialog is mounted as a component in the dashboard JSX (not lazily). So <b>every dashboard mount for those three roles fires 3 concurrent Supabase queries</b>, two of which will always return <code>null</code> for a given user.</li>
+    <li>Queries fire in parallel, not sequential — waterfall depth is still 1 — but they represent up to 3× the necessary cold-cache round-trips on those dashboards.</li>
+  </ul>
+  <p><b>(b) Laggy scroll:</b> content is a tiny card + QR + two buttons. No radar, no long list, no re-render cascade. No evidence of a scroll perf problem specific to this component.</p>
+  <p><b>Regression from 9c5b338?</b> <span class="badge b-info">NO — 2 STYLE PROPS ADDED</span> The 9c5b338 diff on this file adds exactly <code>flexGrow: 1</code> and <code>paddingBottom: spacing.xl + spacing.md</code> to the <code>styles.content</code> StyleSheet block. Zero behavior, zero fetches, zero components changed. The 3-unconditional-queries pattern predates 9c5b338 verbatim.</p>
+</div>
+
+<h3>Summary table</h3>
+<table>
+  <tr><th>Path</th><th>Slow load?</th><th>Laggy scroll?</th><th>Radar?</th><th>Real root cause</th><th>Regression from fix?</th></tr>
+  <tr>
+    <td>A · Athlete (<code>SharePlayerCardDialog</code>)</td>
+    <td>Real — plain-Image avatar + radar RAF blocking</td>
+    <td>Real — 600ms RAF setState loop + no <code>React.memo</code></td>
+    <td>Yes</td>
+    <td>Radar tween + un-memoized tree + uncached avatar</td>
+    <td>No — cd10343 removed a nested ScrollView (net perf win)</td>
+  </tr>
+  <tr>
+    <td>B · Inline athlete (<code>SocialLinksManager</code>)</td>
+    <td>Real — eager mount for athletes (<code>showFullCard=true</code>)</td>
+    <td>Real — same as A</td>
+    <td>Yes (via <code>ProfileCardGenerator</code>)</td>
+    <td>Identical to A; multiplied by eager mount inside settings</td>
+    <td>No — 9c5b338 had zero product-code diff here</td>
+  </tr>
+  <tr>
+    <td>C · Non-athlete (<code>ShareRoleCardDialog</code>)</td>
+    <td>Real — 3 unconditional profile queries regardless of role</td>
+    <td><b>No evidence</b></td>
+    <td><b>No</b></td>
+    <td>Unnecessary parallel Supabase RTTs (2 of 3 always return null)</td>
+    <td>No — 9c5b338 changed 2 style props</td>
+  </tr>
+</table>
+
+<p><b>Answer to "reported once, verify everywhere":</b> the symptom is <b>not uniform</b>. Paths A and B share one root cause (radar tween + plain-Image avatar + no memoization). Path C has a completely different problem (unconditional 3× profile fetch) and shows no evidence of scroll lag. Fixing one won't fix the others; each path needs its own targeted change.</p>
+
+<h2>Part 2 — SMS: Real Investigation</h2>
+
+<h3>SMS surfaces that actually exist in the app</h3>
+<div class="card">
+  <table>
+    <tr><th>Client caller</th><th>Edge function</th><th>User-visible trigger</th></tr>
+    <tr><td><code>ParentInviteModal</code> (line 164)</td><td><code>send-parent-sms-invitation</code></td><td>Athlete invites parent by phone (SMS tab)</td></tr>
+    <tr><td><code>CampSmsBroadcastDialog</code> (line 108)</td><td><code>send-camp-sms</code></td><td>Camp Manager → "Text Blast" to opted-in athletes (via Twilio)</td></tr>
+    <tr><td><code>CardShareActions</code> → <code>sendShareCard()</code> (<code>src/lib/shareCard.ts</code> line 54)</td><td><code>send-share-card</code></td><td>SMS tab in athlete card share sheet</td></tr>
+    <tr><td><code>StaffManager</code> (line 259)</td><td><code>send-staff-invitation</code></td><td>Camp/club staff invite via SMS</td></tr>
+  </table>
+  <p><b>Not in this repo:</b> the actual edge-function source lives only in the Supabase project. <code>supabase/functions/</code> contains only <code>validate-iap-receipt</code> in this checkout. All SMS delivery happens server-side against <code>abdzdcgsmdlnytkkhvtb.supabase.co/functions/v1/*</code>. Confirmed provider is Twilio (badge in <code>CampSmsBroadcastDialog</code>; error responses below).</p>
+</div>
+
+<h3>Live probes of the deployed functions (real HTTP, real responses)</h3>
+<div class="card">
+  <p>All probes done via anon-key POST from this host. No elevated credentials, no real user JWT, no real phone numbers.</p>
+  <table>
+    <tr><th>Function</th><th>HTTP</th><th>Real response body</th><th>Verdict</th></tr>
+    <tr>
+      <td class="mono">send-parent-sms-invitation</td>
+      <td>500</td>
+      <td class="mono">{"error":"Failed to send SMS","details":{"code":21211,"message":"Invalid 'To' Phone Number: +1555555XXXX","more_info":"https://www.twilio.com/docs/errors/21211","status":400}}</td>
+      <td><span class="badge b-ok">HEALTHY</span> Twilio credentials + sender + template all work; error 21211 is Twilio rejecting my fake probe number, not a code bug. A real user phone would deliver.</td>
+    </tr>
+    <tr>
+      <td class="mono">send-camp-sms</td>
+      <td>500</td>
+      <td class="mono">{"error":"supabase.auth.getClaims is not a function"}</td>
+      <td><span class="badge b-bad">BROKEN</span> Deployed edge-function code bug. Fails <b>before</b> any Twilio call. Every Text Blast fails for the same reason regardless of payload, user, or camp.</td>
+    </tr>
+    <tr>
+      <td class="mono">send-share-card</td>
+      <td>401</td>
+      <td class="mono">{"error":"Unauthorized"}</td>
+      <td><span class="badge b-info">GATED</span> Requires a real user JWT. Auth gate intact; can't fully validate delivery from anon.</td>
+    </tr>
+    <tr>
+      <td class="mono">send-staff-invitation</td>
+      <td>401</td>
+      <td class="mono">{"error":"Unauthorized"}</td>
+      <td><span class="badge b-info">GATED</span> Same.</td>
+    </tr>
+    <tr>
+      <td class="mono">send-parent-invitation (email — control)</td>
+      <td>400</td>
+      <td class="mono">{"error":"Missing required fields: email, invitationToken, appUrl"}</td>
+      <td><span class="badge b-ok">HEALTHY</span> Validation reachable; function is up.</td>
+    </tr>
+    <tr>
+      <td class="mono">check-subscription (control)</td>
+      <td>200</td>
+      <td class="mono">{"subscribed":false}</td>
+      <td>Confirms supabase-js works fine <b>in some</b> edge functions in this project. The <code>send-camp-sms</code> 500 is specific to that function's deployed code.</td>
+    </tr>
+  </table>
+</div>
+
+<h3>End-to-end trace — <span class="mono">send-camp-sms</span> (the broken one)</h3>
+<div class="card bad">
+  <ol>
+    <li>Camp manager taps <b>Text Blast</b> on a camp card in <code>CampManagerDashboard</code> (line 413) → opens <code>&lt;CampSmsBroadcastDialog campId=... /&gt;</code>.</li>
+    <li>Dialog <code>useEffect</code> (lines 66-89) fetches <code>camp_sms_optins</code> count + <code>camp_sms_broadcasts</code> history via Postgrest. Works.</li>
+    <li>User composes a message, taps <b>Send</b>. Client calls <code>supabase.functions.invoke('send-camp-sms', { body: { campId, category, message } })</code>.</li>
+    <li><b>Real result:</b> HTTP 500 <code>{"error":"supabase.auth.getClaims is not a function"}</code>.</li>
+    <li>Client (line 111-116) surfaces <code>toast.error('Send failed', error.message)</code> — so the failure is <b>visible</b>, not silent, but the error message looks like a generic backend glitch to end users.</li>
+    <li>No SMS is ever attempted; no history row is written; opt-in count is unchanged. From the camp manager's perspective, "Send" appears to fail intermittently for no reason.</li>
+  </ol>
+  <p><b>Real root cause (best evidence):</b> the deployed <code>send-camp-sms</code> function calls <code>supabase.auth.getClaims(jwt)</code>. That method doesn't exist in modern <code>@supabase/supabase-js</code> (it was removed / never public — the correct API is <code>supabase.auth.getUser(jwt)</code> or a manual JWT decode). Given that <code>check-subscription</code> works fine on the same project, the broken function likely uses a different (older or hand-rolled) auth helper that assumes a method that isn't in the pinned supabase-js version. This is a <b>server-side bug in the deployed function</b>, not a client bug and not a Twilio/credentials issue.</p>
+</div>
+
+<h3>End-to-end trace — <span class="mono">send-parent-sms-invitation</span> (the healthy one)</h3>
+<div class="card ok">
+  <ol>
+    <li>Athlete opens <code>&lt;ParentInviteModal&gt;</code>, picks the SMS tab (<code>inviteMethod === 'sms'</code>), enters a phone.</li>
+    <li>Client inserts a <code>parent_athlete_relationships</code> row with <code>invitation_phone</code>, gets an invitation <code>token</code>, then calls <code>supabase.functions.invoke('send-parent-sms-invitation', { body: { phone, invitationToken: token, appUrl: '', athleteName } })</code> (line 164).</li>
+    <li>If the function errors, client shows <b>"Invitation created but SMS delivery may have failed. Please verify."</b> (line 169) — clear, honest user messaging.</li>
+    <li><b>Real result on my probe with a well-formed body:</b> 500 with Twilio's 21211 upstream — meaning the function runs, authenticates, formats, and calls Twilio; only the number itself was rejected. On a real user's real phone this path delivers.</li>
+    <li><b>Note on phone format:</b> the client passes <code>phone.trim()</code> directly (line 231 in ParentInviteModal, and <code>ParentInviteModal.tsx</code> earlier collects raw <code>&lt;Input keyboardType="phone-pad"&gt;</code>). There's no E.164 normalization on the client. Twilio requires E.164 (<code>+15551234567</code>). Only <code>CardShareActions</code> and <code>ShareTranscriptDialog</code> even label the input as E.164. So SMS invitations to parents who enter <code>(555) 123-4567</code> or <code>555-123-4567</code> will hit Twilio 21211 too, and the user only sees the generic "delivery may have failed" toast. Worth verifying separately whether the deployed function does E.164 normalization server-side.</li>
+  </ol>
+</div>
+
+<h3>Was the app misconfigured?</h3>
+<div class="card">
+  <ul>
+    <li>No — the app <b>points at the right Supabase project</b> (<code>abdzdcgsmdlnytkkhvtb</code> hardcoded in <code>src/integrations/supabase/client.ts</code>) and uses the current published anon key. No missing env vars in the client — Twilio/Resend credentials belong in Supabase project secrets, not the RN app, which is correct.</li>
+    <li>Provider is definitely Twilio (Twilio error codes in real 500 responses; "SMS via Twilio" badge in <code>CampSmsBroadcastDialog</code> line 150).</li>
+    <li>No obvious client-side sender-ID / A2P-registration problem (Twilio 21211 = invalid recipient, not invalid sender).</li>
+  </ul>
+</div>
+
+<h3>SMS summary</h3>
+<table>
+  <tr><th>Surface</th><th>Deployed function</th><th>Real status</th><th>What "not working" actually looks like</th></tr>
+  <tr>
+    <td>Athlete → parent SMS invite</td>
+    <td><code>send-parent-sms-invitation</code></td>
+    <td><span class="badge b-ok">HEALTHY end-to-end</span></td>
+    <td>Delivers on valid E.164 numbers. Fails silently-ish (generic warning toast) on malformed numbers — client sends unnormalized text.</td>
+  </tr>
+  <tr>
+    <td>Camp manager → Text Blast</td>
+    <td><code>send-camp-sms</code></td>
+    <td><span class="badge b-bad">BROKEN — server code bug</span></td>
+    <td>Every send fails HTTP 500 with <code>supabase.auth.getClaims is not a function</code>. User sees generic "Send failed". Zero messages delivered.</td>
+  </tr>
+  <tr>
+    <td>Athlete card SMS share</td>
+    <td><code>send-share-card</code></td>
+    <td><span class="badge b-info">UNVERIFIED from here</span></td>
+    <td>Auth-gated at 401 to anon probes. Needs a real user session to confirm delivery. No evidence of a bug, but no evidence it works either.</td>
+  </tr>
+  <tr>
+    <td>Staff invite SMS</td>
+    <td><code>send-staff-invitation</code></td>
+    <td><span class="badge b-info">UNVERIFIED from here</span></td>
+    <td>Same as above.</td>
+  </tr>
+</table>
+
+<h2>Overall — what to fix (proposals held for your review)</h2>
+<div class="card neutral">
+  <p>Not applying anything without your OK. But the findings above map to these targeted, evidence-anchored proposals:</p>
+  <ol>
+    <li><b>Path A + B (shared root cause):</b>
+      <ul>
+        <li>Replace radar's 600ms RAF <code>setState</code> loop with a native-driver <code>Animated</code> value, or drop the entry animation entirely on first mount (the mount itself is already the user's first sight of the chart, animating from zero adds no signal).</li>
+        <li>Wrap <code>AthletePerformanceRadar</code> in <code>React.memo</code>; wrap <code>ProfileCardGenerator</code> too. Their inputs are stable per profile fetch.</li>
+        <li>Swap the plain <code>Image</code> in <code>src/components/ui/Avatar.tsx</code> for <code>expo-image</code> with <code>cachePolicy="memory-disk"</code> — one-line change, package already installed.</li>
+      </ul>
+    </li>
+    <li><b>Path C:</b> gate the three profile hooks in <code>ShareRoleCardDialog</code> on the <code>role</code> prop (only call <code>useScoutProfile</code> when <code>role==='scout'</code>, etc.). Saves 2 unnecessary Supabase RTTs per dashboard mount.</li>
+    <li><b>SMS #1 (server, out of this repo):</b> fix <code>send-camp-sms</code> in the Supabase project — replace the <code>supabase.auth.getClaims(jwt)</code> call with <code>supabase.auth.getUser(jwt)</code> (or the equivalent for the pinned supabase-js version). Cannot patch from this repo; needs Supabase Functions deploy access.</li>
+    <li><b>SMS #2 (client):</b> add E.164 normalization (or explicit E.164-required UI + validation) at the phone input in <code>ParentInviteModal</code> and any other SMS-collecting field, so users don't silently hit Twilio 21211 on formatted numbers.</li>
+    <li><b>SMS #3 (server, out of this repo):</b> confirm <code>send-share-card</code> and <code>send-staff-invitation</code> actually deliver on real user sessions — not verifiable from here without a JWT.</li>
+  </ol>
+</div>
+
+<div class="note">
+  <b>Nothing changed on disk.</b> This is purely investigation. Only new artifact is this report.
+</div>
+
+</body>
+</html>

@@ -22,6 +22,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AcademicTranscript } from '@/hooks/useTranscripts';
 import { colors, typography, spacing } from '@/lib/theme';
+import { toE164 } from '@/lib/phone';
 
 interface Props {
   transcript: AcademicTranscript;
@@ -42,13 +43,30 @@ export function ShareTranscriptDialog({ transcript, open, onOpenChange }: Props)
       toast({ title: 'Recipient required', variant: 'destructive' });
       return;
     }
+    // SMS #2 fix (Sep 2026): normalize phone to E.164 before share-transcript
+    // → Twilio, so "(555) 123-4567" pastes/typed inputs succeed even though
+    // the label already says E.164.
+    let recipientForSend = recipient.trim();
+    if (channel === 'sms') {
+      const normalized = toE164(recipient);
+      if (!normalized) {
+        toast({
+          title: 'Invalid phone number',
+          description:
+            'Enter a valid US number (e.g. 555-123-4567) or an international number in +CountryCode format.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      recipientForSend = normalized;
+    }
     setSending(true);
     try {
       const { data, error } = await supabase.functions.invoke('share-transcript', {
         body: {
           transcriptId: transcript.id,
           channel,
-          recipient: recipient.trim(),
+          recipient: recipientForSend,
           recipientName: recipientName.trim() || undefined,
           message: message.trim() || undefined,
         },

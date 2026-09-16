@@ -52,7 +52,21 @@ export async function sendShareCard(params: {
   message?: string;
 }) {
   const { data, error } = await supabase.functions.invoke('send-share-card', { body: params });
-  if (error) throw error;
+  if (error) {
+    // supabase-js wraps non-2xx as FunctionsHttpError; try to unwrap the
+    // real edge-function error message for the toast.
+    const ctx: any = (error as any)?.context;
+    let msg = (error as any)?.message || 'Failed to send';
+    try {
+      if (ctx && typeof ctx.json === 'function') {
+        const body = await ctx.json();
+        if (body?.error && typeof body.error === 'string') msg = body.error;
+      }
+    } catch {
+      // keep original message
+    }
+    throw new Error(msg);
+  }
   if ((data as any)?.error) throw new Error((data as any).error);
   return data;
 }

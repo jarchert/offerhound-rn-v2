@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { View, Text, ScrollView, Pressable, Platform } from "react-native";
+import { useState, useRef, useCallback } from "react";
+import { View, Text, ScrollView, Pressable, Platform, Alert } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,17 +14,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
 import { TeamRosterAthleteCard } from "@/components/club/TeamRosterAthleteCard";
+import { ClubTransferRequests } from "@/components/club/ClubTransferRequests";
+import { Switch } from "@/components/ui/Switch";
 import { useToast } from "@/hooks/use-toast";
 import { useLetterCenter } from "@/hooks/useLetterCenter";
 import {
   Users, UserPlus, Loader2, Shield, Edit, Copy, Archive, Mail, Upload,
-  ChevronRight, ArrowLeft, Plus, CheckCircle2, Link2,
+  ChevronRight, ArrowLeft, Plus, CheckCircle2, Link2, Eye, AlertTriangle,
 } from "lucide-react-native";
 import { colors, typography, spacing } from "@/lib/theme";
 
 interface ClubTeamManagementProps {
-  clubProfileId: string;
+  /** Required when used by a Club Coach. Omit when hsCoachProfileId is set. */
+  clubProfileId?: string;
   userId: string;
+  /** When set, this component is being used by an HS Coach. Team creation
+   * will set level='high_school' and hs_coach_profile_id instead of
+   * club_coach_id. club_coach_id will be omitted. */
+  hsCoachProfileId?: string;
 }
 
 const SPORTS = ["football","basketball","baseball","soccer","softball","volleyball","track","swimming","tennis","golf","lacrosse","wrestling","hockey"];
@@ -34,11 +41,13 @@ const LEVELS = ["recreational", "competitive", "elite", "academy", "select", "tr
 type TeamFormData = {
   name: string; sport: string; gender: string; age_group: string;
   graduation_year: string; level: string; season: string; league: string; description: string;
+  recruiting_enabled: boolean;
 };
 
 const emptyTeamForm: TeamFormData = {
   name: "", sport: "football", gender: "coed", age_group: "",
   graduation_year: "", level: "competitive", season: "", league: "", description: "",
+  recruiting_enabled: false,
 };
 
 type RosterEntry = {
@@ -48,13 +57,31 @@ type RosterEntry = {
   zorts_registration_url: string;
 };
 
+/** Returns age in whole years from a YYYY-MM-DD string, or null if unparseable. */
+function computeAge(dob: string): number | null {
+  if (!dob || !/^\d{4}-\d{2}-\d{2}$/.test(dob)) return null;
+  const birth = new Date(dob);
+  if (isNaN(birth.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const m = now.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+/** True when DOB string represents an athlete under 13. */
+function isUnder13(dob: string): boolean {
+  const age = computeAge(dob);
+  return age !== null && age < 13;
+}
+
 const emptyRosterEntry: RosterEntry = {
   athlete_name: "", athlete_email: "", position: "", jersey_number: "",
   school: "", graduation_year: "", date_of_birth: "", parent_name: "", parent_email: "", parent_phone: "",
   zorts_registration_url: "",
 };
 
-export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagementProps) {
+export function ClubTeamManagement({ clubProfileId, userId, hsCoachProfileId }: ClubTeamManagementProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const csvInputRef = useRef<HTMLInputElement | null>(null);
@@ -73,6 +100,9 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
   const [parentInviteEmail, setParentInviteEmail] = useState("");
   const [selectedRosterId, setSelectedRosterId] = useState<string | null>(null);
   const [rosterTab, setRosterTab] = useState("roster");
+  // Minor-Safe: when the coach enters a DOB that makes the athlete under-13,
+  // collapse the form to name + DOB + parent email only.
+  const rosterDobIsUnder13 = isUnder13(rosterForm.date_of_birth);
 
   // Fetch teams
   const { data: teams = [], isLoading } = useQuery({
@@ -156,18 +186,22 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
   // ========== MUTATIONS ==========
   const createTeam = useMutation({
     mutationFn: async (form: TeamFormData) => {
+      const isHsCoach = !!hsCoachProfileId;
       const { error } = await supabase.from("teams").insert({
-        club_coach_id: clubProfileId,
+        ...(isHsCoach
+          ? { hs_coach_profile_id: hsCoachProfileId }
+          : { club_coach_id: clubProfileId }),
         coach_user_id: userId,
         name: form.name,
         sport: form.sport || (clubProfile as any)?.sport || "football",
         gender: form.gender || null,
         age_group: form.age_group || null,
         graduation_year: form.graduation_year ? parseInt(form.graduation_year) : null,
-        level: form.level || "club",
+        level: isHsCoach ? "high_school" : (form.level || "club"),
         season: form.season || null,
         league: form.league || null,
         description: form.description || null,
+        recruiting_enabled: isHsCoach ? false : (form.recruiting_enabled ?? false),
       });
       if (error) throw error;
     },
@@ -192,6 +226,7 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
         season: form.season || null,
         league: form.league || null,
         description: form.description || null,
+        recruiting_enabled: form.recruiting_enabled ?? false,
       }).eq("id", id);
       if (error) throw error;
     },
@@ -219,16 +254,23 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
 
   const duplicateTeam = useMutation({
     mutationFn: async (team: any) => {
+      const isHsCoach = !!hsCoachProfileId;
       const { error } = await supabase.from("teams").insert({
-        club_coach_id: clubProfileId,
+        ...(isHsCoach
+          ? { hs_coach_profile_id: hsCoachProfileId }
+          : { club_coach_id: clubProfileId }),
         coach_user_id: userId,
         name: `${team.name} (Copy)`,
         sport: team.sport,
         gender: team.gender,
         age_group: team.age_group,
-        level: team.level,
+        level: isHsCoach ? "high_school" : team.level,
         league: team.league,
         description: team.description,
+        // Mirror createTeam: HS coaches never get recruiting_enabled=true,
+        // even if the source team had it. Otherwise inherit the source team's
+        // value so "Duplicate" faithfully copies the club coach's setting.
+        recruiting_enabled: isHsCoach ? false : !!team.recruiting_enabled,
       });
       if (error) throw error;
     },
@@ -241,6 +283,41 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
   const addRosterEntry = useMutation({
     mutationFn: async (entry: RosterEntry) => {
       if (!selectedTeamId) throw new Error("No team selected");
+      // Minor-Safe: under-13 athletes must be added by a parent.
+      // Belt-and-suspenders: the DB trigger also enforces this, but we block
+      // here first so the coach sees a clear, actionable error immediately.
+      if (isUnder13(entry.date_of_birth)) {
+        if (!entry.parent_email) {
+          throw new Error(
+            "Athletes under 13 cannot be added directly by a coach. " +
+            "Please enter the parent's email address — we will invite the parent " +
+            "to create the athlete's profile."
+          );
+        }
+        // Allowed: create a minimal invite-only row so the parent invite flow fires.
+        // Only name + DOB + parent_email are persisted; all other fields are stripped.
+        const { data: inserted, error } = await supabase.from("team_rosters").insert({
+          team_id: selectedTeamId,
+          athlete_name: entry.athlete_name,
+          date_of_birth: entry.date_of_birth,
+          parent_email: entry.parent_email,
+          parent_name: entry.parent_name || null,
+          parent_phone: entry.parent_phone || null,
+          status: "parent_pending",
+          invite_method: "manual",
+        }).select("id").single();
+        if (error) throw error;
+        try {
+          const { error: inviteErr } = await supabase.functions.invoke(
+            "invite-club-athlete",
+            { body: { rosterId: (inserted as any).id } },
+          );
+          if (inviteErr) console.warn("Invite send warning:", inviteErr);
+        } catch (e) {
+          console.warn("Invite send failed (roster row still created):", e);
+        }
+        return { under13: true };
+      }
       const { data: inserted, error } = await supabase.from("team_rosters").insert({
         team_id: selectedTeamId,
         athlete_name: entry.athlete_name,
@@ -272,6 +349,19 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
       }
     },
     onSuccess: (result: any) => {
+      if (result?.under13) {
+        queryClient.invalidateQueries({ queryKey: ["club-roster", selectedTeamId] });
+        queryClient.invalidateQueries({ queryKey: ["club-roster-counts"] });
+        toast({
+          title: "Parent invite sent",
+          description:
+            "This athlete is under 13. We have invited the parent to create the profile — " +
+            "no athlete data has been stored beyond name, date of birth, and parent contact.",
+        });
+        setShowRosterDialog(false);
+        setRosterForm(emptyRosterEntry);
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["club-roster", selectedTeamId] });
       queryClient.invalidateQueries({ queryKey: ["club-roster-counts"] });
       const sent = result?.results?.filter((r: any) => r.success).length || 0;
@@ -374,6 +464,7 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
   });
 
   // CSV upload handler (RN via DocumentPicker)
+  // Minor-Safe: under-13 rows detected in the CSV are rejected before any DB insert.
   const handleCSVUpload = async () => {
     if (!selectedTeamId) return;
     const result = await DocumentPicker.getDocumentAsync({ type: "text/csv", copyToCacheDirectory: true });
@@ -405,24 +496,49 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
 
     if (nameIdx < 0) { toast({ title: "CSV must have a 'name' column", variant: "destructive" }); return; }
 
-    const rows = lines.slice(1).map(line => {
-      const cols = line.split(",").map(c => c.trim().replace(/^"|"$/g, ""));
-      return {
-        team_id: selectedTeamId!,
-        athlete_name: cols[nameIdx] || "",
-        athlete_email: emailIdx >= 0 ? cols[emailIdx] || null : null,
-        position: posIdx >= 0 ? cols[posIdx] || null : null,
-        jersey_number: jerseyIdx >= 0 ? cols[jerseyIdx] || null : null,
-        school: schoolIdx >= 0 ? cols[schoolIdx] || null : null,
-        graduation_year: gradIdx >= 0 && cols[gradIdx] ? parseInt(cols[gradIdx]) : null,
-        parent_email: parentEmailIdx >= 0 ? cols[parentEmailIdx] || null : null,
-        parent_name: parentNameIdx >= 0 ? cols[parentNameIdx] || null : null,
-        parent_phone: parentPhoneIdx >= 0 ? cols[parentPhoneIdx] || null : null,
-        status: "invited" as const,
-        invite_method: "csv" as const,
-      };
-    }).filter(r => r.athlete_name);
+    // Minor-Safe: parse DOB column index before mapping rows
+    const dobIdx = headers.findIndex(h => h.includes("dob") || (h.includes("date") && h.includes("birth")));
 
+    const allParsed = lines.slice(1).map((line, lineNum) => {
+      const cols = line.split(",").map(c => c.trim().replace(/^"|"$/g, ""));
+      const dob = dobIdx >= 0 ? (cols[dobIdx] || "") : "";
+      return {
+        lineNum: lineNum + 2, // 1-based, +1 for header
+        dob,
+        under13: isUnder13(dob),
+        row: {
+          team_id: selectedTeamId!,
+          athlete_name: cols[nameIdx] || "",
+          athlete_email: emailIdx >= 0 ? cols[emailIdx] || null : null,
+          position: posIdx >= 0 ? cols[posIdx] || null : null,
+          jersey_number: jerseyIdx >= 0 ? cols[jerseyIdx] || null : null,
+          school: schoolIdx >= 0 ? cols[schoolIdx] || null : null,
+          graduation_year: gradIdx >= 0 && cols[gradIdx] ? parseInt(cols[gradIdx]) : null,
+          date_of_birth: dob || null,
+          parent_email: parentEmailIdx >= 0 ? cols[parentEmailIdx] || null : null,
+          parent_name: parentNameIdx >= 0 ? cols[parentNameIdx] || null : null,
+          parent_phone: parentPhoneIdx >= 0 ? cols[parentPhoneIdx] || null : null,
+          status: "invited" as const,
+          invite_method: "csv" as const,
+        },
+      };
+    }).filter(r => r.row.athlete_name);
+
+    // Reject under-13 rows: block the entire upload and report which rows need fixing
+    const blockedRows = allParsed.filter(r => r.under13);
+    if (blockedRows.length > 0) {
+      const names = blockedRows
+        .map(r => `Row ${r.lineNum}: ${r.row.athlete_name} (DOB ${r.dob})`)
+        .join("\n");
+      Alert.alert(
+        "Under-13 athletes in CSV",
+        `${blockedRows.length} row(s) appear to be under 13 and cannot be imported directly by a coach.\n\n${names}\n\nRemove these rows and re-upload, then add each under-13 athlete manually using the 'Add Athlete' button — you will be prompted to invite the parent instead.`,
+        [{ text: "OK" }],
+      );
+      return;
+    }
+
+    const rows = allParsed.map(r => r.row);
     if (rows.length === 0) { toast({ title: "No valid rows found", variant: "destructive" }); return; }
 
     const { error } = await supabase.from("team_rosters").insert(rows);
@@ -447,6 +563,7 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
       season: team.season || "",
       league: team.league || "",
       description: team.description || "",
+      recruiting_enabled: !!(team.recruiting_enabled),
     });
     setShowTeamDialog(true);
   };
@@ -486,10 +603,35 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
           <Card style={{ flex: 1 }}><CardContent style={{ paddingVertical: spacing.sm, alignItems: "center" }}><Text style={{ fontSize: typography.fontSize["2xl"], fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground }}>{pendingParentCount}</Text><Text style={{ fontSize: typography.fontSize.xs, color: colors.mutedForeground }}>Parent Pending</Text></CardContent></Card>
         </View>
 
+        {/* recruiting_enabled toggle — club coaches only */}
+        {!hsCoachProfileId && (
+          <Card>
+            <CardContent style={{ paddingVertical: spacing.sm, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm }}>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Eye size={14} color={colors.primary} />
+                  <Text style={{ fontFamily: typography.fontFamily.bodySemiBold, fontSize: typography.fontSize.sm, color: colors.foreground }}>Visible to HS coaches</Text>
+                </View>
+                <Text style={{ fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.xs, color: colors.mutedForeground, marginTop: 2 }}>
+                  Athletes on this team can be discovered and claimed by high school coaches.
+                </Text>
+              </View>
+              <Switch
+                value={!!(selectedTeam as any).recruiting_enabled}
+                onValueChange={async (val: boolean) => {
+                  await supabase.from("teams").update({ recruiting_enabled: val }).eq("id", (selectedTeam as any).id);
+                  queryClient.invalidateQueries({ queryKey: ["club-teams"] });
+                }}
+              />
+            </CardContent>
+          </Card>
+        )}
+
         <Tabs value={rosterTab} onValueChange={setRosterTab}>
           <TabsList>
             <TabsTrigger value="roster">Roster ({roster.length})</TabsTrigger>
             <TabsTrigger value="staff">Staff ({staff.length})</TabsTrigger>
+            {!hsCoachProfileId && <TabsTrigger value="transfers">Transfers</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="roster">
@@ -537,6 +679,10 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
             </View>
           </TabsContent>
 
+          <TabsContent value="transfers">
+            <ClubTransferRequests teamId={(selectedTeam as any).id} />
+          </TabsContent>
+
           <TabsContent value="staff">
             <View style={{ gap: spacing.md }}>
               <View>
@@ -575,33 +721,62 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
         {/* Add Roster Dialog */}
         <Dialog open={showRosterDialog} onOpenChange={setShowRosterDialog}>
           <DialogContent>
-            <DialogHeader><DialogTitle>Add Athlete</DialogTitle><DialogDescription>Manually add an athlete to the roster</DialogDescription></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>Add Athlete</DialogTitle>
+              <DialogDescription>Manually add an athlete to the roster</DialogDescription>
+            </DialogHeader>
             <View style={{ gap: spacing.sm }}>
+              {/* Name + DOB always shown */}
               <View><Label>Name *</Label><Input value={rosterForm.athlete_name} onChangeText={(t: string) => setRosterForm(f => ({ ...f, athlete_name: t }))} /></View>
-              <View style={{ flexDirection: "row", gap: spacing.sm }}>
-                <View style={{ flex: 1 }}><Label>Email</Label><Input keyboardType="email-address" value={rosterForm.athlete_email} onChangeText={(t: string) => setRosterForm(f => ({ ...f, athlete_email: t }))} /></View>
-                <View style={{ flex: 1 }}><Label>Position</Label><Input value={rosterForm.position} onChangeText={(t: string) => setRosterForm(f => ({ ...f, position: t }))} /></View>
-              </View>
-              <View style={{ flexDirection: "row", gap: spacing.sm }}>
-                <View style={{ flex: 1 }}><Label>Jersey #</Label><Input value={rosterForm.jersey_number} onChangeText={(t: string) => setRosterForm(f => ({ ...f, jersey_number: t }))} /></View>
-                <View style={{ flex: 1 }}><Label>School</Label><Input value={rosterForm.school} onChangeText={(t: string) => setRosterForm(f => ({ ...f, school: t }))} /></View>
-              </View>
-              <View style={{ flexDirection: "row", gap: spacing.sm }}>
-                <View style={{ flex: 1 }}><Label>Grad Year</Label><Input keyboardType="numeric" value={rosterForm.graduation_year} onChangeText={(t: string) => setRosterForm(f => ({ ...f, graduation_year: t }))} placeholder="2027" /></View>
-                <View style={{ flex: 1 }}><Label>Date of Birth</Label><Input value={rosterForm.date_of_birth} onChangeText={(t: string) => setRosterForm(f => ({ ...f, date_of_birth: t }))} placeholder="YYYY-MM-DD" /></View>
-              </View>
-              <Text style={{ fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, marginTop: spacing.xs }}>Parent/Guardian Info</Text>
+              <View style={{ flex: 1 }}><Label>Date of Birth</Label><Input value={rosterForm.date_of_birth} onChangeText={(t: string) => setRosterForm(f => ({ ...f, date_of_birth: t }))} placeholder="YYYY-MM-DD" /></View>
+
+              {/* Minor-Safe: under-13 banner + collapsed form */}
+              {rosterDobIsUnder13 ? (
+                <View style={{ backgroundColor: `${colors.destructive}15`, borderWidth: 1, borderColor: colors.destructive, borderRadius: 8, padding: spacing.sm, gap: spacing.xs }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <AlertTriangle size={16} color={colors.destructive} />
+                    <Text style={{ fontFamily: typography.fontFamily.bodySemiBold, color: colors.destructive, fontSize: typography.fontSize.sm }}>Under 13 — parent must create this profile</Text>
+                  </View>
+                  <Text style={{ fontFamily: typography.fontFamily.body, color: colors.mutedForeground, fontSize: typography.fontSize.xs, lineHeight: 18 }}>
+                    Athletes under 13 cannot have a profile created directly by a coach. Enter the parent's email and we will invite them to set it up — only the name, date of birth, and parent contact are stored until the parent completes the profile.
+                  </Text>
+                </View>
+              ) : (
+                // Full form for 13+ athletes
+                <>
+                  <View style={{ flexDirection: "row", gap: spacing.sm }}>
+                    <View style={{ flex: 1 }}><Label>Email</Label><Input keyboardType="email-address" value={rosterForm.athlete_email} onChangeText={(t: string) => setRosterForm(f => ({ ...f, athlete_email: t }))} /></View>
+                    <View style={{ flex: 1 }}><Label>Position</Label><Input value={rosterForm.position} onChangeText={(t: string) => setRosterForm(f => ({ ...f, position: t }))} /></View>
+                  </View>
+                  <View style={{ flexDirection: "row", gap: spacing.sm }}>
+                    <View style={{ flex: 1 }}><Label>Jersey #</Label><Input value={rosterForm.jersey_number} onChangeText={(t: string) => setRosterForm(f => ({ ...f, jersey_number: t }))} /></View>
+                    <View style={{ flex: 1 }}><Label>School</Label><Input value={rosterForm.school} onChangeText={(t: string) => setRosterForm(f => ({ ...f, school: t }))} /></View>
+                  </View>
+                  <View><Label>Grad Year</Label><Input keyboardType="numeric" value={rosterForm.graduation_year} onChangeText={(t: string) => setRosterForm(f => ({ ...f, graduation_year: t }))} placeholder="2027" /></View>
+                  <Text style={{ fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, marginTop: spacing.xs }}>Zorts Registration</Text>
+                  <View><Label>Zorts Registration URL</Label><Input value={rosterForm.zorts_registration_url} onChangeText={(t: string) => setRosterForm(f => ({ ...f, zorts_registration_url: t }))} placeholder="https://zfrhs.com/..." /></View>
+                </>
+              )}
+
+              {/* Parent/Guardian — always shown (required for under-13, optional for older) */}
+              <Text style={{ fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, marginTop: spacing.xs }}>
+                {rosterDobIsUnder13 ? "Parent/Guardian (required) *" : "Parent/Guardian Info"}
+              </Text>
               <View><Label>Parent Name</Label><Input value={rosterForm.parent_name} onChangeText={(t: string) => setRosterForm(f => ({ ...f, parent_name: t }))} /></View>
               <View style={{ flexDirection: "row", gap: spacing.sm }}>
-                <View style={{ flex: 1 }}><Label>Parent Email</Label><Input keyboardType="email-address" value={rosterForm.parent_email} onChangeText={(t: string) => setRosterForm(f => ({ ...f, parent_email: t }))} /></View>
+                <View style={{ flex: 1 }}><Label>Parent Email {rosterDobIsUnder13 ? "*" : ""}</Label><Input keyboardType="email-address" value={rosterForm.parent_email} onChangeText={(t: string) => setRosterForm(f => ({ ...f, parent_email: t }))} /></View>
                 <View style={{ flex: 1 }}><Label>Parent Phone</Label><Input keyboardType="phone-pad" value={rosterForm.parent_phone} onChangeText={(t: string) => setRosterForm(f => ({ ...f, parent_phone: t }))} /></View>
               </View>
-              <Text style={{ fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, marginTop: spacing.xs }}>Zorts Registration</Text>
-              <View><Label>Zorts Registration URL</Label><Input value={rosterForm.zorts_registration_url} onChangeText={(t: string) => setRosterForm(f => ({ ...f, zorts_registration_url: t }))} placeholder="https://zfrhs.com/..." /></View>
             </View>
             <DialogFooter>
               <Button variant="outline" onPress={() => setShowRosterDialog(false)}>Cancel</Button>
-              <Button onPress={() => addRosterEntry.mutate(rosterForm)} disabled={!rosterForm.athlete_name || addRosterEntry.isPending} leftIcon={addRosterEntry.isPending ? <Loader2 size={16} color={colors.primaryForeground} /> : <UserPlus size={16} color={colors.primaryForeground} />}>Add</Button>
+              <Button
+                onPress={() => addRosterEntry.mutate(rosterForm)}
+                disabled={!rosterForm.athlete_name || (rosterDobIsUnder13 && !rosterForm.parent_email) || addRosterEntry.isPending}
+                leftIcon={addRosterEntry.isPending ? <Loader2 size={16} color={colors.primaryForeground} /> : <UserPlus size={16} color={colors.primaryForeground} />}
+              >
+                {rosterDobIsUnder13 ? "Invite Parent" : "Add"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -794,6 +969,20 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
             <View><Label>Season</Label><Input value={teamForm.season} onChangeText={(t: string) => setTeamForm(f => ({ ...f, season: t }))} placeholder="Spring 2026" /></View>
             <View><Label>League</Label><Input value={teamForm.league} onChangeText={(t: string) => setTeamForm(f => ({ ...f, league: t }))} placeholder="AAU, USSSA..." /></View>
             <View><Label>Description</Label><Textarea value={teamForm.description} onChangeText={(t: string) => setTeamForm(f => ({ ...f, description: t }))} numberOfLines={2} /></View>
+            {!hsCoachProfileId && (
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: spacing.sm, gap: spacing.sm }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: typography.fontFamily.bodySemiBold, fontSize: typography.fontSize.sm, color: colors.foreground }}>Visible to high school coaches</Text>
+                  <Text style={{ fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.xs, color: colors.mutedForeground, marginTop: 2 }}>
+                    Lets verified HS coaches find HS-aged athletes on this roster and request a transfer. You still approve every request, and parents consent for minors.
+                  </Text>
+                </View>
+                <Switch
+                  value={teamForm.recruiting_enabled}
+                  onValueChange={(v: boolean) => setTeamForm(f => ({ ...f, recruiting_enabled: v }))}
+                />
+              </View>
+            )}
           </View>
           <DialogFooter>
             <Button variant="outline" onPress={() => setShowTeamDialog(false)}>Cancel</Button>

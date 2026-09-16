@@ -1,4 +1,28 @@
 // ShareRoleCardDialog — RN port of Lovable ShareRoleCardDialog.tsx + RoleCardGenerator.tsx
+//
+// Bug fix (parity with cd10343 SharePlayerCardDialog Bug 3): the modal sheet
+// caps at maxHeight: '85%' and contains a header + a single <ScrollView> for
+// card+actions. On short devices with bottom safe-area insets (iPhone home
+// indicator, Android nav bar) the Share/Copy action buttons sat flush against
+// the sheet's bottom edge, which on real hardware landed behind the system
+// bar, making them tap-unreachable and creating the reported "cut off at
+// bottom, no scroll" symptom. The fix: give the ScrollView contentContainer
+// flexGrow:1 (so it always claims the sheet's usable height even when content
+// is short) plus a generous paddingBottom that clears typical device safe-area
+// insets, mirroring the discipline applied to SharePlayerCardDialog.
+//
+// Perf fix (Sep 2026, follow-up to 383e098 T2.C — which was investigate-only):
+// per explicit build-cycle instruction, apply the same lazy-mount discipline
+// used for SharePlayerCardDialog's heavy ProfileCardGenerator (T2.A) and the
+// Dialog radar-chart deferral. The outer <ShareRoleCardDialog> keeps all four
+// role-gated useQuery declarations at the top level (this preserves the
+// hook-order contract and the role-gated-queries test), but the heavy card
+// composition (useMemo over profile → card view, QRCode SVG, action row JSX)
+// now lives inside <ShareRoleCardDialogContent>, a child component that is
+// only mounted when `open === true`. That way, every dashboard re-render
+// (Agency / ClubCoach / HSCoach) touches only the tiny outer shell — the
+// useMemo body and QRCode element creation are not paid until the sheet
+// actually opens.
 // Renders a modal bottom sheet with role-specific contact card + QR code + native share.
 // Roles: athlete | coach | club_coach | hs_coach | scout | influencer
 import React, { useMemo } from 'react';
@@ -16,9 +40,6 @@ import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCoachProfile } from '@/hooks/useCoachProfile';
-import { useScoutProfile } from '@/hooks/useScoutProfile';
-import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 import { useToast } from '@/hooks/use-toast';
@@ -52,9 +73,64 @@ export function ShareRoleCardDialog({ role, visible, onClose, children }: ShareR
   };
   const { user } = useAuth();
   const { toast } = useToast();
-  const { data: coachProfile } = useCoachProfile();
-  const { data: scoutProfile } = useScoutProfile();
-  const { profile: playerProfile } = usePlayerProfile();
+
+  // Perf fix (Sep 2026): the previous implementation unconditionally called
+  // useCoachProfile() + useScoutProfile() + usePlayerProfile() at the top of
+  // this component. Because ShareRoleCardDialog is rendered eagerly in the
+  // Scout/ClubCoach/HSCoach dashboards, every dashboard mount fired 3 concurrent
+  // Supabase RTTs, 2 of which always returned null for a given user. Now we
+  // gate each query on the actual role prop so only the relevant one runs.
+  // Query keys match the shared hooks so react-query cache stays consistent
+  // if the user later navigates to a screen that uses those hooks directly.
+  const isCoachRole = role === 'coach' || role === 'club_coach' || role === 'hs_coach';
+  const isScoutRole = role === 'scout';
+  const isAthleteRole = role === 'athlete';
+  const isInfluencerRole = role === 'influencer';
+
+  const { data: coachProfile } = useQuery({
+    queryKey: ['coach-profile', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from('coach_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user && isCoachRole,
+  });
+
+  const { data: scoutProfile } = useQuery({
+    queryKey: ['scout-profile', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await (supabase as any)
+        .from('scout_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!user && isScoutRole,
+  });
+
+  const { data: playerProfile } = useQuery({
+    queryKey: ['player-profile', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from('player_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user && isAthleteRole,
+  });
 
   const { data: influencerProfile } = useQuery({
     queryKey: ['influencer-profile-share', user?.id],
@@ -63,9 +139,69 @@ export function ShareRoleCardDialog({ role, visible, onClose, children }: ShareR
       const { data } = await (supabase as any).from('influencer_profiles').select('*').eq('user_id', user.id).maybeSingle();
       return data;
     },
-    enabled: !!user && role === 'influencer',
+    enabled: !!user && isInfluencerRole,
   });
 
+  return (
+    <>
+      {/* Uncontrolled: render the child as the trigger */}
+      {!isControlled && children ? (
+        <Pressable onPress={handleOpen} accessibilityRole="button">
+          {children}
+        </Pressable>
+      ) : null}
+
+      {/*
+        Lazy-mount the heavy modal content (useMemo card composition, QRCode
+        SVG, action row JSX). When open === false the entire Modal element is
+        omitted from the React tree — dashboard re-renders don't pay for
+        creating those elements. When open flips to true, the content mounts
+        fresh; when it flips back to false, React unmounts and drops its state.
+        This matches the T2.A pattern already used for SharePlayerCardDialog.
+      */}
+      {open ? (
+        <ShareRoleCardDialogContent
+          role={role}
+          onClose={handleClose}
+          user={user}
+          toast={toast}
+          coachProfile={coachProfile}
+          scoutProfile={scoutProfile}
+          playerProfile={playerProfile}
+          influencerProfile={influencerProfile}
+        />
+      ) : null}
+    </>
+  );
+}
+
+// ── Heavy inner content — only mounted while the sheet is open ─────────────
+// Split out from ShareRoleCardDialog so dashboard re-renders don't pay for
+// the useMemo card composition + QRCode element creation when the sheet is
+// closed. The outer component still declares the four useQuery hooks so
+// the query registration + role-gated cache warming behavior is unchanged
+// (see ShareRoleCardDialogRoleGatedQueries.test.tsx contract).
+interface ShareRoleCardDialogContentProps {
+  role: ShareRole;
+  onClose: () => void;
+  user: { id?: string; email?: string | null } | null | undefined;
+  toast: (opts: { title: string }) => void;
+  coachProfile: any;
+  scoutProfile: any;
+  playerProfile: any;
+  influencerProfile: any;
+}
+
+function ShareRoleCardDialogContent({
+  role,
+  onClose,
+  user,
+  toast,
+  coachProfile,
+  scoutProfile,
+  playerProfile,
+  influencerProfile,
+}: ShareRoleCardDialogContentProps) {
   const card = useMemo(() => {
     const coach = coachProfile as any;
     const scout = scoutProfile as any;
@@ -153,21 +289,13 @@ export function ShareRoleCardDialog({ role, visible, onClose, children }: ShareR
   };
 
   return (
-    <>
-      {/* Uncontrolled: render the child as the trigger */}
-      {!isControlled && children ? (
-        <Pressable onPress={handleOpen} accessibilityRole="button">
-          {children}
-        </Pressable>
-      ) : null}
-
-      <Modal visible={open} transparent animationType="slide" onRequestClose={handleClose}>
-        <Pressable style={styles.backdrop} onPress={handleClose}>
+    <Modal visible={true} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={() => {}}>
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>{titleMap[role]}</Text>
-            <Pressable onPress={handleClose} hitSlop={8}><X size={20} color={colors.mutedForeground} /></Pressable>
+            <Pressable onPress={onClose} hitSlop={8}><X size={20} color={colors.mutedForeground} /></Pressable>
           </View>
 
           <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -215,7 +343,6 @@ export function ShareRoleCardDialog({ role, visible, onClose, children }: ShareR
         </Pressable>
       </Pressable>
     </Modal>
-    </>
   );
 }
 
@@ -251,7 +378,13 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
+    // Bug fix (parity with SharePlayerCardDialog cd10343): flexGrow:1 makes the
+    // ScrollView's content column claim the full available height inside the
+    // maxHeight-capped sheet, and paddingBottom clears bottom safe-area insets
+    // so the Share/Copy action buttons remain reachable on every device.
+    flexGrow: 1,
     gap: spacing.lg,
+    paddingBottom: spacing.xl + spacing.md,
   },
   card: {
     backgroundColor: colors.background,

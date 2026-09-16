@@ -28,6 +28,7 @@ import { ImagePlus, Trash2, Image as ImageIconLucide, Maximize2 } from 'lucide-r
 import { Button } from '@/components/ui/Button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
 import { supabase } from '@/integrations/supabase/client';
+import { isMinorSafeAthlete } from '@/lib/isMinorSafeAthlete';
 import { useToast } from '@/hooks/use-toast';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
@@ -35,6 +36,8 @@ interface BannerImageUploadProps {
   athleteId: string;
   currentImageUrl: string | null;
   onImageUpdated: (newUrl: string | null) => void;
+  /** When true, all uploads are blocked (under-13 minor-safe profile). */
+  isMinorSafe?: boolean;
 }
 
 // Best-effort mime inference from extension (ImagePicker assets don't always
@@ -62,6 +65,7 @@ export function BannerImageUpload({
   athleteId,
   currentImageUrl,
   onImageUpdated,
+  isMinorSafe = false,
 }: BannerImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -69,6 +73,16 @@ export function BannerImageUpload({
   const { toast } = useToast();
 
   const pickImage = async () => {
+    // Minor-Safe guard (prop fast-path + DB verification).
+    const minorSafeLocked = isMinorSafe || (await isMinorSafeAthlete(athleteId));
+    if (minorSafeLocked) {
+      toast({
+        title: 'Upload Locked',
+        description: 'Banner images cannot be uploaded until a parent completes the consent process for this minor athlete.',
+        variant: 'destructive',
+      });
+      return;
+    }
     // Request permission (no-op on web; safe on native).
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {

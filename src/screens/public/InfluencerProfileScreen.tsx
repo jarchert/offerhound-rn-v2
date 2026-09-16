@@ -4,7 +4,7 @@
 //   - <Link> → Pressable + nav.navigate
 //   - lucide-react → lucide-react-native
 //   - shadcn Tabs → @/components/ui/Tabs (controlled by useState<string>)
-//   - <img>/<video> → Image + expo-av Video for inline video
+//   - <img>/<video> → Image + expo-video (useVideoPlayer + VideoView) for inline video
 //   - external <a href> → Linking.openURL
 //   - Tailwind/responsive grids → ScrollView columns + StyleSheet
 import React, { useState } from 'react';
@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import {
   Star,
   Globe,
@@ -316,15 +317,7 @@ export default function InfluencerProfileScreen() {
               ) : (
                 <View style={s.mediaGrid}>
                   {gallery.map((m: any) => (
-                    <View key={m.id} style={s.mediaCell}>
-                      {/* PORT-PENDING: video tiles use Image as a placeholder
-                          poster; expo-av Video integration tracked separately. */}
-                      <Image
-                        source={{ uri: m.thumbnail_url || m.file_url }}
-                        style={s.mediaImg}
-                        resizeMode="cover"
-                      />
-                    </View>
+                    <MediaTile key={m.id} item={m} />
                   ))}
                 </View>
               )}
@@ -400,6 +393,39 @@ export default function InfluencerProfileScreen() {
 
         <Footer />
       </ScrollView>
+    </View>
+  );
+}
+
+function MediaTile({ item }: { item: any }) {
+  const isVideo = item.file_type === 'video';
+  // useVideoPlayer must be called unconditionally to respect hook rules.
+  // Pass null when not a video; expo-video accepts null source.
+  const player = useVideoPlayer(isVideo ? item.file_url : null, (p) => {
+    p.loop = false;
+  });
+
+  if (isVideo) {
+    return (
+      <View style={s.mediaCell}>
+        <VideoView
+          player={player}
+          style={s.mediaImg}
+          contentFit="cover"
+          nativeControls
+          testID="media-video"
+        />
+      </View>
+    );
+  }
+  return (
+    <View style={s.mediaCell}>
+      <Image
+        source={{ uri: item.thumbnail_url || item.file_url }}
+        style={s.mediaImg}
+        resizeMode="cover"
+        testID="media-image"
+      />
     </View>
   );
 }

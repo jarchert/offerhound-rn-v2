@@ -147,7 +147,19 @@ export default function CoachDashboard() {
     (nav as any).navigate('Messages', athleteName ? { recipientName: athleteName } : undefined);
   };
   const goLetter = (athlete: any) => {
-    (nav as any).navigate('LetterComposer', { seed: { athlete } });
+    // Flat recipient shape — LetterComposerScreen's extractRecipientSeed reads
+    // these fields directly. The old `seed: { athlete }` nested shape was
+    // silently dropped by the composer (never destructured), leaving the form
+    // completely blank. Fixes coach-side Letter button on the pipeline card.
+    (nav as any).navigate('LetterComposer', {
+      seed: {
+        recipientName: athlete?.full_name || athlete?.name || '',
+        recipientRole: 'Athlete',
+        schoolName: athlete?.school || '',
+        prefillAthleteId: athlete?.id,
+        prefillAthleteName: athlete?.full_name || athlete?.name || '',
+      },
+    });
   };
 
   if (profileLoading) {

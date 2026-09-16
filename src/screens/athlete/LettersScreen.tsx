@@ -35,6 +35,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useUnifiedLetterHistory } from '@/hooks/useUnifiedLetterHistory';
+import { buildGenerateLetterPayload } from '@/lib/generateLetterPayload';
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -118,7 +119,7 @@ function buildLocalLetter(
 // ---------------------------------------------------------------------------
 export default function LettersScreen() {
   const nav = useNavigation<any>();
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
   const { profile } = usePlayerProfile();
   const { isSubscribed, isLoading: isSubLoading } = useSubscription();
   const { history, isLoading: isHistoryLoading, addToHistory, refetch } = useUnifiedLetterHistory('athlete');
@@ -171,17 +172,66 @@ export default function LettersScreen() {
       nav.navigate('Pricing');
       return;
     }
+
+    // Reshape athleteData into the Universal Letter Center's senderProfile
+    // shape. See generate-coach-scout-letter/index.ts → buildSenderBlock
+    // (senderType === 'athlete' branch) for the fields it actually reads.
+    const senderProfile = {
+      name: athleteData.name,
+      position: athleteData.position,
+      school: athleteData.highSchool,
+      graduation_year: athleteData.classYear,
+      gpa: athleteData.gpa,
+      height: athleteData.height,
+      weight: athleteData.weight,
+      city: athleteData.city,
+      state: athleteData.state,
+      email: athleteData.email || undefined,
+      phone: athleteData.phone || undefined,
+    };
+
+    // Every template on this screen is athlete→college-coach outreach.
+    const recipientInfo =
+      coachName || schoolName
+        ? {
+            name: coachName || undefined,
+            organization: schoolName || undefined,
+          }
+        : undefined;
+
+    const built = buildGenerateLetterPayload({
+      role: userRole || 'athlete',
+      letterType: selectedType,
+      recipientCategory: 'college-coach',
+      senderProfile,
+      recipientInfo,
+    });
+
+    if (!built.payload) {
+      Toast.show({ type: 'error', text1: 'Cannot generate letter', text2: built.reason });
+      return;
+    }
+
     setIsGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke('generate-letter', {
-        body: {
-          letterType: selectedType,
-          coachName: coachName || undefined,
-          schoolName: schoolName || undefined,
-          athleteProfile: athleteData,
-        },
+      const { data, error } = await supabase.functions.invoke('generate-coach-scout-letter', {
+        body: built.payload,
       });
-      if (error) throw error;
+      if (error) {
+        // supabase-js wraps non-2xx as FunctionsHttpError; try to unwrap the
+        // real edge-function error message for the toast.
+        const ctx: any = (error as any)?.context;
+        let msg = (error as any)?.message || 'Failed to generate';
+        try {
+          if (ctx && typeof ctx.json === 'function') {
+            const body = await ctx.json();
+            if (body?.error && typeof body.error === 'string') msg = body.error;
+          }
+        } catch {
+          // keep original message
+        }
+        throw new Error(msg);
+      }
       if ((data as any)?.letter) {
         setLetterContent((data as any).letter);
         Toast.show({ type: 'success', text1: 'AI-generated letter ready!' });

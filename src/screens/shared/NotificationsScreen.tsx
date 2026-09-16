@@ -1,12 +1,16 @@
 import React from 'react';
 import { View, Text, FlatList, StyleSheet, SafeAreaView, RefreshControl, Pressable } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, CheckCheck } from 'lucide-react-native';
+import { Check, CheckCheck, ChevronRight } from 'lucide-react-native';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navbar } from '@/components/Navbar';
 import { BackButton } from '@/components/BackButton';
 import { colors, typography, spacing } from '@/lib/theme';
+import type { RootStackParamList } from '@/navigation/RootNavigator';
+
+type Nav = NavigationProp<RootStackParamList>;
 
 interface Notification {
   id: string;
@@ -14,12 +18,20 @@ interface Notification {
   title: string;
   body: string | null;
   created_at: string;
+  /** DB column is `is_read` but queried as `read` via select('*') alias */
   read: boolean;
   type: string;
+  /** Arbitrary JSON payload set server-side. For visibility_proposal notifications
+   *  this contains { proposalId: string }. */
+  data: Record<string, any> | null;
 }
+
+/** Notification types that carry an actionable deep-link. */
+const PROPOSAL_TYPE = 'visibility_proposal';
 
 export default function NotificationsScreen() {
   const { user } = useAuth();
+  const nav = useNavigation<Nav>();
   const qc = useQueryClient();
 
   const { data: notifications = [], isLoading, refetch } = useQuery({
@@ -50,6 +62,27 @@ export default function NotificationsScreen() {
     qc.invalidateQueries({ queryKey: ['notifications'] });
   };
 
+  /** Tap handler: mark read, then navigate to the appropriate screen when the
+   *  notification carries an actionable payload. Currently handles:
+   *  - type === 'visibility_proposal' → AuthStack → VisibilityDecision */
+  const handleTap = async (item: Notification) => {
+    if (!item.read) {
+      await markRead(item.id);
+    }
+    if (item.type === PROPOSAL_TYPE) {
+      const proposalId = item.data?.proposalId as string | undefined;
+      if (proposalId) {
+        (nav as any).navigate('AuthStack', {
+          screen: 'VisibilityDecision',
+          params: { proposalId },
+        });
+      }
+    }
+  };
+
+  const isActionable = (item: Notification): boolean =>
+    item.type === PROPOSAL_TYPE && !!item.data?.proposalId;
+
   return (
     <SafeAreaView style={s.container}>
       <Navbar />
@@ -74,19 +107,31 @@ export default function NotificationsScreen() {
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />}
         ItemSeparatorComponent={() => <View style={s.sep} />}
         ListEmptyComponent={<Text style={s.empty}>No notifications yet</Text>}
-        renderItem={({ item }) => (
-          <Pressable style={[s.row, !item.read && s.rowUnread]} onPress={() => !item.read && markRead(item.id)}>
-            <View style={s.rowText}>
-              <View style={s.rowTop}>
-                <Text style={s.rowTitle} numberOfLines={1}>{item.title}</Text>
-                {!item.read && <View style={s.dot} />}
+        renderItem={({ item }) => {
+          const actionable = isActionable(item);
+          return (
+            <Pressable
+              style={[s.row, !item.read && s.rowUnread]}
+              onPress={() => handleTap(item)}
+              accessibilityRole="button"
+              accessibilityLabel={item.title}
+            >
+              <View style={s.rowText}>
+                <View style={s.rowTop}>
+                  <Text style={s.rowTitle} numberOfLines={1}>{item.title}</Text>
+                  {!item.read && <View style={s.dot} />}
+                </View>
+                {item.body && <Text style={s.rowBody}>{item.body}</Text>}
+                <Text style={s.rowDate}>{new Date(item.created_at).toLocaleString()}</Text>
               </View>
-              {item.body && <Text style={s.rowBody}>{item.body}</Text>}
-              <Text style={s.rowDate}>{new Date(item.created_at).toLocaleString()}</Text>
-            </View>
-            {item.read && <Check size={14} color={colors.mutedForeground} />}
-          </Pressable>
-        )}
+              {actionable
+                ? <ChevronRight size={16} color={colors.primary} />
+                : item.read
+                  ? <Check size={14} color={colors.mutedForeground} />
+                  : null}
+            </Pressable>
+          );
+        }}
       />
     </SafeAreaView>
   );

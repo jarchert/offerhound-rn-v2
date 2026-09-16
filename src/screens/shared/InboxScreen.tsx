@@ -202,7 +202,7 @@ export default function InboxScreen() {
       if (!user) return;
       const { error } = await supabase
         .from('messages')
-        .update({ is_read: true } as any)
+        .update({ is_read: true, read_at: new Date().toISOString() } as any)
         .eq('conversation_id', conversationId)
         .neq('sender_user_id', user.id)
         .eq('is_read', false);

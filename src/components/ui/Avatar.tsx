@@ -1,5 +1,14 @@
+// Perf fix (Sep 2026): swapped plain react-native <Image> for expo-image
+// (already a dependency, used in Banner/Footer/Gallery/HeroBackground uploaders).
+// The share-card Avatar renders profile.profile_image_url on every mount of
+// SharePlayerCardDialog + the inline ProfileCardGenerator inside
+// SocialLinksManager. Plain <Image> has no in-process memory/disk cache, so
+// each open re-decoded the JPEG on the JS thread and re-fetched from the CDN
+// on cold OS-cache. expo-image gives us memory+disk cache and a native decode
+// path with essentially no source-shape change (source={{uri}} still works).
 import React from 'react';
-import { View, Image, Text, StyleSheet, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { Image } from 'expo-image';
 import { colors, typography } from '@/lib/theme';
 
 interface AvatarProps {
@@ -24,6 +33,9 @@ export function Avatar({ source, fallback, size = 40, style }: AvatarProps) {
           source={source!}
           style={{ width: size, height: size, borderRadius: size / 2 }}
           onError={() => setError(true)}
+          cachePolicy="memory-disk"
+          contentFit="cover"
+          transition={0}
         />
       )}
     </View>

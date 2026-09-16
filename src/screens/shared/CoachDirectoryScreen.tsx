@@ -9,7 +9,7 @@
 //   - Checkbox                       → @/components/ui/Checkbox
 //   - useNavigate (react-router)     → useNavigation (react-navigation)
 //   - sticky bottom bar              → absolutely-positioned View at bottom
-//   - shadcn Sheet/CoachOutreachComposer → PORT-PENDING (composer not opened)
+//   - shadcn Sheet/CoachOutreachComposer → CoachOutreachComposer Modal (wired)
 //   - useAuth.isAuthenticated        → derived from `user` presence
 //
 // Verbatim filter logic preserved 1:1:
@@ -22,9 +22,6 @@
 //   - Sort: name-presence first, then AI matches, then proximity, then alpha.
 //
 // PORT-PENDING stubs (intentional, called out inline):
-//   - CoachOutreachComposer (shadcn Sheet + email composer)  → omitted
-//   - sticky multi-select email button still selectable but
-//     "Email selected" press only logs (no composer modal in RN yet)
 //   - viewerSports overlap filter relies on extractSports — preserved 1:1
 //   - "AI Letters" header button picks the right LetterCenter route per role
 //   - "Saved" header button navigates to "SavedCoaches" if exposed (else no-op)
@@ -78,16 +75,9 @@ import { compareByFullNamePresence } from '@/lib/utils/nameSorting';
 import { extractSports, sportsOverlap } from '@/lib/utils/sportMatching';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
-
-// PORT-PENDING: CoachOutreachComposer (shadcn Sheet + email body builder).
-type OutreachCoach = {
-  id: string;
-  name?: string;
-  school?: string;
-  email?: string;
-  position_coached?: string;
-  sport?: string;
-};
+import { CoachOutreachComposer } from '@/components/CoachOutreachComposer';
+import type { OutreachCoach } from '@/components/CoachOutreachComposer';
+import { RegisterSearchGate } from '@/components/RegisterSearchGate';
 
 // ── State proximity tables (verbatim from Lovable CoachDirectory.tsx) ────────
 const STATE_NEIGHBORS: Record<string, string[]> = {
@@ -199,7 +189,7 @@ export default function CoachDirectoryScreen() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   // PORT-PENDING: composer Sheet — kept stateful for future wire-up.
-  const [, setComposerOpen] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
 
   const { user } = useAuth() as any;
   const isAuthenticated = !!user;
@@ -353,8 +343,6 @@ export default function CoachDirectoryScreen() {
         })),
     [sortedCoaches, selectedIds],
   );
-  void selectedCoaches; // silence unused-warning until composer wires up
-
   const goToLetterCenter = () => {
     // PORT-PENDING: only Letters route in RN today is the shared LetterComposer
     // and ScoutLetters tab. We pick the closest match by viewer role.
@@ -374,7 +362,7 @@ export default function CoachDirectoryScreen() {
               <Button
                 variant="outline"
                 size="sm"
-                onPress={() => {/* PORT-PENDING: SavedCoaches route */}}
+                onPress={() => nav.navigate('SavedCoaches' as any)}
                 leftIcon={<Bookmark size={14} color={colors.foreground} />}
               >
                 {`Saved (${savedCoaches.length})`}
@@ -383,6 +371,13 @@ export default function CoachDirectoryScreen() {
           ) : null}
         </View>
 
+        {!isAuthenticated ? (
+          <>
+            <RegisterSearchGate message="Register to find your coach and program match" />
+            <Footer />
+          </>
+        ) : (
+        <>
         <Text style={s.title}>Coach Directory</Text>
         <Text style={s.subtitle}>Search college coaches across all divisions and sports.</Text>
         {userState ? (
@@ -558,8 +553,18 @@ export default function CoachDirectoryScreen() {
                       proximityLabel={proximityLabel}
                       isSaved={isSaved}
                       onToggleSave={isAuthenticated ? toggleSave : undefined}
+                      disableContact={!isAuthenticated}
                       viewerRole={viewerRole}
                       coachAudience={isHSCoachCard ? 'hs-coach' : 'college-coach'}
+                      onOpenProfile={
+                        isHSCoachCard
+                          ? () =>
+                              nav.navigate('PublicProfileStack' as any, {
+                                screen: 'PublicHSCoachProfile',
+                                params: { hsCoachId: coach.id },
+                              })
+                          : undefined
+                      }
                     />
                   </View>
                 </View>
@@ -570,6 +575,8 @@ export default function CoachDirectoryScreen() {
 
         <Text style={s.footerCount}>{`${sortedCoaches.length} coaches found`}</Text>
         <Footer />
+        </>
+        )}
       </ScrollView>
 
       {/* Sticky multi-select action bar */}
@@ -595,7 +602,11 @@ export default function CoachDirectoryScreen() {
         </View>
       ) : null}
 
-      {/* PORT-PENDING: <CoachOutreachComposer ... /> shadcn Sheet */}
+      <CoachOutreachComposer
+        coaches={selectedCoaches}
+        visible={composerOpen}
+        onClose={() => setComposerOpen(false)}
+      />
     </SafeAreaView>
   );
 }

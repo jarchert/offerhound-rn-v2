@@ -16,11 +16,12 @@ interface ButtonProps {
   textStyle?: TextStyle;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  testID?: string;
 }
 
 export function Button({
   children, onPress, variant = 'default', size = 'default',
-  disabled, loading, style, textStyle, leftIcon, rightIcon,
+  disabled, loading, style, textStyle, leftIcon, rightIcon, testID,
 }: ButtonProps) {
   const variantStyle = variantStyles[variant];
   const sizeStyle = sizeStyles[size];
@@ -28,6 +29,7 @@ export function Button({
 
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       disabled={disabled || loading}
       style={({ pressed }) => [
@@ -58,7 +60,7 @@ export function Button({
 
 const s = StyleSheet.create({
   base: { borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row' },
-  content: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  content: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   text: { fontFamily: typography.fontFamily.bodySemiBold, fontSize: typography.fontSize.base },
   disabled: { opacity: 0.5 },
   pressed: { opacity: 0.8 },

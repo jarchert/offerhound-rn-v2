@@ -10,7 +10,7 @@
 // StaffManager, StaffMessaging, ClubMediaGallery, ClubEventCalendar, ClubSocialLinks,
 // ClubCoachDirectoryTab, TermsAcceptanceGate, CoachNav, plus auxiliary cards.
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, Linking, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, Linking, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -31,6 +31,7 @@ import { colors, spacing, typography } from '@/lib/theme';
 
 import { TermsAcceptanceGate } from '@/components/TermsAcceptanceGate';
 import { CoachNav } from '@/components/CoachNav';
+import { LG_BREAKPOINT } from '@/components/OwnerNav';
 import { ClubTeamManagement } from '@/components/ClubTeamManagement';
 import { ClubCoachCRM } from '@/components/ClubCoachCRM';
 import { ClubCoachMessagingHub } from '@/components/ClubCoachMessagingHub';
@@ -42,6 +43,7 @@ import { ClubSocialLinks } from '@/components/ClubSocialLinks';
 import { ClubCoachDirectoryTab } from '@/components/club/ClubCoachDirectoryTab';
 import { TransferPortalFeed } from '@/components/TransferPortalFeed';
 import { CampManagerDashboard } from '@/components/CampManagerDashboard';
+import { OrganizationLogoUpload } from '@/components/OrganizationLogoUpload';
 import { ShareRoleCardDialog } from '@/components/ShareRoleCardDialog';
 import { WebsiteIntegrationDecisionModal } from '@/components/club/WebsiteIntegrationDecisionModal';
 
@@ -83,7 +85,15 @@ export default function ClubCoachDashboardScreen() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [websiteModalOpen, setWebsiteModalOpen] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const isWeb = !isNativePlatform();
+  // Group 3 #7 ROLE 2 (2026-08-31): CoachNav is now gated to wide layouts.
+  // Every real cross-app verb the club coach reaches for on phone is a
+  // first-class Tab.Screen in ClubCoachTabs (Athletes, Settings, Messages,
+  // ...). The phone-bottom-bar mount was retired; the wide-layout sidebar
+  // still renders below via `isWide && <CoachNav role="club_coach" />`.
+  const { width } = useWindowDimensions();
+  const isWide = width >= LG_BREAKPOINT;
 
   const { data: clubProfile, isLoading: clubLoading } = useQuery({
     queryKey: ['club-coach-profile-full', user?.id],
@@ -171,6 +181,10 @@ export default function ClubCoachDashboardScreen() {
   }, [authLoading, isAuthenticated, nav]);
 
   useEffect(() => {
+    if (clubProfile?.club_logo_url) setLogoUrl(clubProfile.club_logo_url);
+  }, [clubProfile]);
+
+  useEffect(() => {
     if (!authLoading && profileFetched && !clubLoading && !clubProfile && isAuthenticated) {
       nav.navigate('CoachTabs' as any);
     }
@@ -184,7 +198,24 @@ export default function ClubCoachDashboardScreen() {
     );
   }
 
-  if (!profile || !clubProfile) return null;
+  if (!profile || !clubProfile) {
+    // Build 54 fix: show a friendly empty state instead of returning null,
+    // which previously caused tab-nav crashes ("Cannot read property city of null").
+    return (
+      <TermsAcceptanceGate>
+        {isWide && <CoachNav role="club_coach" />}
+        <View style={[s.loading, { padding: spacing.lg }] }>
+          <Text style={[s.headerTitle, { textAlign: 'center', marginBottom: spacing.sm }]}>Finish setting up your club profile</Text>
+          <Text style={{ color: colors.mutedForeground, textAlign: 'center', marginBottom: spacing.md }}>
+            We couldn't find your club coach profile yet. Complete onboarding to unlock the dashboard.
+          </Text>
+          <Button onPress={() => nav.navigate('OnboardingStack' as any)}>Complete Onboarding</Button>
+          <View style={{ height: spacing.sm }} />
+          <Button variant="outline" onPress={handleSignOut} leftIcon={<LogOut size={14} color={colors.foreground} />}>Log Out</Button>
+        </View>
+      </TermsAcceptanceGate>
+    );
+  }
 
   const activeTeams = (teams || []).filter((t: any) => t.status !== 'archived');
   const archivedTeams = (teams || []).filter((t: any) => t.status === 'archived');
@@ -203,7 +234,7 @@ export default function ClubCoachDashboardScreen() {
 
   return (
     <TermsAcceptanceGate>
-      <CoachNav />
+      {isWide && <CoachNav role="club_coach" />}
       <ScrollView style={s.root} contentContainerStyle={s.scroll}>
         {/* Header */}
         <View style={s.header}>
@@ -240,7 +271,7 @@ export default function ClubCoachDashboardScreen() {
             ) : null}
           </View>
           <View style={s.bannerActions}>
-            <Button size="sm" onPress={() => nav.navigate('AthleteTabs' as any)} leftIcon={<Search size={14} color={colors.primaryForeground} />}>Search</Button>
+            <Button size="sm" onPress={() => nav.navigate('AthleteSearch' as any)} leftIcon={<Search size={14} color={colors.primaryForeground} />}>Search</Button>
             <Button variant="outline" size="sm" onPress={() => nav.navigate('LetterComposer' as any)} leftIcon={<FileCheck size={14} color={colors.foreground} />}>Letters</Button>
             <Button variant="outline" size="sm" onPress={() => nav.navigate('Messages' as any)} leftIcon={<MessageSquare size={14} color={colors.foreground} />}>Messages</Button>
           </View>
@@ -268,7 +299,7 @@ export default function ClubCoachDashboardScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabListScroll}>
             <TabsList style={s.tabsList}>
               {TAB_DEFS.map(({ value, label, icon: Icon }) => (
-                <TabsTrigger key={value} value={value} style={s.tabsTrigger}>
+                <TabsTrigger key={value} value={value} testID={`tab-trigger-${value}`} style={s.tabsTrigger}>
                   <View style={s.tabsTriggerInner}>
                     <Icon size={14} color={activeTab === value ? colors.primaryForeground : colors.primary} />
                     <Text style={[s.tabsTriggerLabel, activeTab === value && s.tabsTriggerLabelActive]}>{label}</Text>
@@ -343,7 +374,7 @@ export default function ClubCoachDashboardScreen() {
                 <CardContent>
                   <View style={s.quickGrid}>
                     <Button variant="outline" onPress={() => setActiveTab('teams')} style={s.quickBtn} leftIcon={<Trophy size={16} color={colors.foreground} />}>Create Team</Button>
-                    <Button variant="outline" onPress={() => nav.navigate('AthleteTabs' as any)} style={s.quickBtn} leftIcon={<Search size={16} color={colors.foreground} />}>Find Athletes</Button>
+                    <Button variant="outline" onPress={() => nav.navigate('AthleteSearch' as any)} style={s.quickBtn} leftIcon={<Search size={16} color={colors.foreground} />}>Find Athletes</Button>
                     <Button variant="outline" onPress={() => nav.navigate('LetterComposer' as any)} style={s.quickBtn} leftIcon={<FileCheck size={16} color={colors.foreground} />}>AI Letters</Button>
                     <Button variant="outline" onPress={() => nav.navigate('Messages' as any)} style={s.quickBtn} leftIcon={<Mail size={16} color={colors.foreground} />}>Send Message</Button>
                     <Button variant="outline" onPress={() => setActiveTab('discover')} style={s.quickBtn} leftIcon={<Megaphone size={16} color={colors.foreground} />}>Coach Directory</Button>
@@ -509,7 +540,7 @@ export default function ClubCoachDashboardScreen() {
                               <Badge variant={saved.priority === 'high' ? 'default' : 'secondary'}>{String(saved.priority || 'normal')}</Badge>
                             </View>
                           </View>
-                          <Button variant="outline" size="sm" style={s.fullW} onPress={() => {/* PORT-PENDING: deep link to public profile */}}>View Profile</Button>
+                          <Button variant="outline" size="sm" style={s.fullW} onPress={() => nav.navigate('PublicProfileStack' as any, { screen: 'PublicProfile', params: { customUrl: saved.athlete?.custom_url } })}>View Profile</Button>
                         </View>
                       ))}
                     </View>
@@ -518,7 +549,7 @@ export default function ClubCoachDashboardScreen() {
                       <Users size={36} color={colors.mutedForeground} />
                       <Text style={s.emptyTitle}>No saved athletes</Text>
                       <Text style={s.muted}>Search for athletes to add to your roster or recommend to recruiters.</Text>
-                      <Button onPress={() => nav.navigate('AthleteTabs' as any)} leftIcon={<Search size={14} color={colors.primaryForeground} />}>Search Athletes</Button>
+                      <Button onPress={() => nav.navigate('AthleteSearch' as any)} leftIcon={<Search size={14} color={colors.primaryForeground} />}>Search Athletes</Button>
                     </View>
                   )}
                 </CardContent>
@@ -547,8 +578,15 @@ export default function ClubCoachDashboardScreen() {
                     </View>
                   </View>
 
-                  {/* PORT-PENDING: OrganizationLogoUpload prop shape differs from Lovable; */}
-                  {/* skip in-place upload for now — surfaced in account settings. */}
+                  {/* Bug 8 fix: wire OrganizationLogoUpload into Club Coach profile header. */}
+                  {/* org logo lives in scout_organizations; derive orgId from clubProfile.org_id. */}
+                  <OrganizationLogoUpload
+                    organizationId={(clubProfile as any).org_id || clubProfile.id}
+                    currentLogoUrl={logoUrl}
+                    organizationName={clubProfile.club_name || 'Club'}
+                    onLogoUpdated={setLogoUrl}
+                    isOwner={true}
+                  />
 
                   <View style={s.detailGrid}>
                     {clubProfile.league_association ? (<View style={s.detailItem}><Text style={s.detailLabel}>League / Association</Text><Text style={s.detailVal}>{clubProfile.league_association}</Text></View>) : null}

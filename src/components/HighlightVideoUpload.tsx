@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/Button';
 import { Label } from '@/components/ui/Label';
 import { Switch } from '@/components/ui/Switch';
 import { supabase } from '@/integrations/supabase/client';
+import { isMinorSafeAthlete } from '@/lib/isMinorSafeAthlete';
 import { useToast } from '@/hooks/use-toast';
 import { colors, typography, spacing } from '@/lib/theme';
 
@@ -29,6 +30,8 @@ interface HighlightVideoUploadProps {
   showVideoToggle?: boolean;
   isVideoVisible?: boolean;
   onVideoVisibilityChange?: (visible: boolean) => void;
+  /** When true, all uploads are blocked (under-13 minor-safe profile). */
+  isMinorSafe?: boolean;
 }
 
 export function HighlightVideoUpload({
@@ -38,12 +41,23 @@ export function HighlightVideoUpload({
   showVideoToggle,
   isVideoVisible,
   onVideoVisibilityChange,
+  isMinorSafe = false,
 }: HighlightVideoUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [videoUrl, setVideoUrl] = useState(currentVideoUrl || '');
   const { toast } = useToast();
 
   const pickAndUpload = async () => {
+    // Minor-Safe guard (prop fast-path + DB verification).
+    const minorSafeLocked = isMinorSafe || (await isMinorSafeAthlete(athleteId));
+    if (minorSafeLocked) {
+      toast({
+        title: 'Upload Locked',
+        description: 'Highlight videos cannot be uploaded until a parent completes the consent process for this minor athlete.',
+        variant: 'destructive',
+      });
+      return;
+    }
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
