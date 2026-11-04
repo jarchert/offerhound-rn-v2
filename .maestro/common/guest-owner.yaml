@@ -19,7 +19,7 @@ appId: com.emergentmindlab.offerhoundv2.staging
 - tapOn:
     id: guest-walkup-name
 - inputText: ${QA_GUEST_LABEL} OWNER ONE
-- hideKeyboard
+- pressKey: Enter
 - scrollUntilVisible:
     element:
       id: guest-walkup-submit
@@ -38,7 +38,7 @@ appId: com.emergentmindlab.offerhoundv2.staging
 - tapOn:
     id: guest-walkup-name
 - inputText: ${QA_GUEST_LABEL} OWNER TWO
-- hideKeyboard
+- pressKey: Enter
 - scrollUntilVisible:
     element:
       id: guest-walkup-submit
