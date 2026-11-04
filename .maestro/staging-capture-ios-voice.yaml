@@ -38,18 +38,26 @@ tags: [capture-ios]
     visible: Stop recording
     timeout: 20000
 - extendedWaitUntil:
-    visible: Recording 3 seconds
+    visible: 'Recording ([3-9]|[1-9][0-9]+) seconds'
     timeout: 15000
 - tapOn:
     id: camp-voice-stop
 - extendedWaitUntil:
     visible: Preview draft
     timeout: 20000
+- scrollUntilVisible:
+    element:
+      id: camp-voice-preview
+    direction: DOWN
 - tapOn:
     id: camp-voice-preview
 - extendedWaitUntil:
     visible: ".*Playing draft.*"
     timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: camp-voice-discard
+    direction: DOWN
 - tapOn:
     id: camp-voice-discard
 - extendedWaitUntil:
@@ -58,16 +66,24 @@ tags: [capture-ios]
 - repeat:
     times: 2
     commands:
+      - scrollUntilVisible:
+          element:
+            id: camp-voice-record
+          direction: UP
       - tapOn:
           id: camp-voice-record
       - extendedWaitUntil:
           visible: Stop recording
           timeout: 20000
       - extendedWaitUntil:
-          visible: Recording 3 seconds
+          visible: 'Recording ([3-9]|[1-9][0-9]+) seconds'
           timeout: 15000
       - tapOn:
           id: camp-voice-stop
+      - scrollUntilVisible:
+          element:
+            id: camp-voice-save
+          direction: DOWN
       - tapOn:
           id: camp-voice-save
       - extendedWaitUntil:

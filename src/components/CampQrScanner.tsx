@@ -8,7 +8,7 @@ import { colors, spacing } from '@/lib/theme';
 
 type Props = { onCode: (value: string) => Promise<string>; onManual: () => void };
 export function CampQrScanner({ onCode, onManual }: Props) {
-  const [permission, askPermission] = useCameraPermissions();
+  const [permission, askPermission, refreshPermission] = useCameraPermissions();
   const [active, setActive] = useState(false);
   const [message, setMessage] = useState('Scan an enrollment QR code or choose a QR image.');
   const busy = useRef(false);
@@ -28,7 +28,8 @@ export function CampQrScanner({ onCode, onManual }: Props) {
   const start = async () => {
     if (busy.current) return;
     try {
-      const result = permission?.granted ? permission : await askPermission();
+      const current = await refreshPermission();
+      const result = current.granted || !current.canAskAgain ? current : await askPermission();
       if (!result.granted) { setMessage('Camera access is denied. Use a QR image or manual entry, or enable access in Settings.'); return; }
       setMessage('Point the camera at one enrollment QR code.'); setActive(true);
     } catch { setMessage('The camera is unavailable. Use a QR image or manual entry.'); }

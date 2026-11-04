@@ -80,6 +80,9 @@ tags: [capture-ios, capture-android, capture-qr]
       - tapOn:
           id: com.google.android.documentsui:id/thumbnail
           optional: true
+      - tapOn:
+          id: com.android.documentsui:id/thumbnail
+          optional: true
 - runFlow:
     when:
       platform: iOS
