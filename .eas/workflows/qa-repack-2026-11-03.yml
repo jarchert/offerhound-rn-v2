@@ -1,0 +1,43 @@
+# One-off QA navigation correction. These verified QA sources have the same
+# native dependencies and app identity as this revision; only JS links changed.
+# This is not a production release workflow. No automatic trigger is configured.
+name: OfferHound QA navigation correction 2026-11-03
+jobs:
+  android_qa:
+    name: Repack compatible Android QA binary
+    type: repack
+    runs_on: linux-medium
+    environment: preview
+    params:
+      build_id: 2d26570f-288d-40a0-80ec-2a1c6e9e7ad5
+      profile: staging
+      message: QA navigation registration corrections
+  ios_qa:
+    name: Repack compatible iOS QA simulator binary
+    type: repack
+    runs_on: macos-medium
+    environment: preview
+    params:
+      build_id: b9d4d224-b890-4e0a-a8e0-3a845c8cee48
+      profile: staging
+      message: QA navigation registration corrections
+  smoke_ios:
+    name: iOS QA launch and sign-in screen
+    needs: [ios_qa]
+    type: maestro
+    runs_on: macos-medium
+    environment: preview
+    params:
+      build_id: ${{ needs.ios_qa.outputs.build_id }}
+      flow_path: .maestro/staging-public-smoke.yaml
+      retries: 0
+  smoke_android:
+    name: Android QA launch and sign-in screen
+    needs: [android_qa]
+    type: maestro
+    runs_on: linux-medium-nested-virtualization
+    environment: preview
+    params:
+      build_id: ${{ needs.android_qa.outputs.build_id }}
+      flow_path: .maestro/staging-public-smoke.yaml
+      retries: 0

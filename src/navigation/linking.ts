@@ -136,7 +136,6 @@ export const linking: LinkingOptions<any> = {
           PipelineTab: 'coach/pipeline',
           CampsTab: 'coach/camps',
           LettersTab: 'coach/letters',
-          DirectoryTab: 'coach/directory',
         },
       },
 
@@ -145,8 +144,6 @@ export const linking: LinkingOptions<any> = {
         screens: {
           DashboardTab: { path: 'scout', alias: ['scout/dashboard'] },
           LettersTab: 'scout/letters',
-          TrendsTab: 'scout/trends',
-          OnboardingTab: 'scout/guide',
         },
       },
 
@@ -215,17 +212,18 @@ export const linking: LinkingOptions<any> = {
       SavedCamps: 'camps',
       AthleteSearch: 'athletes',
       InfluencerBoard: 'influencers',
-      CoachDirectory: 'coaches',
+      CoachDirectory: { path: 'coaches', alias: ['coach/directory', 'coach-directory'] },
       CoachProfile: 'coaches/:id',
       PublicClubCoachProfile: 'club-coach/:id',
       SavedCoaches: 'saved-coaches',
       Referrals: 'referrals',
       PodcastEpisodeDetail: 'podcasts/:id',
+      ScoutTrends: 'scout/trends',
       Pricing: 'pricing',
       SubscriptionSuccess: 'subscription/success',
 
       // Fallback not-found (optional; RN v7 supports this)
-      NotFound: '*',
+      NotFound: { path: '*', alias: ['scout/guide'] },
     },
   },
 };
