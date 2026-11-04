@@ -29,19 +29,23 @@ export function CampEvaluatorVoiceNotes({ campId, enrollmentId, drill, onBusyCha
   const [denied, setDenied] = useState(false);
   const [playingId, setPlayingId] = useState('');
   const stopping = useRef(false);
+  const recordingUri = useRef<string | null>(null);
   const mounted = useRef(true);
   const draftRef = useRef<NativeVoiceDraft | null>(null);
   const permission = useQuery({ queryKey: ['camp-voice-access', campId, user?.id], enabled: !!user, queryFn: async () => { const r = await (supabase.rpc as any)('can_evaluate_camp', { p_camp_id: campId }); if (r.error) throw r.error; return r.data === true; } });
   const notes = useQuery({ queryKey: ['native-camp-voice', campId, enrollmentId, drill, user?.id], enabled: !!user && permission.data === true, queryFn: async () => { const r = await supabase.from('camp_voice_notes').select('*').eq('camp_id', campId).eq('enrollment_id', enrollmentId).eq('drill_key', drill).order('created_at', { ascending: false }); if (r.error) throw r.error; return r.data as CampVoiceNote[]; } });
-  const clearLocal = (value: NativeVoiceDraft | null) => { if (!value) return; try { const f = new File(value.uri); if (f.exists) f.delete(); } catch {} };
+  const clearLocal = (value: Pick<NativeVoiceDraft, 'uri'> | null) => { if (!value) return; try { const f = new File(value.uri); if (f.exists) f.delete(); } catch {} };
   const stop = async (cancel = false) => {
     if (stopping.current) return;
     stopping.current = true;
     try {
       const elapsed = Math.min(VOICE_LIMIT_MS, Math.max(1, recorder.getStatus().durationMillis));
       const mediaMs = recorder.currentTime * 1000;
+      const capturedUri = recorder.uri || recordingUri.current;
       await recorder.stop();
-      const uri = recorder.uri;
+      // The hook may have released the recorder while stop was awaiting native work.
+      const uri = mounted.current ? recorder.uri || capturedUri : capturedUri;
+      recordingUri.current = null;
       if (uri && user) {
         const value = { id: newVoiceIdentity(), uri, durationMs: elapsed, staffId: user.id };
         if (cancel || !mounted.current) { clearLocal(value); if (mounted.current) setMessage('Recording cancelled.'); }
@@ -65,7 +69,15 @@ export function CampEvaluatorVoiceNotes({ campId, enrollmentId, drill, onBusyCha
   useEffect(() => {
     mounted.current = true;
     const sub = AppState.addEventListener('change', value => { if (value !== 'active' && recorder.isRecording) void stop(); });
-    return () => { mounted.current = false; sub.remove(); player.pause(); if (recorder.isRecording) void stop(true); clearLocal(draftRef.current); };
+    return () => {
+      mounted.current = false;
+      sub.remove();
+      // Expo's audio hooks own release/stop on unmount. Their effect cleanup runs
+      // before this one, so calling player or recorder methods here is invalid.
+      clearLocal(draftRef.current);
+      if (recordingUri.current) clearLocal({ uri: recordingUri.current });
+      recordingUri.current = null;
+    };
   }, [recorder, player]);
   const start = async () => {
     if (!user || permission.data !== true || busy || draft || recorder.isRecording) return;
@@ -76,10 +88,13 @@ export function CampEvaluatorVoiceNotes({ campId, enrollmentId, drill, onBusyCha
       if (!mounted.current || !focusRef.current || AppState.currentState !== 'active') return;
       player.pause(); setDenied(false);
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      if (!mounted.current) return;
       await recorder.prepareToRecordAsync();
-      if (!mounted.current || !focusRef.current || AppState.currentState !== 'active') { await recorder.stop(); await setAudioModeAsync({ allowsRecording: false }); return; }
+      if (!mounted.current) return;
+      recordingUri.current = recorder.uri;
+      if (!focusRef.current || AppState.currentState !== 'active') { await recorder.stop(); clearLocal(recordingUri.current ? {uri:recordingUri.current} : null); recordingUri.current = null; await setAudioModeAsync({ allowsRecording: false }); return; }
       recorder.record(); setMessage('Recording… Stop when finished.');
-    } catch (error: any) { setMessage(error.message || 'Microphone unavailable. Written notes remain available.'); await setAudioModeAsync({ allowsRecording: false }).catch(() => {}); }
+    } catch (error: any) { if (mounted.current) setMessage(error.message || 'Microphone unavailable. Written notes remain available.'); await setAudioModeAsync({ allowsRecording: false }).catch(() => {}); }
     finally { if (mounted.current) setBusy(false); }
   };
   const save = async () => {
