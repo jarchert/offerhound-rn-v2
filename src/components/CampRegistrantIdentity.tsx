@@ -1,3 +1,4 @@
+import { CampProfileVoiceNotes } from '@/components/CampProfileVoiceNotes';
 import React, { useState } from 'react';
 import { View, Text, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -56,5 +57,5 @@ function CompleteNativeRegistrant({enrollmentId}:{enrollmentId:string}) {
 }
 export function CampRegistrantProfileDisclosure({enrollmentId}:{enrollmentId:string}) {
  const [open,setOpen]=useState(false);
- return <View><Button variant="outline" onPress={()=>setOpen(!open)}>{open?'Hide athlete profile':'View athlete profile'}</Button>{open?<CampRegistrantProfile enrollmentId={enrollmentId}/>:null}</View>;
+ return <View><Button variant="outline" onPress={()=>setOpen(!open)}>{open?'Hide athlete profile':'View athlete profile'}</Button>{open?<><CampRegistrantProfile enrollmentId={enrollmentId}/><CampProfileVoiceNotes enrollmentId={enrollmentId}/></>:null}</View>;
 }
