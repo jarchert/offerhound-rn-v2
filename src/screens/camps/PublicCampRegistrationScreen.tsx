@@ -1,3 +1,4 @@
+import { CampParticipantsPanel } from '@/components/CampParticipantsPanel';
 import { CampRegistrantIdentityForm, emptyNativeIdentity, validateNativeIdentity } from '@/components/CampRegistrantIdentity';
 import { makeGuestRequestKey } from '@/lib/nativeCampGuest';
 // PublicCampRegistrationScreen — RN port of Lovable web src/pages/PublicCampRegistration.tsx (966 LOC).
@@ -478,6 +479,8 @@ export default function PublicCampRegistrationScreen() {
             </Button>
           </View>
         </View>
+
+        <CampParticipantsPanel campId={campId!} campName={c.name} />
 
         <Card style={s.heroCard}>
           {c.image_url ? (

@@ -9,3 +9,6 @@ The private camp-registrant-headshots bucket uses camp/actor/request.jpg or .png
 Legacy enrollments are retained and explicitly marked incomplete until their real details are supplied. Old incomplete offline registrations remain pending rather than being silently registered without a photo. Upload the required headshot while connected before saving a registration offline.
 
 Web source and backend migrations remain in the separate web repository. This document records the API requirements only. Native tests do not certify web, and web tests do not certify native.
+
+## Direct access from camp discovery
+The Details action opens the full managed camp page. Authorized camp owners and accepted registration/evaluation staff see Participants & registered athletes, with current enrollment counts, registered/checked-in filters, profiles and page controls. Cancelled entries are excluded. Profile details remain private; no participant query is issued until camp-specific staff authorization succeeds. Check-in/walk-up tools require registration permission; evaluation tools require evaluation permission. Each action retains the selected camp ID. Upcoming and ongoing published/active camps remain discoverable through their end date. External directory listings are not treated as OfferHound participant databases.
