@@ -27,6 +27,11 @@ appId: com.emergentmindlab.offerhoundv2.staging
     timeout: 20000
 - tapOn:
     id: guest-walkup-submit
+- scrollUntilVisible:
+    element:
+      text: ${QA_GUEST_LABEL} OWNER ONE registered
+    direction: DOWN
+    timeout: 60000
 - extendedWaitUntil:
     visible: ${QA_GUEST_LABEL} OWNER ONE registered
     timeout: 60000
@@ -46,6 +51,11 @@ appId: com.emergentmindlab.offerhoundv2.staging
     timeout: 20000
 - tapOn:
     id: guest-walkup-submit
+- scrollUntilVisible:
+    element:
+      text: ${QA_GUEST_LABEL} OWNER TWO registered
+    direction: DOWN
+    timeout: 60000
 - extendedWaitUntil:
     visible: ${QA_GUEST_LABEL} OWNER TWO registered
     timeout: 60000

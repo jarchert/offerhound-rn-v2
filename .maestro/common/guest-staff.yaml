@@ -27,6 +27,11 @@ appId: com.emergentmindlab.offerhoundv2.staging
     timeout: 20000
 - tapOn:
     id: guest-walkup-submit
+- scrollUntilVisible:
+    element:
+      text: ${QA_GUEST_LABEL} STAFF GUEST registered
+    direction: DOWN
+    timeout: 60000
 - extendedWaitUntil:
     visible: ${QA_GUEST_LABEL} STAFF GUEST registered
     timeout: 60000
