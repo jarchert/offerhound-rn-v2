@@ -1,6 +1,6 @@
 appId: com.emergentmindlab.offerhoundv2.staging
 name: android evaluator voice persistence playback and deletion
-tags: [capture-android]
+tags: [capture-android, capture-android-voice]
 ---
 - runFlow:
     file: common/login.yaml

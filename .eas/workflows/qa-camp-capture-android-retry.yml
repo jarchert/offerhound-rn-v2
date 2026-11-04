@@ -1,0 +1,33 @@
+# Reuse the fresh camera/audio Android binary, independently of iOS.
+name: OfferHound Android camp capture acceptance
+jobs:
+  capture_android_qr:
+    type: maestro
+    runs_on: linux-medium-nested-virtualization
+    environment: preview
+    params:
+      build_id: d8abb781-eb4c-4765-baf5-2e0d029699ee
+      flow_path: .maestro
+      include_tags: capture-qr
+      record_screen: true
+      retries: 0
+  capture_android_access:
+    type: maestro
+    runs_on: linux-medium-nested-virtualization
+    environment: preview
+    params:
+      build_id: d8abb781-eb4c-4765-baf5-2e0d029699ee
+      flow_path: .maestro
+      include_tags: capture-access
+      record_screen: true
+      retries: 0
+  capture_android_voice:
+    type: maestro
+    runs_on: linux-medium-nested-virtualization
+    environment: preview
+    params:
+      build_id: d8abb781-eb4c-4765-baf5-2e0d029699ee
+      flow_path: .maestro
+      include_tags: capture-android-voice
+      record_screen: true
+      retries: 0

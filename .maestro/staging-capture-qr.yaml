@@ -28,7 +28,12 @@ tags: [capture-ios, capture-android, capture-qr]
 - assertVisible: ".*complete.*QR.*"
 - tapOn:
     id: camp-manual-token
-- eraseText
+- longPressOn:
+    id: camp-manual-token
+- tapOn:
+    text: Select All
+    optional: true
+- eraseText: 100
 - inputText: ${MAESTRO_CAPTURE_EXPIRED_TOKEN}
 - hideKeyboard
 - tapOn:
@@ -38,7 +43,12 @@ tags: [capture-ios, capture-android, capture-qr]
     timeout: 30000
 - tapOn:
     id: camp-manual-token
-- eraseText
+- longPressOn:
+    id: camp-manual-token
+- tapOn:
+    text: Select All
+    optional: true
+- eraseText: 100
 - inputText: ${MAESTRO_CAPTURE_MANUAL_TOKEN}
 - hideKeyboard
 - tapOn:
