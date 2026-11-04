@@ -83,12 +83,12 @@ export default function CampMobileCheckinScreen() {
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       // Auth gate parity with web (web redirects to /auth?redirect=...).
-      navigation.navigate('Auth' as never);
+      navigation.navigate('AuthStack', { screen: 'Auth' });
     }
   }, [authLoading, isAuthenticated, navigation]);
 
   const { data: camp, isLoading: campLoading } = useQuery({
-    queryKey: ['camp-mobile-checkin-camp', campId],
+    queryKey: ['camp-mobile-checkin-camp', campId, user?.id],
     queryFn: async () => {
       if (!campId) return null;
       const { data, error } = await supabase
@@ -99,11 +99,11 @@ export default function CampMobileCheckinScreen() {
       if (error) throw error;
       return data as CampSummary | null;
     },
-    enabled: !!campId,
+    enabled: !!campId && isAuthenticated,
   });
 
   const { data: enrollments = [], isLoading: enrollmentsLoading } = useQuery({
-    queryKey: ['camp-ops-enrollments', campId],
+    queryKey: ['camp-ops-enrollments', campId, user?.id],
     queryFn: async () => {
       if (!campId) return [];
       const { data, error } = await supabase
@@ -116,7 +116,7 @@ export default function CampMobileCheckinScreen() {
       if (error) throw error;
       return (data || []) as Enrollment[];
     },
-    enabled: !!campId,
+    enabled: !!campId && isAuthenticated,
     refetchInterval: isOnline ? 8000 : false,
   });
 
@@ -209,7 +209,7 @@ export default function CampMobileCheckinScreen() {
     .filter((e) => e.status !== 'checked_in' && e.status !== 'cancelled')
     .slice(0, 25);
 
-  if (authLoading || campLoading) {
+  if (authLoading || !isAuthenticated || campLoading) {
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color={colors.primary} />

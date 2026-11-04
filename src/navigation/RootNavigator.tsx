@@ -198,7 +198,7 @@ export default function RootNavigator() {
           <Stack.Screen name="PublicSportStack" component={PublicSportStack} />
           <Stack.Screen name="AuthStack" component={AuthStack} />
           <Stack.Screen name="PublicProfileStack" component={PublicProfileStack} />
-          <Stack.Screen name="CampStack" component={CampStack} />
+          <Stack.Screen name="CampStack" component={CampStack} navigationKey="public-camps" />
           <Stack.Screen name="Install" component={InstallScreen} />
           <Stack.Screen name="FounderMessage" component={FounderMessageScreen} />
           <Stack.Screen name="Pricing" component={PricingScreen} />
@@ -221,7 +221,7 @@ export default function RootNavigator() {
 
           {/* Shared stacks accessible from any role */}
           <Stack.Screen name="OnboardingStack" component={OnboardingStack} />
-          <Stack.Screen name="CampStack" component={CampStack} />
+          <Stack.Screen name="CampStack" component={CampStack} navigationKey={`staff-camps:${user.id}`} />
           <Stack.Screen name="SettingsStack" component={SettingsStack} />
           <Stack.Screen name="PublicProfileStack" component={PublicProfileStack} />
           <Stack.Screen name="PublicSportStack" component={PublicSportStack} />
