@@ -7,6 +7,10 @@ name: QA hs-coach login restore admin denial and logout
       QA_EMAIL: qa.hs-coach@offerhound.test
       QA_PASSWORD: ${MAESTRO_QA_HS_COACH_PASSWORD}
 - runFlow:
+    when:
+      visible: Terms of Use & Privacy Policy
+    file: common/accept-qa-terms.yaml
+- runFlow:
     file: common/role-check.yaml
     env:
       QA_EMAIL: qa.hs-coach@offerhound.test

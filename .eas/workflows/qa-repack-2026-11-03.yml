@@ -1,7 +1,7 @@
-# One-off QA navigation correction. These verified QA sources have the same
-# native dependencies and app identity as this revision; only JS links changed.
+# One-off QA routing and consent correction. These verified QA sources have the same
+# native dependencies and app identity as this revision; only JavaScript changed.
 # This is not a production release workflow. No automatic trigger is configured.
-name: OfferHound QA navigation correction 2026-11-03
+name: OfferHound QA routing and consent correction 2026-11-03
 jobs:
   android_qa:
     name: Repack compatible Android QA binary
@@ -11,7 +11,7 @@ jobs:
     params:
       build_id: 2d26570f-288d-40a0-80ec-2a1c6e9e7ad5
       profile: staging
-      message: QA navigation registration corrections
+      message: QA routing and consent state corrections
   ios_qa:
     name: Repack compatible iOS QA simulator binary
     type: repack
@@ -20,44 +20,44 @@ jobs:
     params:
       build_id: b9d4d224-b890-4e0a-a8e0-3a845c8cee48
       profile: staging
-      message: QA navigation registration corrections
-  smoke_ios:
-    name: iOS QA launch and sign-in screen
+      message: QA routing and consent state corrections
+  roles_ios:
+    name: ios ten QA role journeys
     needs: [ios_qa]
     type: maestro
     runs_on: macos-medium
     environment: preview
     params:
       build_id: ${{ needs.ios_qa.outputs.build_id }}
-      flow_path: .maestro/staging-public-smoke.yaml
+      flow_path:
+        - .maestro/staging-athlete-auth.yaml
+        - .maestro/staging-admin-auth.yaml
+        - .maestro/staging-role-u13-athlete.yaml
+        - .maestro/staging-role-parent.yaml
+        - .maestro/staging-role-college-coach.yaml
+        - .maestro/staging-role-club-coach.yaml
+        - .maestro/staging-role-hs-coach.yaml
+        - .maestro/staging-role-scout.yaml
+        - .maestro/staging-role-agency-owner.yaml
+        - .maestro/staging-role-influencer.yaml
       retries: 0
-  smoke_android:
-    name: Android QA launch and sign-in screen
+  roles_android:
+    name: android ten QA role journeys
     needs: [android_qa]
     type: maestro
     runs_on: linux-medium-nested-virtualization
     environment: preview
     params:
       build_id: ${{ needs.android_qa.outputs.build_id }}
-      flow_path: .maestro/staging-public-smoke.yaml
-      retries: 0
-  athlete_auth_ios:
-    name: iOS athlete login restore admin denial and logout
-    needs: [ios_qa]
-    type: maestro
-    runs_on: macos-medium
-    environment: preview
-    params:
-      build_id: ${{ needs.ios_qa.outputs.build_id }}
-      flow_path: .maestro/staging-athlete-auth.yaml
-      retries: 0
-  admin_auth_ios:
-    name: iOS admin login restore authorization and logout
-    needs: [ios_qa]
-    type: maestro
-    runs_on: macos-medium
-    environment: preview
-    params:
-      build_id: ${{ needs.ios_qa.outputs.build_id }}
-      flow_path: .maestro/staging-admin-auth.yaml
+      flow_path:
+        - .maestro/staging-athlete-auth.yaml
+        - .maestro/staging-admin-auth.yaml
+        - .maestro/staging-role-u13-athlete.yaml
+        - .maestro/staging-role-parent.yaml
+        - .maestro/staging-role-college-coach.yaml
+        - .maestro/staging-role-club-coach.yaml
+        - .maestro/staging-role-hs-coach.yaml
+        - .maestro/staging-role-scout.yaml
+        - .maestro/staging-role-agency-owner.yaml
+        - .maestro/staging-role-influencer.yaml
       retries: 0

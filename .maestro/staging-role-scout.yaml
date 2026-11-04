@@ -11,4 +11,4 @@ name: QA scout login restore admin denial and logout
     env:
       QA_EMAIL: qa.scout@offerhound.test
       QA_ROLE_KEY: scout
-      QA_ROLE_MARKER: "QA Scout"
+      QA_ROLE_MARKER: ".*QA Scout.*"

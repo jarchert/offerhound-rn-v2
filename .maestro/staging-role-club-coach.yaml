@@ -7,6 +7,10 @@ name: QA club-coach login restore admin denial and logout
       QA_EMAIL: qa.club-coach@offerhound.test
       QA_PASSWORD: ${MAESTRO_QA_CLUB_COACH_PASSWORD}
 - runFlow:
+    when:
+      visible: Terms of Use & Privacy Policy
+    file: common/accept-qa-terms.yaml
+- runFlow:
     file: common/role-check.yaml
     env:
       QA_EMAIL: qa.club-coach@offerhound.test
