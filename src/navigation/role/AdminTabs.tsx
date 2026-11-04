@@ -1,6 +1,8 @@
 // AdminTabs — 6 tabs per Part 2 §2.1: Overview, Users, Moderation, Content, Audit, Settings
 // Part 32 describes admin suite conversion.
 import React from 'react';
+import { View, Text, ActivityIndicator } from 'react-native';
+import { useAdminRole } from '@/hooks/useAdminRole';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
 import { roleTabScreenOptions } from '@/navigation/role/roleTabScreenOptions';
@@ -17,6 +19,10 @@ import AdminSettingsScreen from '@/screens/admin/AdminSettingsScreen';
 const Tab = createBottomTabNavigator();
 
 export default function AdminTabs() {
+  const { isAdmin, loading } = useAdminRole();
+  // Do not mount any admin screen (or its queries) until the server allows it.
+  if (loading) return <View><ActivityIndicator /><Text>Checking access…</Text></View>;
+  if (!isAdmin) return <View><Text>Admins only</Text></View>;
   return (
     <Tab.Navigator
       screenOptions={roleTabScreenOptions}>

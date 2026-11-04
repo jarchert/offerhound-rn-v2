@@ -32,7 +32,11 @@ env:
   EXPO_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
 
 jobs:
+  quality:
+    uses: ./.github/workflows/native-quality.yml
+
   build:
+    needs: quality
     name: Build (${{ inputs.platform || 'all' }} / ${{ inputs.profile || 'preview' }})
     runs-on: ubuntu-latest
     steps:
@@ -62,7 +66,6 @@ jobs:
 
       - name: Build iOS
         if: ${{ github.event.inputs.platform != 'android' }}
-        continue-on-error: true
         env:
           EXPO_ASC_API_KEY_PATH: /tmp/expo-asc/key.p8
           ASC_API_KEY_ID: ${{ secrets.EXPO_ASC_API_KEY_ID }}

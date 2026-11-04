@@ -7,7 +7,9 @@ import Toast from 'react-native-toast-message';
 import { signInWithApple as nativeAppleSignIn, isAppleSignInAvailable } from '@/lib/appleSignIn';
 import { registerForPushNotifications } from '@/lib/push';
 
-const REDIRECT_SCHEME = 'offerhoundv2://';
+const REDIRECT_SCHEME = process.env.EXPO_PUBLIC_APP_ENV === 'staging'
+  ? 'offerhound-staging://'
+  : 'offerhoundv2://';
 
 const toast = {
   success: (text1: string) => Toast.show({ type: 'success', text1 }),

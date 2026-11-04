@@ -1,5 +1,5 @@
 // linking.ts — React Navigation deep-link config per Part 2 §2.1
-// Universal Links: https://playbook-promoter.lovable.app/* and https://offerhound.app/*
+// Universal Links include the canonical OfferHound web domain.
 // Custom scheme: offerhoundv2://
 // Route coverage: 122 paths from Lovable app.
 import type { LinkingOptions } from '@react-navigation/native';
@@ -9,6 +9,8 @@ export const linking: LinkingOptions<any> = {
   prefixes: [
     Linking.createURL('/'),
     'offerhoundv2://',
+    'https://offer-hound.com',
+    'https://www.offer-hound.com',
     'https://offerhound.app',
     'https://www.offerhound.app',
     'https://playbook-promoter.lovable.app',
@@ -76,7 +78,7 @@ export const linking: LinkingOptions<any> = {
       // Camp ecosystem (shared across roles)
       CampStack: {
         screens: {
-          CampDiscovery: 'camps',
+          CampDiscovery: 'camp-discovery',
           CampsList: 'camps/list',
           CampsDiscover: 'camps/discover',
           ClaimCampSpot: 'camps/claim',
@@ -217,7 +219,6 @@ export const linking: LinkingOptions<any> = {
       SavedCoaches: 'saved-coaches',
       Referrals: 'referrals',
       PodcastEpisodeDetail: 'podcasts/:id',
-      ScoutTrends: 'scout/trends',
       Pricing: 'pricing',
       SubscriptionSuccess: 'subscription/success',
 

@@ -11,5 +11,5 @@ The OfferHound web application and React Native mobile application MUST always r
 - Do not change repository links or release branches without verifying the intended platform and project identity.
 - This rule persists for all future OfferHound work unless the owner explicitly changes it.
 
-Web: Lovable OfferHound MAIN (project a171504d-fe76-405b-b44d-3158df669502); GitHub repository link must be verified.
+Web: Lovable OfferHound MAIN (project a171504d-fe76-405b-b44d-3158df669502); GitHub jarchert/playbook-promoter-c3ae2d35 (branch jarchert/playbook-promoter), verified in Lovable Git settings.
 Mobile: jarchert/offerhound-rn-v2; Expo @jarchert/offerhound-v2.

@@ -53,6 +53,24 @@
         "EXPO_INCLUDE_WIDGETS": "false",
         "EXPO_INCLUDE_LIVE_ACTIVITIES": "false"
       }
+    },
+    "staging": {
+      "distribution": "internal",
+      "environment": "preview",
+      "channel": "staging",
+      "ios": {
+        "simulator": true
+      },
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "APP_ENV": "staging",
+        "EXPO_PUBLIC_APP_ENV": "staging",
+        "EXPO_INCLUDE_APP_CLIP": "false",
+        "EXPO_INCLUDE_WIDGETS": "false",
+        "EXPO_INCLUDE_LIVE_ACTIVITIES": "false"
+      }
     }
   },
   "submit": {

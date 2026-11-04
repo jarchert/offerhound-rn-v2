@@ -144,7 +144,8 @@ export default function RootNavigator() {
   const { data: scoutOrg } = useScoutOrganization();
   const isAgency = userRole === 'scout' && !!scoutOrg && ((scoutOrg as any).isOwner || (scoutOrg as any).isMember);
 
-  if (isLoading) return null;
+  // Session restoration can complete before the asynchronous role lookup.
+  if (isLoading || (user && !userRole)) return null;
 
   // Resolve the initial route. With the new fetchUserRole resolver, userRole is
   // always set for authenticated users (defaults to 'athlete' on error). The old
@@ -160,6 +161,7 @@ export default function RootNavigator() {
   return (
     <>
     <Stack.Navigator
+      key={`${user?.id ?? 'public'}:${initialRouteName}`}
       initialRouteName={initialRouteName}
       screenOptions={{
         headerShown: false,

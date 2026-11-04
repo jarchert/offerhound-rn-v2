@@ -31,27 +31,13 @@ const configBlock = realSrc.slice(start + 'config: '.length, endIdx + 1);
 const asJs = '(' + configBlock.replace(/\/\/[^\n]*\n/g, '\n') + ')';
 const config = (0, eval)(asJs);
 
-// Neutralize pre-existing duplicate registrations so the real parser can run
-// against the URLs this probe cares about. All of these existed in linking.ts
-// before this session's edits — the duplicates are not caused by the two-line
-// fix under test. The drops are probe-only; the real file is untouched here.
-// Recording each as a separate follow-up.
-//
-// Pre-existing duplicates in src/navigation/linking.ts:
-//   'camps'        -> CampStack>CampDiscovery (line 79)  vs  SavedCamps (line 211)
-//   'scout/trends' -> ScoutTabs>TrendsTab      (line 146) vs  ScoutTrends (line 220)
-if (config.screens?.ScoutTrends === 'scout/trends') {
-  delete config.screens.ScoutTrends;
-  console.log("  (probe-only: removed pre-existing duplicate top-level ScoutTrends -> 'scout/trends')");
-}
-if (config.screens?.SavedCamps === 'camps') {
-  delete config.screens.SavedCamps;
-  console.log("  (probe-only: removed pre-existing duplicate top-level SavedCamps -> 'camps')");
-}
 console.log('  (config loaded from src/navigation/linking.ts, screens keys:', Object.keys(config.screens).length, ')');
 console.log('  (real linking.ts sha256:', createHash('sha256').update(realSrc).digest('hex').slice(0, 12), ')');
 
 const cases = [
+  ['/camp-discovery', 'CampDiscovery'],
+  ['/camps', 'SavedCamps'],
+  ['/scout/trends', 'TrendsTab'],
   ['/founder-message',       'FounderMessage'],
   ['/subscription/success',  'SubscriptionSuccess'],
   ['/podcasts/abc123',       'PodcastEpisodeDetail'],
@@ -76,6 +62,7 @@ function leafParams(state) {
   return route.params ?? null;
 }
 
+let failures = 0;
 console.log('=== getStateFromPath probe (real React Navigation parser) ===');
 for (const [url, expected] of cases) {
   const state = getStateFromPath(url, config);
@@ -88,5 +75,8 @@ for (const [url, expected] of cases) {
   } else {
     verdict = name === expected ? `OK -> ${expected}` : `FAIL (got ${name || 'nothing'}, expected ${expected})`;
   }
+  if (verdict.startsWith('FAIL')) failures++;
   console.log(`  ${url.padEnd(30)} -> name=${String(name).padEnd(24)} params=${JSON.stringify(params) || 'null'} [${verdict}]`);
 }
+
+if (failures) process.exitCode = 1;
