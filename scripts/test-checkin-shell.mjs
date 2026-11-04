@@ -42,3 +42,34 @@ for (let render = 0; render < 20; render++) {
   assert.equal(next.dismiss, first.dismiss);
 }
 console.log('Check-in shell: PASS (keyboard/route hook order and stable notification callbacks)');
+
+// Exercise the actual root component across auth transitions. Shared camp
+// routes must not survive logout, and a cold public deep link is left intact.
+let signedInUser = null;
+let previousUserRef;
+let rootEffects = [];
+const rootReact = {
+  createElement: (...args) => args,
+  useRef: value => previousUserRef ??= { current: value },
+  useEffect: fn => rootEffects.push(fn),
+};
+const resets = [];
+const rootSource = fs.readFileSync(new URL('../src/navigation/RootNavigator.tsx', import.meta.url), 'utf8');
+const rootImports = Object.fromEntries(ts.preProcessFile(rootSource).importedFiles.map(file => [file.fileName, { __esModule: true, default: 'Screen' }]));
+Object.assign(rootImports, {
+  react: { __esModule: true, default: rootReact, ...rootReact },
+  'react-native': { ActivityIndicator: 'ActivityIndicator', Pressable: 'Pressable', SafeAreaView: 'SafeAreaView', Text: 'Text', View: 'View' },
+  '@react-navigation/native-stack': { createNativeStackNavigator: () => ({ Navigator: 'Navigator', Screen: 'Screen' }) },
+  '@/contexts/AuthContext': { useAuth: () => ({ user: signedInUser, userRole: signedInUser ? 'coach' : null, isLoading: false }) },
+  '@/navigation/navigationRef': { navigationRef: { isReady: () => true, resetRoot: state => resets.push(state) } },
+  '@/hooks/useScoutOrganization': { useScoutOrganization: () => ({ data: null, isPending: false, isError: false }) },
+  '@/lib/theme': { colors: {} },
+});
+const root = load('../src/navigation/RootNavigator.tsx', rootImports);
+for (const [id, expectedResets] of [[null, 0], ['owner-a', 0], [null, 1], [null, 1], ['staff-b', 1], [null, 2]]) {
+  signedInUser = id ? { id } : null; rootEffects = [];
+  root.default(); rootEffects.forEach(effect => effect());
+  assert.equal(resets.length, expectedResets, 'Ending an authenticated session must discard the shared camp route');
+}
+assert(resets.every(state => state.index === 0 && state.routes.length === 1 && state.routes[0].name === 'PublicTabs'));
+console.log('Root logout reset: PASS (two independent sessions; cold public navigation preserved)');
