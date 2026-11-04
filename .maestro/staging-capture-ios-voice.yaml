@@ -1,5 +1,6 @@
 appId: com.emergentmindlab.offerhoundv2.staging
 name: ios evaluator voice persistence playback and deletion
+tags: [capture-ios]
 ---
 - runFlow:
     file: common/login.yaml

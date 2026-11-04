@@ -22,10 +22,9 @@ jobs:
     environment: preview
     params:
       build_id: ${{ needs.ios_qa.outputs.build_id }}
-      flow_path:
-        - .maestro/staging-capture-qr.yaml
-        - .maestro/staging-capture-ios-voice.yaml
-        - .maestro/staging-capture-denied.yaml
+      flow_path: .maestro
+      include_tags: capture-ios
+      record_screen: true
       retries: 0
   capture_android:
     type: maestro
@@ -34,8 +33,7 @@ jobs:
     environment: preview
     params:
       build_id: ${{ needs.android_qa.outputs.build_id }}
-      flow_path:
-        - .maestro/staging-capture-qr.yaml
-        - .maestro/staging-capture-android-voice.yaml
-        - .maestro/staging-capture-denied.yaml
+      flow_path: .maestro
+      include_tags: capture-android
+      record_screen: true
       retries: 0

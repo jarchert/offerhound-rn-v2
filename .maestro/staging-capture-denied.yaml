@@ -1,5 +1,6 @@
 appId: com.emergentmindlab.offerhoundv2.staging
 name: Unassigned athlete cannot evaluate or record
+tags: [capture-ios, capture-android]
 ---
 - runFlow:
     file: common/login.yaml

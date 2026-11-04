@@ -1,0 +1,13 @@
+# Tests only: the fresh camera/audio build is reused unchanged.
+name: OfferHound iOS camp capture device tests
+jobs:
+  capture_ios:
+    type: maestro
+    runs_on: macos-medium
+    environment: preview
+    params:
+      build_id: aaef8566-4fff-4681-a3b5-a718c248d461
+      flow_path: .maestro
+      include_tags: capture-ios
+      record_screen: true
+      retries: 0

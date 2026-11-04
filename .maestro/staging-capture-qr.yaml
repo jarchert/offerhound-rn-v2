@@ -1,5 +1,6 @@
 appId: com.emergentmindlab.offerhoundv2.staging
 name: Full QR validation and native image decoder
+tags: [capture-ios, capture-android]
 ---
 - runFlow:
     file: common/login.yaml
