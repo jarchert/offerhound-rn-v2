@@ -21,8 +21,8 @@ jobs:
       build_id: b9d4d224-b890-4e0a-a8e0-3a845c8cee48
       profile: staging
       message: QA routing and consent state corrections
-  roles_ios:
-    name: ios ten QA role journeys
+  roles_ios_core:
+    name: ios core QA role journeys
     needs: [ios_qa]
     type: maestro
     runs_on: macos-medium
@@ -35,14 +35,24 @@ jobs:
         - .maestro/staging-role-u13-athlete.yaml
         - .maestro/staging-role-parent.yaml
         - .maestro/staging-role-college-coach.yaml
+      retries: 0
+  roles_ios_staff:
+    name: ios staff QA role journeys
+    needs: [ios_qa]
+    type: maestro
+    runs_on: macos-medium
+    environment: preview
+    params:
+      build_id: ${{ needs.ios_qa.outputs.build_id }}
+      flow_path:
         - .maestro/staging-role-club-coach.yaml
         - .maestro/staging-role-hs-coach.yaml
         - .maestro/staging-role-scout.yaml
         - .maestro/staging-role-agency-owner.yaml
         - .maestro/staging-role-influencer.yaml
       retries: 0
-  roles_android:
-    name: android ten QA role journeys
+  roles_android_core:
+    name: android core QA role journeys
     needs: [android_qa]
     type: maestro
     runs_on: linux-medium-nested-virtualization
@@ -55,6 +65,16 @@ jobs:
         - .maestro/staging-role-u13-athlete.yaml
         - .maestro/staging-role-parent.yaml
         - .maestro/staging-role-college-coach.yaml
+      retries: 0
+  roles_android_staff:
+    name: android staff QA role journeys
+    needs: [android_qa]
+    type: maestro
+    runs_on: linux-medium-nested-virtualization
+    environment: preview
+    params:
+      build_id: ${{ needs.android_qa.outputs.build_id }}
+      flow_path:
         - .maestro/staging-role-club-coach.yaml
         - .maestro/staging-role-hs-coach.yaml
         - .maestro/staging-role-scout.yaml

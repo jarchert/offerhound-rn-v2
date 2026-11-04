@@ -2,6 +2,7 @@
 // NO NavigationContainer here (App.tsx owns it). This is the root Stack that
 // branches on auth + role and exposes 9 role navigators + 7 shared stacks.
 import React from 'react';
+import { ActivityIndicator, Pressable, SafeAreaView, Text, View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '@/contexts/AuthContext';
 import { useScoutOrganization } from '@/hooks/useScoutOrganization';
@@ -137,15 +138,39 @@ export function roleToInitialRoute(role: UserRole | null | undefined): keyof Roo
 }
 
 export default function RootNavigator() {
-  const { user, userRole, isLoading } = useAuth() as any;
+  const { user, userRole, isLoading, signOut } = useAuth() as any;
 
   // Agency detection: if user is a scout AND owns or belongs to a scout_organization,
   // route them to AgencyTabs instead of ScoutTabs. Mirrors Lovable Navbar.tsx logic.
-  const { data: scoutOrg } = useScoutOrganization();
+  const scoutOrganization = useScoutOrganization();
+  const scoutOrg = scoutOrganization.data;
   const isAgency = userRole === 'scout' && !!scoutOrg && ((scoutOrg as any).isOwner || (scoutOrg as any).isMember);
 
   // Session restoration can complete before the asynchronous role lookup.
   if (isLoading || (user && !userRole)) return null;
+
+  // A scout's organization determines which navigator must mount first. Changing
+  // initialRouteName after a navigator has mounted does not reliably replace the
+  // NavigationContainer state on both platforms.
+  if (user && userRole === 'scout' && (scoutOrganization.isPending || scoutOrganization.isError)) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: 16 }}>
+          {scoutOrganization.isError ? (
+            <>
+              <Text style={{ color: colors.foreground, textAlign: 'center' }}>Could not load your organization.</Text>
+              <Pressable accessibilityRole="button" onPress={() => { void scoutOrganization.refetch(); }} style={{ padding: 16 }}>
+                <Text style={{ color: colors.primary }}>Retry</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" onPress={() => { void signOut(); }} style={{ padding: 16 }}>
+                <Text style={{ color: colors.foreground }}>Sign out</Text>
+              </Pressable>
+            </>
+          ) : <ActivityIndicator accessibilityLabel="Loading organization" color={colors.primary} />}
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   // Resolve the initial route. With the new fetchUserRole resolver, userRole is
   // always set for authenticated users (defaults to 'athlete' on error). The old
