@@ -1,3 +1,4 @@
+import { CampRegistrantProfile } from '@/components/CampRegistrantIdentity';
 // CampEvaluatorScoringScreen — RN port of Lovable web src/pages/CampEvaluatorScoring.tsx (441 LOC).
 // Quick mobile interface for evaluators to record drill scores during a camp. Athletes are
 // pickable from a searchable list; selecting one reveals the drill picker, score input,
@@ -308,6 +309,7 @@ export default function CampEvaluatorScoringScreen() {
           </Card>
         ) : (
           <Card>
+            <CampRegistrantProfile enrollmentId={activeEnrollment.id} />
             <CardHeader style={styles.activeHeader}>
               <View style={{ flexShrink: 1 }}>
                 <CardTitle>

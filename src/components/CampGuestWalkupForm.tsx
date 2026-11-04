@@ -1,3 +1,4 @@
+import { CampRegistrantIdentityForm, emptyNativeIdentity } from '@/components/CampRegistrantIdentity';
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View, StyleSheet } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -15,6 +16,7 @@ export function CampGuestWalkupForm({ campId, positions, online, refreshQueue }:
   const { user } = useAuth();
   const cache = useQueryClient();
   const [key, setKey] = useState(makeGuestRequestKey);
+  const [identity, setIdentity] = useState(emptyNativeIdentity);
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
   const [number, setNumber] = useState('');
@@ -38,7 +40,7 @@ export function CampGuestWalkupForm({ campId, positions, online, refreshQueue }:
     },
     onSuccess: result => {
       setRecentEntries(previous => [`${result.name} ${result.queued ? 'saved offline' : 'registered'}`, ...previous].slice(0, 5));
-      setGuestName(''); setGuestEmail(''); setNumber(''); setSelectedPosition(''); setKey(makeGuestRequestKey());
+      setIdentity(emptyNativeIdentity()); setGuestName(''); setGuestEmail(''); setNumber(''); setSelectedPosition(''); setKey(makeGuestRequestKey());
       refreshQueue();
       cache.invalidateQueries({ queryKey: ['camp-ops-enrollments', campId] });
       cache.invalidateQueries({ queryKey: ['camp-enrollments', campId] });
@@ -53,11 +55,12 @@ export function CampGuestWalkupForm({ campId, positions, online, refreshQueue }:
     <CardHeader><CardTitle>Guest walk-up registration</CardTitle></CardHeader>
     <CardContent style={s.stack}>
       <Input label="Guest name *" accessibilityLabel="Guest name" testID="guest-walkup-name" value={guestName} onChangeText={setGuestName} maxLength={120} editable={!registration.isPending} autoCapitalize="words" />
-      <Input label="Email (optional)" accessibilityLabel="Guest email" value={guestEmail} onChangeText={setGuestEmail} maxLength={254} editable={!registration.isPending} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
+      <Input label="Email *" accessibilityLabel="Guest email" value={guestEmail} onChangeText={setGuestEmail} maxLength={254} editable={!registration.isPending} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
+      <CampRegistrantIdentityForm campId={campId} requestKey={key} value={identity} onChange={setIdentity} disabled={registration.isPending || !online} />
       <Input label="Jersey # (optional)" accessibilityLabel="Guest jersey number" value={number} onChangeText={setNumber} maxLength={12} editable={!registration.isPending} />
       {positions.length > 0 && <View style={s.stack}><Text style={s.text}>Position (optional)</Text><View style={s.positions}>{positions.map(position => <Pressable key={position} accessibilityRole="radio" accessibilityLabel={`Position ${position}`} accessibilityState={{ selected: selectedPosition === position }} disabled={registration.isPending} onPress={() => setSelectedPosition(current => current === position ? '' : position)} style={[s.position, selectedPosition === position && s.selected]}><Text style={s.text}>{position}</Text></Pressable>)}</View></View>}
       {registration.error && <Text accessibilityRole="alert" style={s.error}>{(registration.error as Error).message || 'Could not register this guest. Retry the same entry.'}</Text>}
-      <Button loading={registration.isPending} testID="guest-walkup-submit" disabled={registration.isPending || !guestName.trim()} onPress={() => registration.mutate({ requestKey: key, staffId: user.id, fullName: guestName, emailAddress: guestEmail, jerseyNumber: number, position: selectedPosition })}>
+      <Button loading={registration.isPending} testID="guest-walkup-submit" disabled={registration.isPending || !guestName.trim()} onPress={() => registration.mutate({ requestKey: key, staffId: user.id, fullName: guestName, emailAddress: guestEmail, jerseyNumber: number, position: selectedPosition, ...identity })}>
         Register &amp; check in
       </Button>
       {recentEntries.map((entry, index) => <Text key={`${index}:${entry}`} style={s.text}>{entry}</Text>)}
