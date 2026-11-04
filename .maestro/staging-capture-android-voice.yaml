@@ -51,6 +51,11 @@ tags: [capture-android, capture-android-voice]
     direction: DOWN
 - tapOn:
     id: camp-voice-preview
+- scrollUntilVisible:
+    element:
+      id: camp-voice-playing
+    direction: DOWN
+    timeout: 15000
 - extendedWaitUntil:
     visible: ".*(Playing|Audio) draft.*"
     timeout: 10000
@@ -109,6 +114,11 @@ tags: [capture-android, capture-android-voice]
 - assertVisible: 2 saved voice notes
 - tapOn:
     id: camp-voice-play-0
+- scrollUntilVisible:
+    element:
+      id: camp-voice-playing
+    direction: UP
+    timeout: 15000
 - extendedWaitUntil:
     visible: ".*(Playing|Audio) saved note.*"
     timeout: 20000

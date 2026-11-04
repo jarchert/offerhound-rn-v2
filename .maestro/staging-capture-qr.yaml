@@ -78,8 +78,10 @@ tags: [capture-ios, capture-android, capture-qr]
           visible:
             id: '(com.google.android.providers.media.module:id/icon_thumbnail|com.google.android.documentsui:id/thumbnail|com.android.documentsui:id/thumbnail)'
           timeout: 30000
+      # The observed API-30 picker puts a preview icon over the image center.
+      # Select the lower part of the sole injected QR thumbnail (320x640 fixture device).
       - tapOn:
-          id: '(com.google.android.providers.media.module:id/icon_thumbnail|com.google.android.documentsui:id/thumbnail|com.android.documentsui:id/thumbnail)'
+          point: '20%,42%'
 - runFlow:
     when:
       platform: iOS
