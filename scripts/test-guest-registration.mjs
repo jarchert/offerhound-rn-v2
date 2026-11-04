@@ -25,7 +25,7 @@ function load(path, imports) {
   return exports;
 }
 const guest = load('../src/lib/nativeCampGuest.ts', { '@/integrations/supabase/client': { supabase: api } });
-const queue = load('../src/lib/checkinQueue.ts', { '@/integrations/supabase/client': { supabase: api }, './nativeCampGuest': guest, '@react-native-async-storage/async-storage': { __esModule: true, default: storage } });
+const queue = load('../src/lib/checkinQueue.ts', { '@/integrations/supabase/client': { supabase: api }, './nativeCampGuest': guest, './nativeCampCheckin': { checkInNativeToken() { throw Error('Unexpected QR operation'); } }, '@react-native-async-storage/async-storage': { __esModule: true, default: storage } });
 const draft = { requestKey: 'native_guest_001', staffId: 'staff-a', fullName: ' QA Guest ', emailAddress: '', jerseyNumber: ' 7 ', position: 'QB' };
 let passed = 0;
 async function test(fn) { stored = null; loseReply = false; calls.length = 0; serverRows.clear(); await fn(); passed++; }

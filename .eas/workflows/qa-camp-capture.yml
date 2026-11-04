@@ -1,0 +1,41 @@
+# Manual staging acceptance. Camera/audio native plugins require fresh builds.
+name: OfferHound QR and evaluator audio acceptance
+jobs:
+  android_qa:
+    type: build
+    environment: preview
+    params:
+      platform: android
+      profile: staging
+      message: Independent native QR camera and private evaluator voice notes
+  ios_qa:
+    type: build
+    environment: preview
+    params:
+      platform: ios
+      profile: staging
+      message: Independent native QR camera and private evaluator voice notes
+  capture_ios:
+    type: maestro
+    needs: [ios_qa]
+    runs_on: macos-medium
+    environment: preview
+    params:
+      build_id: ${{ needs.ios_qa.outputs.build_id }}
+      flow_path:
+        - .maestro/staging-capture-qr.yaml
+        - .maestro/staging-capture-ios-voice.yaml
+        - .maestro/staging-capture-denied.yaml
+      retries: 0
+  capture_android:
+    type: maestro
+    needs: [android_qa]
+    runs_on: linux-medium-nested-virtualization
+    environment: preview
+    params:
+      build_id: ${{ needs.android_qa.outputs.build_id }}
+      flow_path:
+        - .maestro/staging-capture-qr.yaml
+        - .maestro/staging-capture-android-voice.yaml
+        - .maestro/staging-capture-denied.yaml
+      retries: 0

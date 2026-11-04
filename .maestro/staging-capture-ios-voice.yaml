@@ -1,0 +1,127 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: ios evaluator voice persistence playback and deletion
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.scout@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_SCOUT_PASSWORD}
+- extendedWaitUntil:
+    visible: ".*QA Scout.*"
+    timeout: 60000
+- runFlow:
+    file: common/open-qa-link.yaml
+    env:
+      QA_LINK: offerhound-staging://camps/${MAESTRO_CAPTURE_CAMP_ID}/score
+- extendedWaitUntil:
+    visible:
+      id: evaluation-athlete-71
+    timeout: 60000
+- tapOn:
+    id: evaluation-athlete-71
+- scrollUntilVisible:
+    element:
+      id: camp-voice-record
+    direction: DOWN
+- tapOn:
+    id: camp-voice-record
+- extendedWaitUntil:
+    visible: Stop recording
+    timeout: 20000
+- tapOn:
+    id: camp-voice-cancel
+- assertVisible: Record voice note
+- tapOn:
+    id: camp-voice-record
+- extendedWaitUntil:
+    visible: Stop recording
+    timeout: 20000
+- extendedWaitUntil:
+    visible: Recording 3 seconds
+    timeout: 15000
+- tapOn:
+    id: camp-voice-stop
+- extendedWaitUntil:
+    visible: Preview draft
+    timeout: 20000
+- tapOn:
+    id: camp-voice-preview
+- extendedWaitUntil:
+    visible: ".*Playing draft.*"
+    timeout: 10000
+- tapOn:
+    id: camp-voice-discard
+- extendedWaitUntil:
+    visible: Draft discarded.
+    timeout: 30000
+- repeat:
+    times: 2
+    commands:
+      - tapOn:
+          id: camp-voice-record
+      - extendedWaitUntil:
+          visible: Stop recording
+          timeout: 20000
+      - extendedWaitUntil:
+          visible: Recording 3 seconds
+          timeout: 15000
+      - tapOn:
+          id: camp-voice-stop
+      - tapOn:
+          id: camp-voice-save
+      - extendedWaitUntil:
+          visible: Voice note saved.
+          timeout: 60000
+- assertVisible: 2 saved voice notes
+- stopApp
+- launchApp
+- runFlow:
+    file: common/open-qa-link.yaml
+    env:
+      QA_LINK: offerhound-staging://camps/${MAESTRO_CAPTURE_CAMP_ID}/score
+- extendedWaitUntil:
+    visible:
+      id: evaluation-athlete-71
+    timeout: 60000
+- tapOn:
+    id: evaluation-athlete-71
+- scrollUntilVisible:
+    element:
+      id: camp-voice-play-0
+    direction: DOWN
+- assertVisible: 2 saved voice notes
+- tapOn:
+    id: camp-voice-play-0
+- extendedWaitUntil:
+    visible: ".*Playing saved note.*"
+    timeout: 20000
+- tapOn:
+    id: camp-voice-delete-0
+- tapOn: Delete
+- extendedWaitUntil:
+    visible: 1 saved voice notes
+    timeout: 30000
+- takeScreenshot: capture-ios-voice-restored
+- setPermissions:
+    permissions:
+      microphone: deny
+- runFlow:
+    file: common/open-qa-link.yaml
+    env:
+      QA_LINK: offerhound-staging://camps/${MAESTRO_CAPTURE_CAMP_ID}/score
+- tapOn:
+    id: evaluation-athlete-71
+    optional: true
+- scrollUntilVisible:
+    element:
+      id: camp-voice-record
+    direction: DOWN
+- tapOn:
+    id: camp-voice-record
+- extendedWaitUntil:
+    visible: ".*Microphone access is denied.*"
+    timeout: 30000
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.scout@offerhound.test

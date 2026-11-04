@@ -1,0 +1,20 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Unassigned athlete cannot evaluate or record
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.adult-athlete@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_ADULT_PASSWORD}
+- runFlow:
+    file: common/open-qa-link.yaml
+    env:
+      QA_LINK: offerhound-staging://camps/${MAESTRO_CAPTURE_CAMP_ID}/score
+- extendedWaitUntil:
+    visible: ".*Only the camp owner or accepted evaluators.*"
+    timeout: 60000
+- assertNotVisible: Record voice note
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.adult-athlete@offerhound.test
