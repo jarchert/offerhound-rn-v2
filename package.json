@@ -17,7 +17,7 @@
     "test:push-isolation": "node scripts/test-push-isolation.mjs",
     "test:guest-registration": "node scripts/test-guest-registration.mjs",
     "test:checkin-shell": "node scripts/test-checkin-shell.mjs",
-    "test:capture": "node scripts/test-camp-capture.mjs"
+    "test:capture": "node scripts/test-camp-capture.mjs && node scripts/test-camp-voice-session.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/bebas-neue": "^0.4.1",

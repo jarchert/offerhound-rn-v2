@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { colors, spacing } from '@/lib/theme';
-import { discardNativeUpload, nativeVoicePlayback, newVoiceIdentity, persistNativeVoice, removeNativeVoice, VOICE_LIMIT_MS, type CampVoiceNote, type NativeVoiceDraft } from '@/lib/nativeCampVoice';
+import { discardNativeUpload, nativeVoicePlayback, nativeRecordingDuration, newVoiceIdentity, persistNativeVoice, removeNativeVoice, VOICE_LIMIT_MS, type CampVoiceNote, type NativeVoiceDraft } from '@/lib/nativeCampVoice';
 
 type Props = { campId: string; enrollmentId: string; drill: string; onBusyChange?: (busy: boolean) => void };
 export function CampEvaluatorVoiceNotes({ campId, enrollmentId, drill, onBusyChange }: Props) {
@@ -19,7 +19,9 @@ export function CampEvaluatorVoiceNotes({ campId, enrollmentId, drill, onBusyCha
   focusRef.current = focused;
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const state = useAudioRecorderState(recorder, 250);
-  const player = useAudioPlayer(null);
+  // Recording and preview share the iOS audio session. A default player pause
+  // schedules session deactivation after 100 ms, even while a recorder is active.
+  const player = useAudioPlayer(null, { keepAudioSessionActive: true });
   const playback = useAudioPlayerStatus(player);
   const [draft, setDraft] = useState<NativeVoiceDraft | null>(null);
   const [busy, setBusy] = useState(false);
@@ -37,12 +39,17 @@ export function CampEvaluatorVoiceNotes({ campId, enrollmentId, drill, onBusyCha
     stopping.current = true;
     try {
       const elapsed = Math.min(VOICE_LIMIT_MS, Math.max(1, recorder.getStatus().durationMillis));
+      const mediaMs = recorder.currentTime * 1000;
       await recorder.stop();
       const uri = recorder.uri;
       if (uri && user) {
         const value = { id: newVoiceIdentity(), uri, durationMs: elapsed, staffId: user.id };
         if (cancel || !mounted.current) { clearLocal(value); if (mounted.current) setMessage('Recording cancelled.'); }
-        else { draftRef.current = value; setDraft(value); setMessage('Recording ready. Preview, save or discard it.'); }
+        else {
+          try { value.durationMs = nativeRecordingDuration(elapsed, mediaMs); }
+          catch (error) { clearLocal(value); throw error; }
+          draftRef.current = value; setDraft(value); setMessage('Recording ready. Preview, save or discard it.');
+        }
       }
     } catch (error: any) { if (mounted.current) setMessage(error.message || 'Recording interrupted. Try again.'); }
     finally { stopping.current = false; await setAudioModeAsync({ allowsRecording: false }).catch(() => {}); }

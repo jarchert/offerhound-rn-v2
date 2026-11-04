@@ -1,6 +1,13 @@
 import { supabase } from '@/integrations/supabase/client';
 export const VOICE_BUCKET = 'camp-evaluation-audio';
 export const VOICE_LIMIT_MS = 120000;
+// Compare native media time with elapsed recording status before trusting a draft.
+export function nativeRecordingDuration(elapsedMs: number, mediaMs: number) {
+  if (!Number.isFinite(mediaMs) || mediaMs <= 0 || !Number.isFinite(elapsedMs) || elapsedMs < 0 || elapsedMs - mediaMs > 1000) {
+    throw Error('Recording was interrupted before all audio was captured. Please record again.');
+  }
+  return Math.min(VOICE_LIMIT_MS, Math.max(1, Math.round(mediaMs)));
+}
 export type CampVoiceNote = { id: string; camp_id: string; enrollment_id: string; evaluator_user_id: string; performance_entry_id: string; drill_key: string; storage_path: string; duration_ms: number; size_bytes: number; created_at: string };
 export type NativeVoiceDraft = { id: string; uri: string; durationMs: number; staffId: string };
 export function newVoiceIdentity() {

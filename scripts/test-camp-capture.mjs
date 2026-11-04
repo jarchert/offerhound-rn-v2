@@ -55,4 +55,10 @@ await test(async () => {
   await queueExports.removeOp(op.id);
   api.rpc = normalRpc;
 });
+await test(() => {
+  assert.equal(voice.nativeRecordingDuration(9600, 9580), 9580);
+  assert.throws(() => voice.nativeRecordingDuration(9600, 100), /interrupted/);
+  assert.throws(() => voice.nativeRecordingDuration(9600, 0), /interrupted/);
+  assert.throws(() => voice.nativeRecordingDuration(9600, NaN), /interrupted/);
+});
 console.log(`Native camp capture: PASS (${passed} parsing, RPC, persistence retry, deletion and actual offline-queue cases; mocked transport)`);
