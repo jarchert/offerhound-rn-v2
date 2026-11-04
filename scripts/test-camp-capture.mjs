@@ -14,4 +14,45 @@ await test(async()=>{const before=calls.filter(c=>c[0]==='remove').length;await 
 await test(async()=>{await voice.nativeVoicePlayback({storage_path:'private/path'});assert.equal(calls.at(-1)[2],90);});
 await test(async()=>{removeError=true;await assert.rejects(voice.removeNativeVoice({id:uuid,storage_path:'private/path'}));assert.equal(deletes,0,'Keep metadata if file deletion fails');removeError=false;await voice.removeNativeVoice({id:uuid,storage_path:'private/path'});assert.equal(deletes,1);});
 await test(()=>{assert.match(voice.newVoiceIdentity(),/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);});
-console.log(`Native camp capture: PASS (${passed} parsing, RPC, persistence retry and deletion cases; mocked transport)`);
+// Exercise the real persistent queue with the actual native QR module, not a mirrored replay function.
+let queueValue = null;
+const queueStorage = { async getItem() { return queueValue; }, async setItem(_key, value) { queueValue = value; } };
+const queueExports = {};
+const queueCode = ts.transpileModule(fs.readFileSync(new URL('../src/lib/checkinQueue.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+vm.runInNewContext(queueCode, { exports: queueExports, require(name) {
+  if (name === '@react-native-async-storage/async-storage') return { default: queueStorage };
+  if (name === './nativeCampCheckin') return qr;
+  if (name === '@/integrations/supabase/client') return { supabase: api };
+  if (name === './nativeCampGuest') return { savedGuestStaff: () => { throw Error('QR replay must not use guest registration'); } };
+  throw Error(`Unexpected queue dependency: ${name}`);
+} });
+await test(async () => {
+  await queueExports.enqueueOp({ kind: 'qr_check_in', campId: 'camp', payload: { token: uuid, staffId: 'staff' } });
+  assert.equal((await queueExports.listQueue('camp', 'other-staff')).length, 0);
+  const before = calls.length;
+  assert.equal((await queueExports.flushQueue('camp', 'other-staff')).flushed, 0);
+  assert.equal(calls.length, before, 'Another staff account must not submit a saved QR');
+});
+const normalRpc = api.rpc;
+await test(async () => {
+  api.rpc = async () => ({ error: Error('Network reply lost') });
+  const failed = await queueExports.flushQueue('camp', 'staff');
+  assert.equal(failed.failed, 1);
+  const retained = await queueExports.listQueue('camp', 'staff');
+  assert.equal(retained[0].attempts, 1);
+  assert.equal(retained[0].payload.token, uuid);
+  api.rpc = normalRpc;
+  const replay = await queueExports.flushQueue('camp', 'staff');
+  assert.equal(replay.flushed, 1);
+  assert.equal((await queueExports.listQueue('camp', 'staff')).length, 0);
+  assert.equal(calls.at(-1)[1].p_actor_user_id, 'staff');
+});
+await test(async () => {
+  const op = await queueExports.enqueueOp({ kind: 'qr_check_in', campId: 'camp', payload: { token: uuid, staffId: 'staff' } });
+  api.rpc = async () => ({ error: Error('This QR code has expired') });
+  assert.equal((await queueExports.flushQueue('camp', 'staff')).failed, 1);
+  assert.match((await queueExports.listQueue('camp', 'staff'))[0].lastError, /expired/);
+  await queueExports.removeOp(op.id);
+  api.rpc = normalRpc;
+});
+console.log(`Native camp capture: PASS (${passed} parsing, RPC, persistence retry, deletion and actual offline-queue cases; mocked transport)`);
