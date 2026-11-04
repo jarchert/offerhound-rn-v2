@@ -7,8 +7,8 @@ name: OfferHound QA public launch and sign-in screen
     visible: Essential Only
     timeout: 60000
 - tapOn: Essential Only
-- assertVisible: Account
-- tapOn: Account
+- assertVisible: ".*Account.*"
+- tapOn: ".*Account.*"
 - assertVisible: Welcome Back
 - assertVisible: Email
 - assertVisible: Password
@@ -19,5 +19,5 @@ name: OfferHound QA public launch and sign-in screen
 - stopApp
 - launchApp
 - extendedWaitUntil:
-    visible: Account
+    visible: ".*Account.*"
     timeout: 30000

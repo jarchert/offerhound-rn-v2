@@ -1,0 +1,20 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: Essential Only
+    timeout: 60000
+- tapOn: Essential Only
+- tapOn: ".*Account.*"
+- assertVisible: Welcome Back
+- tapOn: Email
+- inputText:
+    text: ${QA_EMAIL}
+    label: Enter synthetic QA email
+- tapOn: Password
+- inputText:
+    text: ${QA_PASSWORD}
+    label: Enter private QA test password
+- hideKeyboard
+- tapOn: Sign In

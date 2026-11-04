@@ -41,3 +41,23 @@ jobs:
       build_id: ${{ needs.android_qa.outputs.build_id }}
       flow_path: .maestro/staging-public-smoke.yaml
       retries: 0
+  athlete_auth_ios:
+    name: iOS athlete login restore admin denial and logout
+    needs: [ios_qa]
+    type: maestro
+    runs_on: macos-medium
+    environment: preview
+    params:
+      build_id: ${{ needs.ios_qa.outputs.build_id }}
+      flow_path: .maestro/staging-athlete-auth.yaml
+      retries: 0
+  admin_auth_ios:
+    name: iOS admin login restore authorization and logout
+    needs: [ios_qa]
+    type: maestro
+    runs_on: macos-medium
+    environment: preview
+    params:
+      build_id: ${{ needs.ios_qa.outputs.build_id }}
+      flow_path: .maestro/staging-admin-auth.yaml
+      retries: 0

@@ -1,0 +1,26 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: QA athlete login restore admin denial and logout
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.adult-athlete@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_ADULT_PASSWORD}
+- extendedWaitUntil:
+    visible: ".*Matches.*"
+    timeout: 60000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: ".*Matches.*"
+    timeout: 60000
+- openLink: offerhound-staging://admin
+- extendedWaitUntil:
+    visible: Admins only
+    timeout: 30000
+- assertNotVisible: Platform overview
+- takeScreenshot: staging-athlete-admin-denied
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.adult-athlete@offerhound.test
