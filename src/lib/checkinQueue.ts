@@ -1,13 +1,8 @@
-/**
- * Offline queue for camp check-in operations using AsyncStorage.
- * RN port of Lovable web src/lib/checkinQueue.ts (which used IndexedDB via `idb`).
- *
- * Operations are stored locally when offline and flushed to Supabase when the
- * device comes back online. Queue/dequeue/sync semantics match the web version
- * verbatim — only the storage layer was swapped from IndexedDB → AsyncStorage.
- */
+/** Native persistent camp queue. Guest entries retain their staff identity and
+ * retry key; storage changes are serialized to preserve concurrent offline saves. */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/integrations/supabase/client";
+import { savedGuestStaff, recoverNativeGuest, saveNativeGuest } from "./nativeCampGuest";
 
 const STORAGE_KEY = "camp_checkin_queue";
 
@@ -26,13 +21,14 @@ export interface QueuedOp {
 }
 
 async function readAll(): Promise<QueuedOp[]> {
+  const raw = await AsyncStorage.getItem(STORAGE_KEY);
+  if (!raw) return [];
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as QueuedOp[]) : [];
+    if (!Array.isArray(parsed) || parsed.some(entry => !entry || typeof entry !== 'object')) throw new Error('Invalid queue');
+    return parsed as QueuedOp[];
   } catch {
-    return [];
+    throw new Error('Saved camp entries could not be read. Existing entries were kept.');
   }
 }
 
@@ -40,28 +36,34 @@ async function writeAll(ops: QueuedOp[]): Promise<void> {
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(ops));
 }
 
+let storageWrites: Promise<void> = Promise.resolve();
+function changeQueue(transform: (entries: QueuedOp[]) => QueuedOp[]): Promise<void> {
+  const write = storageWrites.then(async () => writeAll(transform(await readAll())));
+  storageWrites = write.catch(() => {});
+  return write;
+}
+let flushActive = false;
+
 export async function enqueueOp(op: Omit<QueuedOp, "id" | "createdAt" | "attempts">) {
-  const all = await readAll();
   const full: QueuedOp = {
     ...op,
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     createdAt: Date.now(),
     attempts: 0,
   };
-  all.push(full);
-  await writeAll(all);
+  await changeQueue(entries => [...entries, full]);
   return full;
 }
 
-export async function listQueue(campId?: string): Promise<QueuedOp[]> {
+export async function listQueue(campId?: string, staffId?: string): Promise<QueuedOp[]> {
+  await storageWrites;
   const all = await readAll();
-  return campId ? all.filter((o) => o.campId === campId) : all;
+  return all.filter(entry => (!campId || entry.campId === campId) &&
+    (entry.kind !== "walkup_register" || (!!staffId && savedGuestStaff(entry.payload) === staffId)));
 }
 
 export async function removeOp(id: string) {
-  const all = await readAll();
-  const next = all.filter((o) => o.id !== id);
-  await writeAll(next);
+  await changeQueue(entries => entries.filter(entry => entry.id !== id));
 }
 
 async function executeOp(op: QueuedOp): Promise<void> {
@@ -79,19 +81,7 @@ async function executeOp(op: QueuedOp): Promise<void> {
   }
 
   if (op.kind === "walkup_register") {
-    const { user_id, athlete_profile_id, jersey_number, position_group, notes } = op.payload;
-    const { error } = await supabase.from("camp_enrollments").insert({
-      camp_id: op.campId,
-      user_id,
-      athlete_profile_id: athlete_profile_id ?? null,
-      jersey_number: jersey_number ?? null,
-      position_group: position_group ?? null,
-      notes: notes ?? null,
-      status: "checked_in",
-      payment_status: "walkup",
-      checked_in_at: new Date().toISOString(),
-    } as any);
-    if (error) throw error;
+    await saveNativeGuest(op.campId, recoverNativeGuest(op.payload, op.id));
     return;
   }
 
@@ -103,8 +93,11 @@ export interface FlushResult {
   failed: number;
 }
 
-export async function flushQueue(campId?: string): Promise<FlushResult> {
-  const ops = await listQueue(campId);
+export async function flushQueue(campId: string | undefined, staffId: string): Promise<FlushResult> {
+  if (flushActive || !staffId) return { flushed: 0, failed: 0 };
+  flushActive = true;
+  try {
+  const ops = await listQueue(campId, staffId);
   let flushed = 0;
   let failed = 0;
 
@@ -112,20 +105,18 @@ export async function flushQueue(campId?: string): Promise<FlushResult> {
     try {
       await executeOp(op);
       // remove the just-flushed op (re-read each time to avoid clobbering concurrent writes)
-      const cur = await readAll();
-      await writeAll(cur.filter((o) => o.id !== op.id));
+      await changeQueue(entries => entries.filter(entry => entry.id !== op.id));
       flushed++;
     } catch (err: any) {
       failed++;
       // bump attempts so user can see the failure persists
-      const cur = await readAll();
-      const next = cur.map((o) =>
+      await changeQueue(entries => entries.map((o) =>
         o.id === op.id
           ? { ...o, attempts: o.attempts + 1, lastError: err?.message ?? String(err) }
           : o,
-      );
-      await writeAll(next);
+      ));
     }
   }
   return { flushed, failed };
+  } finally { flushActive = false; }
 }

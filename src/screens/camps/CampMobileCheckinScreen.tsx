@@ -8,10 +8,7 @@
 //   "Manual" token-entry tab. When expo-barcode-scanner is installed, replace
 //   <ScanStub /> with a real <BarCodeScanner /> wrapper.
 //
-//
-// PORT-PENDING (walk-up registration):
-//   CampWalkupRegistration component is web-only. We render an inline placeholder card
-//   directing staff to the future RN equivalent.
+// Guest registration is implemented independently in CampGuestWalkupForm.
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -42,6 +39,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCampCheckinSync } from '@/hooks/useCampCheckinSync';
 import { enqueueOp } from '@/lib/checkinQueue';
 import { useToast } from '@/hooks/use-toast';
+import { CampGuestWalkupForm } from '@/components/CampGuestWalkupForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -275,7 +273,7 @@ export default function CampMobileCheckinScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
         {!isOwner ? (
           <Card>
             <CardContent style={{ paddingVertical: 12 }}>
@@ -423,15 +421,7 @@ export default function CampMobileCheckinScreen() {
           </TabsContent>
 
           <TabsContent value="walkup">
-            {/* PORT-PENDING: Lovable CampWalkupRegistration not yet ported to RN. */}
-            <Card>
-              <CardContent style={{ paddingVertical: 24 }}>
-                <Text style={[styles.muted, { textAlign: 'center' }]}>
-                  Walk-up registration form is coming soon to the native app. For now, register the
-                  athlete on the web dashboard, then check them in here.
-                </Text>
-              </CardContent>
-            </Card>
+            <CampGuestWalkupForm campId={campId!} positions={camp.positions ?? []} online={isOnline} refreshQueue={refreshQueue} />
           </TabsContent>
         </Tabs>
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import NetInfo from "@react-native-community/netinfo";
 import { flushQueue, listQueue, type QueuedOp } from "@/lib/checkinQueue";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
 /**
@@ -13,6 +14,8 @@ import { useToast } from "@/hooks/use-toast";
  * logic is preserved verbatim; only the connectivity source and storage layer changed.
  */
 export function useCampCheckinSync(campId: string) {
+  const { user } = useAuth();
+  const staffId = user?.id;
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isOnline, setIsOnline] = useState<boolean>(true);
@@ -20,15 +23,19 @@ export function useCampCheckinSync(campId: string) {
   const [isFlushing, setIsFlushing] = useState(false);
 
   const refreshQueue = useCallback(async () => {
-    const items = await listQueue(campId);
-    setQueue(items);
-  }, [campId]);
+    try {
+      const items = await listQueue(campId, staffId);
+      setQueue(items);
+    } catch (error: any) {
+      toast({ title: 'Saved check-ins unavailable', description: error?.message, variant: 'destructive' });
+    }
+  }, [campId, staffId, toast]);
 
   const doFlush = useCallback(async () => {
-    if (isFlushing) return;
+    if (isFlushing || !staffId) return;
     setIsFlushing(true);
     try {
-      const result = await flushQueue(campId);
+      const result = await flushQueue(campId, staffId);
       if (result.flushed > 0) {
         toast({
           title: "Synced offline check-ins",
@@ -42,7 +49,7 @@ export function useCampCheckinSync(campId: string) {
     } finally {
       setIsFlushing(false);
     }
-  }, [campId, isFlushing, queryClient, refreshQueue, toast]);
+  }, [campId, staffId, isFlushing, queryClient, refreshQueue, toast]);
 
   // initial load + NetInfo subscription
   useEffect(() => {
