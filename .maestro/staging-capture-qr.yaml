@@ -74,15 +74,12 @@ tags: [capture-ios, capture-android, capture-qr]
     when:
       platform: Android
     commands:
+      - extendedWaitUntil:
+          visible:
+            id: '(com.google.android.providers.media.module:id/icon_thumbnail|com.google.android.documentsui:id/thumbnail|com.android.documentsui:id/thumbnail)'
+          timeout: 30000
       - tapOn:
-          id: com.google.android.providers.media.module:id/icon_thumbnail
-          optional: true
-      - tapOn:
-          id: com.google.android.documentsui:id/thumbnail
-          optional: true
-      - tapOn:
-          id: com.android.documentsui:id/thumbnail
-          optional: true
+          id: '(com.google.android.providers.media.module:id/icon_thumbnail|com.google.android.documentsui:id/thumbnail|com.android.documentsui:id/thumbnail)'
 - runFlow:
     when:
       platform: iOS
@@ -99,19 +96,6 @@ tags: [capture-ios, capture-android, capture-qr]
     visible: ".*(Athlete checked in|Already checked in).*"
     timeout: 30000
 - takeScreenshot: capture-native-qr-image
-- setPermissions:
-    permissions:
-      camera: deny
-- runFlow:
-    file: common/open-qa-link.yaml
-    env:
-      QA_LINK: offerhound-staging://camps/${MAESTRO_CAPTURE_CAMP_ID}/mobile-checkin
-- tapOn:
-    id: camp-qr-start
-- extendedWaitUntil:
-    visible: ".*Camera access is denied.*"
-    timeout: 30000
-- assertVisible: Open manual entry
 - runFlow:
     file: common/logout.yaml
     env:

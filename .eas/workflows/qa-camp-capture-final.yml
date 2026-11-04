@@ -8,7 +8,7 @@ jobs:
     params:
       build_id: aaef8566-4fff-4681-a3b5-a718c248d461
       profile: staging
-      message: Refresh camera authorization and validate capture journeys
+      message: Verify QR picker readiness and durable audio playback progress
   android_candidate:
     type: repack
     runs_on: linux-medium
@@ -16,7 +16,7 @@ jobs:
     params:
       build_id: d8abb781-eb4c-4765-baf5-2e0d029699ee
       profile: staging
-      message: Refresh camera authorization and validate capture journeys
+      message: Verify QR picker readiness and durable audio playback progress
   ios_qr:
     type: maestro
     needs: [ios_candidate]

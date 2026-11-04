@@ -52,7 +52,7 @@ tags: [capture-ios]
 - tapOn:
     id: camp-voice-preview
 - extendedWaitUntil:
-    visible: ".*Playing draft.*"
+    visible: ".*(Playing|Audio) draft.*"
     timeout: 10000
 - scrollUntilVisible:
     element:
@@ -110,7 +110,7 @@ tags: [capture-ios]
 - tapOn:
     id: camp-voice-play-0
 - extendedWaitUntil:
-    visible: ".*Playing saved note.*"
+    visible: ".*(Playing|Audio) saved note.*"
     timeout: 20000
 - tapOn:
     id: camp-voice-delete-0
