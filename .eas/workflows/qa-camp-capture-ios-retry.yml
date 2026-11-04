@@ -1,13 +1,23 @@
-# Tests only: the fresh camera/audio build is reused unchanged.
-name: OfferHound iOS camp capture device tests
+# Separate fresh simulator jobs prevent a failed test session affecting another role.
+name: OfferHound iOS camp QR and access acceptance
 jobs:
-  capture_ios:
+  capture_ios_qr:
     type: maestro
     runs_on: macos-medium
     environment: preview
     params:
       build_id: aaef8566-4fff-4681-a3b5-a718c248d461
       flow_path: .maestro
-      include_tags: capture-ios
+      include_tags: capture-qr
+      record_screen: true
+      retries: 0
+  capture_ios_access:
+    type: maestro
+    runs_on: macos-medium
+    environment: preview
+    params:
+      build_id: aaef8566-4fff-4681-a3b5-a718c248d461
+      flow_path: .maestro
+      include_tags: capture-access
       record_screen: true
       retries: 0
