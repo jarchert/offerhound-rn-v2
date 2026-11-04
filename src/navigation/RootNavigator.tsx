@@ -5,6 +5,7 @@ import React from 'react';
 import { ActivityIndicator, Pressable, SafeAreaView, Text, View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '@/contexts/AuthContext';
+import { navigationRef } from '@/navigation/navigationRef';
 import { useScoutOrganization } from '@/hooks/useScoutOrganization';
 import { colors } from '@/lib/theme';
 import type { UserRole } from '@/lib/constants';
@@ -139,6 +140,17 @@ export function roleToInitialRoute(role: UserRole | null | undefined): keyof Roo
 
 export default function RootNavigator() {
   const { user, userRole, isLoading, signOut } = useAuth() as any;
+  const previousUserId = React.useRef<string | null>(user?.id ?? null);
+  React.useEffect(() => {
+    const endedSession = previousUserId.current !== null && !user;
+    previousUserId.current = user?.id ?? null;
+    // Camp routes are available in both auth states. Explicitly discard the
+    // old shared route after the signed-out screen graph has committed.
+    if (endedSession && navigationRef.isReady()) {
+      navigationRef.resetRoot({ index: 0, routes: [{ name: 'PublicTabs' }] });
+    }
+  }, [user?.id]);
+
 
   // Agency detection: if user is a scout AND owns or belongs to a scout_organization,
   // route them to AgencyTabs instead of ScoutTabs. Mirrors Lovable Navbar.tsx logic.
@@ -198,7 +210,7 @@ export default function RootNavigator() {
           <Stack.Screen name="PublicSportStack" component={PublicSportStack} />
           <Stack.Screen name="AuthStack" component={AuthStack} />
           <Stack.Screen name="PublicProfileStack" component={PublicProfileStack} />
-          <Stack.Screen name="CampStack" component={CampStack} />
+          <Stack.Screen name="CampStack" component={CampStack} navigationKey="public-camps" />
           <Stack.Screen name="Install" component={InstallScreen} />
           <Stack.Screen name="FounderMessage" component={FounderMessageScreen} />
           <Stack.Screen name="Pricing" component={PricingScreen} />
@@ -221,7 +233,7 @@ export default function RootNavigator() {
 
           {/* Shared stacks accessible from any role */}
           <Stack.Screen name="OnboardingStack" component={OnboardingStack} />
-          <Stack.Screen name="CampStack" component={CampStack} />
+          <Stack.Screen name="CampStack" component={CampStack} navigationKey={`staff-camps:${user.id}`} />
           <Stack.Screen name="SettingsStack" component={SettingsStack} />
           <Stack.Screen name="PublicProfileStack" component={PublicProfileStack} />
           <Stack.Screen name="PublicSportStack" component={PublicSportStack} />

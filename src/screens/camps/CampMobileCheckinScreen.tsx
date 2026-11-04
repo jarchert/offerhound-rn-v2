@@ -8,10 +8,7 @@
 //   "Manual" token-entry tab. When expo-barcode-scanner is installed, replace
 //   <ScanStub /> with a real <BarCodeScanner /> wrapper.
 //
-//
-// PORT-PENDING (walk-up registration):
-//   CampWalkupRegistration component is web-only. We render an inline placeholder card
-//   directing staff to the future RN equivalent.
+// Guest registration is implemented independently in CampGuestWalkupForm.
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -42,6 +39,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCampCheckinSync } from '@/hooks/useCampCheckinSync';
 import { enqueueOp } from '@/lib/checkinQueue';
 import { useToast } from '@/hooks/use-toast';
+import { CampGuestWalkupForm } from '@/components/CampGuestWalkupForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -85,12 +83,12 @@ export default function CampMobileCheckinScreen() {
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       // Auth gate parity with web (web redirects to /auth?redirect=...).
-      navigation.navigate('Auth' as never);
+      navigation.navigate('AuthStack', { screen: 'Auth' });
     }
   }, [authLoading, isAuthenticated, navigation]);
 
   const { data: camp, isLoading: campLoading } = useQuery({
-    queryKey: ['camp-mobile-checkin-camp', campId],
+    queryKey: ['camp-mobile-checkin-camp', campId, user?.id],
     queryFn: async () => {
       if (!campId) return null;
       const { data, error } = await supabase
@@ -101,11 +99,11 @@ export default function CampMobileCheckinScreen() {
       if (error) throw error;
       return data as CampSummary | null;
     },
-    enabled: !!campId,
+    enabled: !!campId && isAuthenticated,
   });
 
   const { data: enrollments = [], isLoading: enrollmentsLoading } = useQuery({
-    queryKey: ['camp-ops-enrollments', campId],
+    queryKey: ['camp-ops-enrollments', campId, user?.id],
     queryFn: async () => {
       if (!campId) return [];
       const { data, error } = await supabase
@@ -118,7 +116,7 @@ export default function CampMobileCheckinScreen() {
       if (error) throw error;
       return (data || []) as Enrollment[];
     },
-    enabled: !!campId,
+    enabled: !!campId && isAuthenticated,
     refetchInterval: isOnline ? 8000 : false,
   });
 
@@ -211,7 +209,7 @@ export default function CampMobileCheckinScreen() {
     .filter((e) => e.status !== 'checked_in' && e.status !== 'cancelled')
     .slice(0, 25);
 
-  if (authLoading || campLoading) {
+  if (authLoading || !isAuthenticated || campLoading) {
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -275,7 +273,7 @@ export default function CampMobileCheckinScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
         {!isOwner ? (
           <Card>
             <CardContent style={{ paddingVertical: 12 }}>
@@ -423,15 +421,7 @@ export default function CampMobileCheckinScreen() {
           </TabsContent>
 
           <TabsContent value="walkup">
-            {/* PORT-PENDING: Lovable CampWalkupRegistration not yet ported to RN. */}
-            <Card>
-              <CardContent style={{ paddingVertical: 24 }}>
-                <Text style={[styles.muted, { textAlign: 'center' }]}>
-                  Walk-up registration form is coming soon to the native app. For now, register the
-                  athlete on the web dashboard, then check them in here.
-                </Text>
-              </CardContent>
-            </Card>
+            <CampGuestWalkupForm campId={campId!} positions={camp.positions ?? []} online={isOnline} refreshQueue={refreshQueue} />
           </TabsContent>
         </Tabs>
 

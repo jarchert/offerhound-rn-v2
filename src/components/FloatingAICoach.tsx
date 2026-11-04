@@ -68,9 +68,6 @@ export function FloatingAICoach({
     return () => loop.stop();
   }, [pulse]);
 
-  if (keyboardVisible) return null;
-  if (activeRoute === hideOnRoute) return null;
-
   // Sync active route on a polling interval — lightweight since this component
   // only needs to know if it's on the AICoach screen to hide itself.
   React.useEffect(() => {
@@ -79,6 +76,9 @@ export function FloatingAICoach({
     }, 300);
     return () => clearInterval(id);
   }, []);
+
+  if (keyboardVisible) return null;
+  if (activeRoute === hideOnRoute) return null;
 
   const handlePress = () => {
     try {

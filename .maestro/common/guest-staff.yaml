@@ -1,0 +1,42 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+---
+- runFlow:
+    file: login.yaml
+    env:
+      QA_EMAIL: qa.club-coach@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_CLUB_COACH_PASSWORD}
+- extendedWaitUntil:
+    visible: Club Dashboard
+    timeout: 60000
+- runFlow:
+    file: open-qa-link.yaml
+    env:
+      QA_LINK: offerhound-staging://camps/${MAESTRO_QA_GUEST_CAMP_ID}/mobile-checkin
+- tapOn: ".*Walk-up.*"
+- extendedWaitUntil:
+    visible: Guest walk-up registration
+    timeout: 60000
+- tapOn:
+    id: guest-walkup-name
+- inputText: ${QA_GUEST_LABEL} STAFF GUEST
+- pressKey: Enter
+- scrollUntilVisible:
+    element:
+      id: guest-walkup-submit
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: guest-walkup-submit
+- scrollUntilVisible:
+    element:
+      text: ${QA_GUEST_LABEL} STAFF GUEST registered
+    direction: DOWN
+    timeout: 60000
+- extendedWaitUntil:
+    visible: ${QA_GUEST_LABEL} STAFF GUEST registered
+    timeout: 60000
+- takeScreenshot: guest-accepted-staff
+- runFlow:
+    file: logout.yaml
+    env:
+      QA_EMAIL: qa.club-coach@offerhound.test

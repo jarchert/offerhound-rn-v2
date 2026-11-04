@@ -7,6 +7,7 @@ export type ButtonSize = 'default' | 'sm' | 'lg' | 'xl' | 'icon';
 
 interface ButtonProps {
   children?: React.ReactNode;
+  testID?: string;
   onPress?: () => void;
   variant?: ButtonVariant;
   size?: ButtonSize;
@@ -20,7 +21,7 @@ interface ButtonProps {
 
 export function Button({
   children, onPress, variant = 'default', size = 'default',
-  disabled, loading, style, textStyle, leftIcon, rightIcon,
+  disabled, loading, style, textStyle, leftIcon, rightIcon, testID,
 }: ButtonProps) {
   const variantStyle = variantStyles[variant];
   const sizeStyle = sizeStyles[size];
@@ -28,6 +29,7 @@ export function Button({
 
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       disabled={disabled || loading}
       style={({ pressed }) => [

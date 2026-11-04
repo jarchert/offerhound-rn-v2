@@ -1,0 +1,7 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: android guest owner registration
+---
+- runFlow:
+    file: common/guest-owner.yaml
+    env:
+      QA_GUEST_LABEL: QA ANDROID

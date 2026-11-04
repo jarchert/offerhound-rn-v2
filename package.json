@@ -11,10 +11,12 @@
     "typecheck": "tsc --noEmit",
     "check:repository": "node scripts/check-repository-boundary.mjs",
     "test:links": "node scripts/link-probe-real.mjs",
-    "ci": "npm run check:repository && npm run typecheck && npm run test:links && npm run test:staging && npm run test:admin-access && npm run test:push-isolation",
+    "ci": "npm run check:repository && npm run typecheck && npm run test:links && npm run test:staging && npm run test:admin-access && npm run test:push-isolation && npm run test:guest-registration && npm run test:checkin-shell",
     "test:staging": "node scripts/test-staging.mjs",
     "test:admin-access": "node scripts/test-admin-access.mjs",
-    "test:push-isolation": "node scripts/test-push-isolation.mjs"
+    "test:push-isolation": "node scripts/test-push-isolation.mjs",
+    "test:guest-registration": "node scripts/test-guest-registration.mjs",
+    "test:checkin-shell": "node scripts/test-checkin-shell.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/bebas-neue": "^0.4.1",

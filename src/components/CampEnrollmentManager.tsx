@@ -58,7 +58,9 @@ import { colors, typography, spacing, radius } from '@/lib/theme';
 interface Enrollment {
   id: string;
   camp_id: string;
-  user_id: string;
+  user_id: string | null;
+  guest_name?: string | null;
+  guest_email?: string | null;
   athlete_profile_id: string | null;
   status: string;
   payment_status: string;
@@ -160,7 +162,8 @@ export function CampEnrollmentManager({
         e.jersey_number?.toLowerCase().includes(term) ||
         e.position_group?.toLowerCase().includes(term) ||
         e.group_assignment?.toLowerCase().includes(term) ||
-        e.notes?.toLowerCase().includes(term)
+        e.notes?.toLowerCase().includes(term) ||
+        e.guest_name?.toLowerCase().includes(term) || e.guest_email?.toLowerCase().includes(term)
       );
     }
     return true;
@@ -267,7 +270,7 @@ export function CampEnrollmentManager({
                     <View style={s.itemTextWrap}>
                       <View style={s.itemTopRow}>
                         <Text style={s.athleteName}>
-                          Athlete #{enrollment.id.slice(0, 8)}
+                          {enrollment.guest_name || `Athlete #${enrollment.id.slice(0, 8)}`}
                         </Text>
                         {enrollment.position_group ? (
                           <Badge variant="outline">
