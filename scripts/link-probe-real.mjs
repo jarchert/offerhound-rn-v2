@@ -37,8 +37,8 @@ console.log('  (real linking.ts sha256:', createHash('sha256').update(realSrc).d
 const cases = [
   ['/auth', 'SignIn'],
   ['/home', 'HomeTab'],
-  ['/messages', 'MessagesTab'],
-  ['/inbox', 'MessagesTab'],
+  ['/messages', 'Messages'],
+  ['/inbox', 'Inbox'],
   ['/coach/dashboard', 'DashboardTab'],
   ['/scout/dashboard', 'DashboardTab'],
   ['/club/dashboard', 'DashboardTab'],

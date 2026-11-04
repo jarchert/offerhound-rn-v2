@@ -123,7 +123,7 @@ export const linking: LinkingOptions<any> = {
         screens: {
           HomeTab: { path: 'athlete', alias: ['home'] },
           MatchesTab: 'athlete/matches',
-          MessagesTab: { path: 'athlete/messages', alias: ['messages', 'inbox'] },
+          MessagesTab: 'athlete/messages',
           LettersTab: 'athlete/letters',
           ProfileTab: 'athlete/profile',
         },
@@ -205,6 +205,8 @@ export const linking: LinkingOptions<any> = {
       },
 
       // Cross-cutting public screens
+      Messages: 'messages',
+      Inbox: 'inbox',
       Install: 'install',
       FounderMessage: 'founder-message',
       LeaveReview: 'leave-review',
