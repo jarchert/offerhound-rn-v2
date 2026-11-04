@@ -8,7 +8,13 @@
     "ios": "expo start --ios",
     "android": "expo start --android",
     "web": "expo start --web",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:repository": "node scripts/check-repository-boundary.mjs",
+    "test:links": "node scripts/link-probe-real.mjs",
+    "ci": "npm run check:repository && npm run typecheck && npm run test:links && npm run test:staging && npm run test:admin-access && npm run test:push-isolation",
+    "test:staging": "node scripts/test-staging.mjs",
+    "test:admin-access": "node scripts/test-admin-access.mjs",
+    "test:push-isolation": "node scripts/test-push-isolation.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/bebas-neue": "^0.4.1",

@@ -1,7 +1,7 @@
 // linking.ts — React Navigation deep-link config per Part 2 §2.1
-// Universal Links: https://playbook-promoter.lovable.app/* and https://offerhound.app/*
+// Universal Links include the canonical OfferHound web domain.
 // Custom scheme: offerhoundv2://
-// Route coverage: 122 paths from Lovable app.
+// Coverage is recorded by the separate URL audit; parser matches do not certify screen parity.
 import type { LinkingOptions } from '@react-navigation/native';
 import * as Linking from 'expo-linking';
 
@@ -9,6 +9,8 @@ export const linking: LinkingOptions<any> = {
   prefixes: [
     Linking.createURL('/'),
     'offerhoundv2://',
+    'https://offer-hound.com',
+    'https://www.offer-hound.com',
     'https://offerhound.app',
     'https://www.offerhound.app',
     'https://playbook-promoter.lovable.app',
@@ -49,7 +51,7 @@ export const linking: LinkingOptions<any> = {
       AuthStack: {
         screens: {
           Landing: 'landing',
-          SignIn: 'signin',
+          SignIn: { path: 'signin', alias: ['auth'] },
           SignUp: 'signup',
           BetaRegister: 'beta-register',
           ParentalConsent: 'parental-consent',
@@ -76,7 +78,7 @@ export const linking: LinkingOptions<any> = {
       // Camp ecosystem (shared across roles)
       CampStack: {
         screens: {
-          CampDiscovery: 'camps',
+          CampDiscovery: 'camp-discovery',
           CampsList: 'camps/list',
           CampsDiscover: 'camps/discover',
           ClaimCampSpot: 'camps/claim',
@@ -119,7 +121,7 @@ export const linking: LinkingOptions<any> = {
       // Athlete role tabs
       AthleteTabs: {
         screens: {
-          HomeTab: 'athlete',
+          HomeTab: { path: 'athlete', alias: ['home'] },
           MatchesTab: 'athlete/matches',
           MessagesTab: 'athlete/messages',
           LettersTab: 'athlete/letters',
@@ -130,28 +132,25 @@ export const linking: LinkingOptions<any> = {
       // Coach role tabs
       CoachTabs: {
         screens: {
-          DashboardTab: 'coach',
+          DashboardTab: { path: 'coach', alias: ['coach/dashboard'] },
           PipelineTab: 'coach/pipeline',
           CampsTab: 'coach/camps',
           LettersTab: 'coach/letters',
-          DirectoryTab: 'coach/directory',
         },
       },
 
       // Scout role tabs
       ScoutTabs: {
         screens: {
-          DashboardTab: 'scout',
+          DashboardTab: { path: 'scout', alias: ['scout/dashboard'] },
           LettersTab: 'scout/letters',
-          TrendsTab: 'scout/trends',
-          OnboardingTab: 'scout/guide',
         },
       },
 
       // Club coach role tabs
       ClubCoachTabs: {
         screens: {
-          DashboardTab: 'club-coach',
+          DashboardTab: { path: 'club-coach', alias: ['club/dashboard'] },
           CampsTab: 'club-coach/camps',
           LettersTab: 'club-coach/letters',
         },
@@ -160,7 +159,7 @@ export const linking: LinkingOptions<any> = {
       // HS coach role tabs
       HSCoachTabs: {
         screens: {
-          DashboardTab: 'hs-coach',
+          DashboardTab: { path: 'hs-coach', alias: ['hs-coach/dashboard'] },
           LettersTab: 'hs-coach/letters',
         },
       },
@@ -168,7 +167,7 @@ export const linking: LinkingOptions<any> = {
       // Parent role tabs
       ParentTabs: {
         screens: {
-          DashboardTab: 'parent',
+          DashboardTab: { path: 'parent', alias: ['parent/dashboard'] },
           TrustSafetyTab: 'parent/safety',
         },
       },
@@ -176,7 +175,7 @@ export const linking: LinkingOptions<any> = {
       // Influencer role tabs
       InfluencerTabs: {
         screens: {
-          DashboardTab: 'influencer',
+          DashboardTab: { path: 'influencer', alias: ['influencer/dashboard'] },
           BoardTab: 'influencer/board',
           PodcastsTab: 'influencer/podcasts',
         },
@@ -185,7 +184,7 @@ export const linking: LinkingOptions<any> = {
       // Agency role tabs (NEW in Session 2)
       AgencyTabs: {
         screens: {
-          DashboardTab: 'agency',
+          DashboardTab: { path: 'agency', alias: ['agency/dashboard'] },
           LettersTab: 'agency/letters',
         },
       },
@@ -203,6 +202,8 @@ export const linking: LinkingOptions<any> = {
       },
 
       // Cross-cutting public screens
+      Messages: 'messages',
+      Inbox: 'inbox',
       Install: 'install',
       FounderMessage: 'founder-message',
       LeaveReview: 'leave-review',
@@ -211,7 +212,7 @@ export const linking: LinkingOptions<any> = {
       SavedCamps: 'camps',
       AthleteSearch: 'athletes',
       InfluencerBoard: 'influencers',
-      CoachDirectory: 'coaches',
+      CoachDirectory: { path: 'coaches', alias: ['coach/directory', 'coach-directory'] },
       CoachProfile: 'coaches/:id',
       PublicClubCoachProfile: 'club-coach/:id',
       SavedCoaches: 'saved-coaches',
@@ -222,7 +223,7 @@ export const linking: LinkingOptions<any> = {
       SubscriptionSuccess: 'subscription/success',
 
       // Fallback not-found (optional; RN v7 supports this)
-      NotFound: '*',
+      NotFound: { path: '*', alias: ['scout/guide'] },
     },
   },
 };

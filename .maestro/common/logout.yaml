@@ -1,0 +1,19 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+---
+- runFlow:
+    file: open-qa-link.yaml
+    env:
+      QA_LINK: offerhound-staging://settings
+- extendedWaitUntil:
+    visible: Settings
+    timeout: 30000
+- assertVisible: ${QA_EMAIL}
+- scrollUntilVisible:
+    element:
+      text: Sign out
+    direction: DOWN
+    timeout: 20000
+- tapOn: Sign out
+- extendedWaitUntil:
+    visible: ".*Account.*"
+    timeout: 30000

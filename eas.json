@@ -53,6 +53,26 @@
         "EXPO_INCLUDE_WIDGETS": "false",
         "EXPO_INCLUDE_LIVE_ACTIVITIES": "false"
       }
+    },
+    "staging": {
+      "distribution": "internal",
+      "environment": "preview",
+      "channel": "staging",
+      "ios": {
+        "simulator": true
+      },
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "APP_ENV": "staging",
+        "EXPO_PUBLIC_APP_ENV": "staging",
+        "EXPO_INCLUDE_APP_CLIP": "false",
+        "EXPO_INCLUDE_WIDGETS": "false",
+        "EXPO_INCLUDE_LIVE_ACTIVITIES": "false",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://wrrfwvkixlzmnsztjfgg.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_50jrwE_hS2Oq0vCuIcjzFg_1Sw33VrE"
+      }
     }
   },
   "submit": {

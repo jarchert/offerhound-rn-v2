@@ -1,0 +1,20 @@
+name: OfferHound Android remaining role verification
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        type: string
+        required: true
+        description: Verified isolated Android QA APK build
+jobs:
+  remaining_android:
+    name: Android agency and influencer on a fresh emulator
+    type: maestro
+    runs_on: linux-medium-nested-virtualization
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      flow_path:
+        - .maestro/staging-role-agency-owner.yaml
+        - .maestro/staging-role-influencer.yaml
+      retries: 0

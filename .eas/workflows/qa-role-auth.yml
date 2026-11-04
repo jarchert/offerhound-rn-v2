@@ -1,0 +1,33 @@
+name: OfferHound isolated all-role native authentication
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        type: string
+        required: true
+        description: Finished OfferHound QA simulator or emulator build ID
+      platform:
+        type: choice
+        required: true
+        default: ios
+        options: [ios, android]
+jobs:
+  all_roles:
+    name: Ten isolated QA role journeys
+    type: maestro
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      flow_path:
+        - .maestro/staging-athlete-auth.yaml
+        - .maestro/staging-admin-auth.yaml
+        - .maestro/staging-role-u13-athlete.yaml
+        - .maestro/staging-role-parent.yaml
+        - .maestro/staging-role-college-coach.yaml
+        - .maestro/staging-role-club-coach.yaml
+        - .maestro/staging-role-hs-coach.yaml
+        - .maestro/staging-role-scout.yaml
+        - .maestro/staging-role-agency-owner.yaml
+        - .maestro/staging-role-influencer.yaml
+      retries: 0

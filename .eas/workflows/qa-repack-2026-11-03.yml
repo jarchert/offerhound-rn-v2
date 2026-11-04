@@ -1,0 +1,83 @@
+# One-off QA routing and consent correction. These verified QA sources have the same
+# native dependencies and app identity as this revision; only JavaScript changed.
+# This is not a production release workflow. No automatic trigger is configured.
+name: OfferHound QA routing and consent correction 2026-11-03
+jobs:
+  android_qa:
+    name: Repack compatible Android QA binary
+    type: repack
+    runs_on: linux-medium
+    environment: preview
+    params:
+      build_id: 2d26570f-288d-40a0-80ec-2a1c6e9e7ad5
+      profile: staging
+      message: QA routing and consent state corrections
+  ios_qa:
+    name: Repack compatible iOS QA simulator binary
+    type: repack
+    runs_on: macos-medium
+    environment: preview
+    params:
+      build_id: b9d4d224-b890-4e0a-a8e0-3a845c8cee48
+      profile: staging
+      message: QA routing and consent state corrections
+  roles_ios_core:
+    name: ios core QA role journeys
+    needs: [ios_qa]
+    type: maestro
+    runs_on: macos-medium
+    environment: preview
+    params:
+      build_id: ${{ needs.ios_qa.outputs.build_id }}
+      flow_path:
+        - .maestro/staging-athlete-auth.yaml
+        - .maestro/staging-admin-auth.yaml
+        - .maestro/staging-role-u13-athlete.yaml
+        - .maestro/staging-role-parent.yaml
+        - .maestro/staging-role-college-coach.yaml
+      retries: 0
+  roles_ios_staff:
+    name: ios staff QA role journeys
+    needs: [ios_qa]
+    type: maestro
+    runs_on: macos-medium
+    environment: preview
+    params:
+      build_id: ${{ needs.ios_qa.outputs.build_id }}
+      flow_path:
+        - .maestro/staging-role-club-coach.yaml
+        - .maestro/staging-role-hs-coach.yaml
+        - .maestro/staging-role-scout.yaml
+        - .maestro/staging-role-agency-owner.yaml
+        - .maestro/staging-role-influencer.yaml
+      retries: 0
+  roles_android_core:
+    name: android core QA role journeys
+    needs: [android_qa]
+    type: maestro
+    runs_on: linux-medium-nested-virtualization
+    environment: preview
+    params:
+      build_id: ${{ needs.android_qa.outputs.build_id }}
+      flow_path:
+        - .maestro/staging-athlete-auth.yaml
+        - .maestro/staging-admin-auth.yaml
+        - .maestro/staging-role-u13-athlete.yaml
+        - .maestro/staging-role-parent.yaml
+        - .maestro/staging-role-college-coach.yaml
+      retries: 0
+  roles_android_staff:
+    name: android staff QA role journeys
+    needs: [android_qa]
+    type: maestro
+    runs_on: linux-medium-nested-virtualization
+    environment: preview
+    params:
+      build_id: ${{ needs.android_qa.outputs.build_id }}
+      flow_path:
+        - .maestro/staging-role-club-coach.yaml
+        - .maestro/staging-role-hs-coach.yaml
+        - .maestro/staging-role-scout.yaml
+        - .maestro/staging-role-agency-owner.yaml
+        - .maestro/staging-role-influencer.yaml
+      retries: 0

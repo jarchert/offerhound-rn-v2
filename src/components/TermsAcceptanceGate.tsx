@@ -138,7 +138,7 @@ export function TermsAcceptanceGate({ children }: TermsAcceptanceGateProps) {
 
               {/* Acceptance Checkboxes */}
               <View style={s.checkboxesWrap}>
-                <Pressable style={s.checkboxRow} onPress={() => setTermsChecked(v => !v)}>
+                <Pressable accessible accessibilityRole="checkbox" accessibilityLabel="Agree to Terms of Use" accessibilityState={{ checked: termsChecked }} style={s.checkboxRow} onPress={() => setTermsChecked(v => !v)}>
                   <Checkbox
                     checked={termsChecked}
                     onCheckedChange={(checked) => setTermsChecked(checked === true)}
@@ -150,7 +150,7 @@ export function TermsAcceptanceGate({ children }: TermsAcceptanceGateProps) {
                   </Label>
                 </Pressable>
 
-                <Pressable style={s.checkboxRow} onPress={() => setPrivacyChecked(v => !v)}>
+                <Pressable accessible accessibilityRole="checkbox" accessibilityLabel="Agree to Privacy Policy" accessibilityState={{ checked: privacyChecked }} style={s.checkboxRow} onPress={() => setPrivacyChecked(v => !v)}>
                   <Checkbox
                     checked={privacyChecked}
                     onCheckedChange={(checked) => setPrivacyChecked(checked === true)}

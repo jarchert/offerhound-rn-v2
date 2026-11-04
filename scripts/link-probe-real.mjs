@@ -6,7 +6,10 @@
 // verbatim from src/navigation/linking.ts — the copy is the thing this probe
 // exists to check.
 import { getStateFromPath } from '@react-navigation/core';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { basename, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import ts from 'typescript';
 
 // Sanity: reject the copy if it drifts from the real config file. Compare the
 // SHA-256 of the extracted screens block against the real file to guarantee
@@ -31,27 +34,61 @@ const configBlock = realSrc.slice(start + 'config: '.length, endIdx + 1);
 const asJs = '(' + configBlock.replace(/\/\/[^\n]*\n/g, '\n') + ')';
 const config = (0, eval)(asJs);
 
-// Neutralize pre-existing duplicate registrations so the real parser can run
-// against the URLs this probe cares about. All of these existed in linking.ts
-// before this session's edits — the duplicates are not caused by the two-line
-// fix under test. The drops are probe-only; the real file is untouched here.
-// Recording each as a separate follow-up.
-//
-// Pre-existing duplicates in src/navigation/linking.ts:
-//   'camps'        -> CampStack>CampDiscovery (line 79)  vs  SavedCamps (line 211)
-//   'scout/trends' -> ScoutTabs>TrendsTab      (line 146) vs  ScoutTrends (line 220)
-if (config.screens?.ScoutTrends === 'scout/trends') {
-  delete config.screens.ScoutTrends;
-  console.log("  (probe-only: removed pre-existing duplicate top-level ScoutTrends -> 'scout/trends')");
+
+// A parser match is useful only if its destination is actually registered.
+const navigationRoot = fileURLToPath(new URL('../src/navigation', import.meta.url));
+function navigatorFiles(dir) {
+  return readdirSync(dir, {withFileTypes:true}).flatMap(e => e.isDirectory()
+    ? navigatorFiles(join(dir,e.name)) : e.name.endsWith('.tsx') ? [join(dir,e.name)] : []);
 }
-if (config.screens?.SavedCamps === 'camps') {
-  delete config.screens.SavedCamps;
-  console.log("  (probe-only: removed pre-existing duplicate top-level SavedCamps -> 'camps')");
+const files = new Map(navigatorFiles(navigationRoot).map(p=>[basename(p,'.tsx'),p]));
+function registeredScreens(name) {
+  const path=files.get(name);
+  if(!path)throw Error(`Missing navigator source: ${name}`);
+  const ast=ts.createSourceFile(path,readFileSync(path,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+  const names=new Set();
+  function visit(node) {
+    if((ts.isJsxSelfClosingElement(node)||ts.isJsxOpeningElement(node)) && node.tagName.getText(ast).endsWith('.Screen')) {
+      const attr=node.attributes.properties.find(a=>ts.isJsxAttribute(a)&&a.name.getText(ast)==='name');
+      if(attr?.initializer && ts.isStringLiteral(attr.initializer))names.add(attr.initializer.text);
+    }
+    ts.forEachChild(node,visit);
+  }
+  visit(ast); return names;
 }
+let registeredCount=0;
+function verifyDestinations(screens,navigator) {
+  const names=registeredScreens(navigator);
+  for(const [name,value] of Object.entries(screens)) {
+    if(!names.has(name))throw Error(`Link target ${navigator} > ${name} is not registered`);
+    registeredCount++;
+    if(typeof value==='object' && value?.screens)verifyDestinations(value.screens,name);
+  }
+}
+verifyDestinations(config.screens,'RootNavigator');
+console.log(`  (${registeredCount} configured destinations verified against navigator JSX)`);
+
 console.log('  (config loaded from src/navigation/linking.ts, screens keys:', Object.keys(config.screens).length, ')');
 console.log('  (real linking.ts sha256:', createHash('sha256').update(realSrc).digest('hex').slice(0, 12), ')');
 
 const cases = [
+  ['/coach/directory', 'CoachDirectory'],
+  ['/coach-directory', 'CoachDirectory'],
+  ['/scout/guide', null],
+  ['/auth', 'SignIn'],
+  ['/home', 'HomeTab'],
+  ['/messages', 'Messages'],
+  ['/inbox', 'Inbox'],
+  ['/coach/dashboard', 'DashboardTab'],
+  ['/scout/dashboard', 'DashboardTab'],
+  ['/club/dashboard', 'DashboardTab'],
+  ['/hs-coach/dashboard', 'DashboardTab'],
+  ['/parent/dashboard', 'DashboardTab'],
+  ['/influencer/dashboard', 'DashboardTab'],
+  ['/agency/dashboard', 'DashboardTab'],
+  ['/camp-discovery', 'CampDiscovery'],
+  ['/camps', 'SavedCamps'],
+  ['/scout/trends', 'ScoutTrends'],
   ['/founder-message',       'FounderMessage'],
   ['/subscription/success',  'SubscriptionSuccess'],
   ['/podcasts/abc123',       'PodcastEpisodeDetail'],
@@ -76,6 +113,13 @@ function leafParams(state) {
   return route.params ?? null;
 }
 
+const roleRoots = {
+  '/coach/dashboard': 'CoachTabs', '/scout/dashboard': 'ScoutTabs',
+  '/club/dashboard': 'ClubCoachTabs', '/hs-coach/dashboard': 'HSCoachTabs',
+  '/parent/dashboard': 'ParentTabs', '/influencer/dashboard': 'InfluencerTabs',
+  '/agency/dashboard': 'AgencyTabs',
+};
+let failures = 0;
 console.log('=== getStateFromPath probe (real React Navigation parser) ===');
 for (const [url, expected] of cases) {
   const state = getStateFromPath(url, config);
@@ -88,5 +132,10 @@ for (const [url, expected] of cases) {
   } else {
     verdict = name === expected ? `OK -> ${expected}` : `FAIL (got ${name || 'nothing'}, expected ${expected})`;
   }
+  const root = state?.routes?.[state.index ?? 0]?.name;
+  if (roleRoots[url] && root !== roleRoots[url]) verdict = `FAIL (got role navigator ${root}, expected ${roleRoots[url]})`;
+  if (verdict.startsWith('FAIL')) failures++;
   console.log(`  ${url.padEnd(30)} -> name=${String(name).padEnd(24)} params=${JSON.stringify(params) || 'null'} [${verdict}]`);
 }
+
+if (failures) process.exitCode = 1;

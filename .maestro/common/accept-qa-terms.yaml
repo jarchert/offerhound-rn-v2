@@ -1,0 +1,21 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+---
+# Synthetic staging accounts only; exercise the actual consent gate.
+- scrollUntilVisible:
+    element:
+      text: Agree to Terms of Use
+    direction: DOWN
+    timeout: 20000
+- tapOn: Agree to Terms of Use
+- scrollUntilVisible:
+    element:
+      text: Agree to Privacy Policy
+    direction: DOWN
+    timeout: 20000
+- tapOn: Agree to Privacy Policy
+- scrollUntilVisible:
+    element:
+      text: Accept and Continue
+    direction: DOWN
+    timeout: 20000
+- tapOn: Accept and Continue
