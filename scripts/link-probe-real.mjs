@@ -35,6 +35,17 @@ console.log('  (config loaded from src/navigation/linking.ts, screens keys:', Ob
 console.log('  (real linking.ts sha256:', createHash('sha256').update(realSrc).digest('hex').slice(0, 12), ')');
 
 const cases = [
+  ['/auth', 'SignIn'],
+  ['/home', 'HomeTab'],
+  ['/messages', 'MessagesTab'],
+  ['/inbox', 'MessagesTab'],
+  ['/coach/dashboard', 'DashboardTab'],
+  ['/scout/dashboard', 'DashboardTab'],
+  ['/club/dashboard', 'DashboardTab'],
+  ['/hs-coach/dashboard', 'DashboardTab'],
+  ['/parent/dashboard', 'DashboardTab'],
+  ['/influencer/dashboard', 'DashboardTab'],
+  ['/agency/dashboard', 'DashboardTab'],
   ['/camp-discovery', 'CampDiscovery'],
   ['/camps', 'SavedCamps'],
   ['/scout/trends', 'TrendsTab'],
@@ -62,6 +73,12 @@ function leafParams(state) {
   return route.params ?? null;
 }
 
+const roleRoots = {
+  '/coach/dashboard': 'CoachTabs', '/scout/dashboard': 'ScoutTabs',
+  '/club/dashboard': 'ClubCoachTabs', '/hs-coach/dashboard': 'HSCoachTabs',
+  '/parent/dashboard': 'ParentTabs', '/influencer/dashboard': 'InfluencerTabs',
+  '/agency/dashboard': 'AgencyTabs',
+};
 let failures = 0;
 console.log('=== getStateFromPath probe (real React Navigation parser) ===');
 for (const [url, expected] of cases) {
@@ -75,6 +92,8 @@ for (const [url, expected] of cases) {
   } else {
     verdict = name === expected ? `OK -> ${expected}` : `FAIL (got ${name || 'nothing'}, expected ${expected})`;
   }
+  const root = state?.routes?.[state.index ?? 0]?.name;
+  if (roleRoots[url] && root !== roleRoots[url]) verdict = `FAIL (got role navigator ${root}, expected ${roleRoots[url]})`;
   if (verdict.startsWith('FAIL')) failures++;
   console.log(`  ${url.padEnd(30)} -> name=${String(name).padEnd(24)} params=${JSON.stringify(params) || 'null'} [${verdict}]`);
 }

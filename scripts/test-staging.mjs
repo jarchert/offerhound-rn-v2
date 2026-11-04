@@ -17,6 +17,13 @@ assert.throws(() => resolveBackendEnvironment({ ...staging, url: 'https://abdzdc
 const require = createRequire(import.meta.url);
 const configure = require('../app.config.js');
 const config = require('../app.json').expo;
+const profiles = require('../eas.json').build;
+assert.equal(profiles.staging.env.EXPO_PUBLIC_SUPABASE_URL, staging.url);
+assert.ok(profiles.staging.env.EXPO_PUBLIC_SUPABASE_ANON_KEY.startsWith('sb_publishable_'));
+for (const name of ['development', 'preview', 'production', 'production-play']) {
+  assert.notEqual(profiles[name].env?.EXPO_PUBLIC_SUPABASE_URL, staging.url);
+  assert.notEqual(profiles[name].env?.EXPO_PUBLIC_APP_ENV, 'staging');
+}
 const previous = process.env.APP_ENV;
 try {
   delete process.env.APP_ENV;
