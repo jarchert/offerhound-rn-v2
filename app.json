@@ -20,10 +20,10 @@
       "bundleIdentifier": "com.emergentmindlab.offerhoundv2",
       "buildNumber": "8",
       "infoPlist": {
-        "NSCameraUsageDescription": "OfferHound needs camera access to upload profile photos and highlight videos.",
+        "NSCameraUsageDescription": "OfferHound uses the camera to scan camp check-in QR codes and capture profile media.",
         "NSPhotoLibraryUsageDescription": "OfferHound needs photo library access to upload profile photos and highlight videos.",
         "NSPhotoLibraryAddUsageDescription": "OfferHound saves share cards and highlight images to your photo library.",
-        "NSMicrophoneUsageDescription": "OfferHound needs microphone access for video recording.",
+        "NSMicrophoneUsageDescription": "OfferHound uses the microphone when you choose to record an evaluator voice note or video.",
         "NSCalendarsUsageDescription": "OfferHound adds upcoming college camps and recruiting events to your calendar.",
         "NSCalendarsFullAccessUsageDescription": "OfferHound adds upcoming college camps and recruiting events to your calendar.",
         "NSUserTrackingUsageDescription": "OfferHound never tracks you across other apps. This permission is unused.",
@@ -179,7 +179,24 @@
       "./plugins/with-app-clip",
       "./plugins/with-widgets",
       "./plugins/with-live-activities",
-      "expo-iap"
+      "expo-iap",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "OfferHound uses the camera to scan camp check-in QR codes and capture profile media.",
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": true
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "OfferHound uses the microphone when you choose to record an evaluator voice note or video.",
+          "recordAudioAndroid": true,
+          "enableBackgroundRecording": false,
+          "enableBackgroundPlayback": false
+        }
+      ]
     ],
     "extra": {
       "eas": {

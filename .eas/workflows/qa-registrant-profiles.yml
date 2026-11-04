@@ -1,0 +1,17 @@
+name: OfferHound required registrant profiles QA
+jobs:
+  iphone_registrants:
+    type: repack
+    runs_on: macos-medium
+    environment: preview
+    params:
+      build_id: 230fcf01-d456-401f-98c4-81ba41535810
+      profile: staging-device
+      message: Required private registrant profiles and iPhone recording fix
+  android_registrants:
+    type: repack
+    environment: preview
+    params:
+      build_id: 828bca16-059a-4676-ab54-aad41ce930ff
+      profile: staging
+      message: Required private registrant profiles QA

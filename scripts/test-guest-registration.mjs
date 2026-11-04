@@ -11,8 +11,8 @@ const storage = {
   async setItem(_key, value) { await new Promise(resolve => setImmediate(resolve)); stored = value; },
 };
 const api = { async rpc(name, args) {
-  assert.equal(name, 'register_camp_guest'); calls.push(args);
-  const key = [args.p_camp_id, args.p_actor_user_id, args.p_request_key].join(':');
+  assert.equal(name, 'register_camp_attendee'); calls.push(args);
+  const key = [args.p_camp_id, args.p_guest, args.p_request_key].join(':');
   if (!serverRows.has(key)) serverRows.set(key, `guest-${serverRows.size + 1}`);
   if (loseReply) { loseReply = false; return { data: null, error: { code: 'NETWORK', message: 'Reply lost' } }; }
   return { data: serverRows.get(key), error: null };
@@ -24,13 +24,14 @@ function load(path, imports) {
   vm.runInNewContext(js, { exports, require(name) { if (!(name in imports)) throw Error(`Unexpected import ${name}`); return imports[name]; } });
   return exports;
 }
-const guest = load('../src/lib/nativeCampGuest.ts', { '@/integrations/supabase/client': { supabase: api } });
-const queue = load('../src/lib/checkinQueue.ts', { '@/integrations/supabase/client': { supabase: api }, './nativeCampGuest': guest, '@react-native-async-storage/async-storage': { __esModule: true, default: storage } });
-const draft = { requestKey: 'native_guest_001', staffId: 'staff-a', fullName: ' QA Guest ', emailAddress: '', jerseyNumber: ' 7 ', position: 'QB' };
+const identity = load('../src/lib/nativeRegistrantIdentity.ts', {});
+const guest = load('../src/lib/nativeCampGuest.ts', { '@/integrations/supabase/client': { supabase: api }, '@/lib/nativeRegistrantIdentity': identity });
+const queue = load('../src/lib/checkinQueue.ts', { '@/integrations/supabase/client': { supabase: api }, './nativeCampGuest': guest, './nativeCampCheckin': { checkInNativeToken() { throw Error('Unexpected QR operation'); } }, '@react-native-async-storage/async-storage': { __esModule: true, default: storage } });
+const draft = { requestKey: 'native_guest_001', staffId: 'staff-a', fullName: ' QA Guest ', emailAddress: 'guest@example.test', phone:'3125550100', birthDate:'2000-01-01', headshotPath:'camp-a/staff-a/native_guest_001.jpg', jerseyNumber: ' 7 ', position: 'QB' };
 let passed = 0;
 async function test(fn) { stored = null; loseReply = false; calls.length = 0; serverRows.clear(); await fn(); passed++; }
-await test(async () => { const args = guest.nativeGuestArguments('camp-a', draft); assert.equal(args.p_actor_user_id, 'staff-a'); assert.equal(args.p_guest_name, 'QA Guest'); assert.equal(args.p_jersey_number, '7'); assert.equal(args.p_guest_email, null); assert(!('user_id' in args)); });
-await test(async () => { for (const patch of [{ fullName: ' ' }, { emailAddress: 'bad email' }, { jerseyNumber: '1234567890123' }]) assert.throws(() => guest.nativeGuestArguments('camp-a', { ...draft, ...patch })); });
+await test(async () => { const args = guest.nativeGuestArguments('camp-a', draft); assert.equal(args.p_guest, true); assert.equal(args.p_full_name, 'QA Guest'); assert.equal(args.p_jersey_number, '7'); assert.equal(args.p_email, 'guest@example.test'); assert(!('user_id' in args)); });
+await test(async () => { for (const patch of [{ headshotPath:'' }, { birthDate:'2026-02-30' }, { phone:'abc' }, { emailAddress:'' }, { fullName: ' ' }, { emailAddress: 'bad email' }, { jerseyNumber: '1234567890123' }]) assert.throws(() => guest.nativeGuestArguments('camp-a', { ...draft, ...patch })); });
 await test(async () => { await Promise.all([queue.enqueueOp({ kind: 'walkup_register', campId: 'camp-a', payload: draft }), queue.enqueueOp({ kind: 'walkup_register', campId: 'camp-a', payload: { ...draft, requestKey: 'native_guest_002', fullName: 'Second Guest' } })]); assert.equal((await queue.listQueue('camp-a', 'staff-a')).length, 2); });
 await test(async () => { await queue.enqueueOp({ kind: 'walkup_register', campId: 'camp-a', payload: draft }); assert.equal((await queue.listQueue('camp-a', 'staff-b')).length, 0); assert.equal((await queue.flushQueue('camp-a', 'staff-b')).flushed, 0); assert.equal(calls.length, 0); assert.equal((await queue.listQueue('camp-a', 'staff-a')).length, 1); });
 await test(async () => { await queue.enqueueOp({ kind: 'walkup_register', campId: 'camp-a', payload: draft }); loseReply = true; assert.equal((await queue.flushQueue('camp-a', 'staff-a')).failed, 1); assert.equal((await queue.listQueue('camp-a', 'staff-a'))[0].attempts, 1); assert.equal((await queue.flushQueue('camp-a', 'staff-a')).flushed, 1); assert.equal(serverRows.size, 1); assert.equal((await queue.listQueue('camp-a', 'staff-a')).length, 0); assert(calls.every(call => call.p_request_key === draft.requestKey)); });

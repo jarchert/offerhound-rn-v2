@@ -1,5 +1,6 @@
 /** Native persistent camp queue. Guest entries retain their staff identity and
  * retry key; storage changes are serialized to preserve concurrent offline saves. */
+import { checkInNativeToken } from './nativeCampCheckin';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/integrations/supabase/client";
 import { savedGuestStaff, recoverNativeGuest, saveNativeGuest } from "./nativeCampGuest";
@@ -7,6 +8,7 @@ import { savedGuestStaff, recoverNativeGuest, saveNativeGuest } from "./nativeCa
 const STORAGE_KEY = "camp_checkin_queue";
 
 export type QueuedOpKind =
+  | "qr_check_in"
   | "check_in" // mark enrollment checked_in
   | "walkup_register"; // create new enrollment + check in
 
@@ -59,7 +61,7 @@ export async function listQueue(campId?: string, staffId?: string): Promise<Queu
   await storageWrites;
   const all = await readAll();
   return all.filter(entry => (!campId || entry.campId === campId) &&
-    (entry.kind !== "walkup_register" || (!!staffId && savedGuestStaff(entry.payload) === staffId)));
+    ((entry.kind !== "walkup_register" && entry.kind !== "qr_check_in") || (!!staffId && (entry.kind === "qr_check_in" ? entry.payload.staffId : savedGuestStaff(entry.payload)) === staffId)));
 }
 
 export async function removeOp(id: string) {
@@ -67,6 +69,7 @@ export async function removeOp(id: string) {
 }
 
 async function executeOp(op: QueuedOp): Promise<void> {
+  if (op.kind === "qr_check_in") { await checkInNativeToken(op.campId, op.payload.token, op.payload.staffId); return; }
   if (op.kind === "check_in") {
     const { enrollmentId } = op.payload;
     const { error } = await supabase

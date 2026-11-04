@@ -1,13 +1,10 @@
+import { CampRegistrantProfile } from '@/components/CampRegistrantIdentity';
 // CampEvaluatorScoringScreen — RN port of Lovable web src/pages/CampEvaluatorScoring.tsx (441 LOC).
 // Quick mobile interface for evaluators to record drill scores during a camp. Athletes are
 // pickable from a searchable list; selecting one reveals the drill picker, score input,
 // and notes field. Scores upsert into camp_performance_entries (per evaluator, latest row).
 //
-// PORT-PENDING (voice notes):
-//   Web uses MediaRecorder + getUserMedia(audio). RN equivalent is `expo-av` or
-//   `react-native-audio-recorder-player`, neither of which is installed yet. The voice
-//   button is rendered but disabled with an explanatory toast. When audio recording lands,
-//   wire startRecording/stopRecording back into a real recorder.
+// Native recording, private storage and playback are implemented independently.
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -28,6 +25,7 @@ import {
   Search,
   Timer,
 } from 'lucide-react-native';
+import { CampEvaluatorVoiceNotes } from '@/components/CampEvaluatorVoiceNotes';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -54,6 +52,7 @@ interface EnrollmentRow {
   position_group: string | null;
   notes: string | null;
   athlete_profile_id: string | null;
+  guest_name: string | null;
 }
 
 interface CampInfo {
@@ -86,15 +85,17 @@ export default function CampEvaluatorScoringScreen() {
   const [drillKey, setDrillKey] = useState<DrillKey>('forty_yard_dash');
   const [scoreInput, setScoreInput] = useState('');
   const [coachNotes, setCoachNotes] = useState('');
+  const [voiceBusy, setVoiceBusy] = useState(false);
+  const evaluatorAccess = useQuery({ queryKey: ['native-evaluation-access', campId, user?.id], enabled: !!campId && isAuthenticated, queryFn: async () => { const r = await (supabase.rpc as any)('can_evaluate_camp', { p_camp_id: campId }); if (r.error) throw r.error; return r.data === true; } });
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      navigation.navigate('Auth' as never);
+      navigation.navigate('AuthStack', { screen: 'Auth' });
     }
   }, [authLoading, isAuthenticated, navigation]);
 
   const { data: camp, isLoading: campLoading } = useQuery({
-    queryKey: ['evaluator-camp', campId],
+    queryKey: ['evaluator-camp', campId, user?.id],
     queryFn: async () => {
       if (!campId) return null;
       const { data, error } = await supabase
@@ -105,22 +106,22 @@ export default function CampEvaluatorScoringScreen() {
       if (error) throw error;
       return data as CampInfo | null;
     },
-    enabled: !!campId,
+    enabled: !!campId && isAuthenticated && evaluatorAccess.data === true,
   });
 
   const { data: enrollments = [], isLoading: enrLoading } = useQuery({
-    queryKey: ['evaluator-enrollments', campId],
+    queryKey: ['evaluator-enrollments', campId, user?.id],
     queryFn: async () => {
       if (!campId) return [];
       const { data, error } = await supabase
         .from('camp_enrollments')
-        .select('id, status, jersey_number, position_group, notes, athlete_profile_id')
+        .select('id, status, jersey_number, position_group, notes, athlete_profile_id, guest_name')
         .eq('camp_id', campId)
         .order('jersey_number', { ascending: true, nullsFirst: false });
       if (error) throw error;
       return (data || []) as EnrollmentRow[];
     },
-    enabled: !!campId,
+    enabled: !!campId && isAuthenticated && evaluatorAccess.data === true,
     refetchInterval: 10_000,
   });
 
@@ -138,10 +139,10 @@ export default function CampEvaluatorScoringScreen() {
 
   const saveScore = useMutation({
     mutationFn: async () => {
-      if (!user) throw new Error('Sign-in required');
+      if (!user || evaluatorAccess.data !== true) throw new Error('Camp evaluator access required');
       if (!campId || !activeEnrollment) throw new Error('Select an athlete');
       const numeric = Number(scoreInput);
-      if (!Number.isFinite(numeric)) throw new Error('Enter a valid score');
+      if (!scoreInput.trim() || !Number.isFinite(numeric) || numeric <= 0) throw new Error('Enter a valid score');
 
       const { data: existing } = await supabase
         .from('camp_performance_entries')
@@ -178,7 +179,7 @@ export default function CampEvaluatorScoringScreen() {
           evaluator_user_id: user.id,
           [drillKey]: updatedValues,
           coach_notes: coachNotes.trim() || null,
-          data_source: 'evaluator_mobile',
+          data_source: 'verified',
         } as any);
         if (error) throw error;
       }
@@ -198,21 +199,15 @@ export default function CampEvaluatorScoringScreen() {
     },
   });
 
-  // PORT-PENDING: hook expo-av or similar when audio recording is added.
-  const handleVoicePress = () => {
-    toast({
-      title: 'Voice notes coming soon',
-      description: 'Native audio capture is not yet wired in this build.',
-    });
-  };
-
-  if (authLoading || campLoading) {
+  if (authLoading || !isAuthenticated || evaluatorAccess.isPending || campLoading) {
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color={colors.primary} />
       </SafeAreaView>
     );
   }
+
+  if (evaluatorAccess.data !== true) return <SafeAreaView style={styles.center}><Text style={styles.muted}>Only the camp owner or accepted evaluators can score athletes and record voice notes.</Text>{evaluatorAccess.isError && <Button onPress={() => { void evaluatorAccess.refetch(); }}>Retry access check</Button>}</SafeAreaView>;
 
   if (!camp) {
     return (
@@ -251,6 +246,14 @@ export default function CampEvaluatorScoringScreen() {
         </Badge>
       </View>
 
+      {activeEnrollment && <View style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.sm }}>
+        <Button variant="outline" testID="evaluation-back-to-athletes"
+          disabled={voiceBusy || saveScore.isPending}
+          onPress={() => { setActiveEnrollment(null); setScoreInput(''); setCoachNotes(''); }}>
+          Back to athlete list
+        </Button>
+      </View>}
+
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         {!activeEnrollment ? (
           <Card>
@@ -285,6 +288,8 @@ export default function CampEvaluatorScoringScreen() {
                   filteredEnrollments.slice(0, 30).map((e) => (
                     <Pressable
                       key={e.id}
+                      testID={`evaluation-athlete-${e.jersey_number || e.id}`}
+                      accessibilityLabel={`Evaluate ${e.guest_name || e.jersey_number || e.id.slice(0,8)}`}
                       onPress={() => setActiveEnrollment(e)}
                       style={({ pressed }) => [
                         styles.athleteRow,
@@ -295,7 +300,7 @@ export default function CampEvaluatorScoringScreen() {
                           <Text style={styles.jersey}>{e.jersey_number}</Text>
                         ) : null}
                         <Text style={styles.athleteId} numberOfLines={1}>
-                          #{e.id.slice(0, 8)}
+                          {e.guest_name || `#${e.id.slice(0, 8)}`}
                         </Text>
                         {e.position_group ? (
                           <Badge variant="outline" style={styles.posBadge}>
@@ -312,6 +317,7 @@ export default function CampEvaluatorScoringScreen() {
           </Card>
         ) : (
           <Card>
+            <CampRegistrantProfile enrollmentId={activeEnrollment.id} />
             <CardHeader style={styles.activeHeader}>
               <View style={{ flexShrink: 1 }}>
                 <CardTitle>
@@ -325,21 +331,12 @@ export default function CampEvaluatorScoringScreen() {
                   </Badge>
                 ) : null}
               </View>
-              <Button
-                size="sm"
-                variant="ghost"
-                onPress={() => {
-                  setActiveEnrollment(null);
-                  setScoreInput('');
-                  setCoachNotes('');
-                }}>
-                Change
-              </Button>
+
             </CardHeader>
             <CardContent>
               <View style={styles.field}>
                 <Label>Drill</Label>
-                <Select value={drillKey} onValueChange={(v) => setDrillKey(v as DrillKey)}>
+                <Select value={drillKey} onValueChange={(v) => { if (!voiceBusy) setDrillKey(v as DrillKey); }}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -366,10 +363,7 @@ export default function CampEvaluatorScoringScreen() {
               <View style={styles.field}>
                 <View style={styles.notesHeaderRow}>
                   <Label>Notes</Label>
-                  <Button size="sm" variant="outline" onPress={handleVoicePress}>
-                    <Mic size={12} color={colors.foreground} />
-                    <Text style={{ marginLeft: 4, color: colors.foreground }}>Voice</Text>
-                  </Button>
+
                 </View>
                 <Textarea
                   value={coachNotes}
@@ -379,9 +373,11 @@ export default function CampEvaluatorScoringScreen() {
                 />
               </View>
 
+              <CampEvaluatorVoiceNotes key={`${campId}:${activeEnrollment.id}:${drillKey}:${user?.id}`} campId={campId!} enrollmentId={activeEnrollment.id} drill={drillKey} onBusyChange={setVoiceBusy} />
+
               <Button
                 onPress={() => saveScore.mutate()}
-                disabled={saveScore.isPending || !scoreInput.trim()}
+                disabled={saveScore.isPending || voiceBusy || !scoreInput.trim()}
                 style={{ marginTop: spacing.sm }}>
                 {saveScore.isPending ? (
                   <ActivityIndicator size="small" color={colors.primaryForeground} />

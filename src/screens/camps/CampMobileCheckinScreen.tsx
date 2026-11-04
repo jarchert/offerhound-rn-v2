@@ -1,12 +1,7 @@
 // CampMobileCheckinScreen — RN port of Lovable web src/pages/CampMobileCheckin.tsx (433 LOC).
 // Coach-side mobile check-in: scan athlete QR, manual token entry, walk-up registration.
 //
-// PORT-PENDING (camera/QR scan):
-//   Web uses BarcodeDetector + getUserMedia. RN equivalent is `expo-barcode-scanner` or
-//   `expo-camera`'s onBarCodeScanned, but neither is currently in package.json. For now
-//   the "Scan" tab renders a stub explaining the limitation and pushes users to the
-//   "Manual" token-entry tab. When expo-barcode-scanner is installed, replace
-//   <ScanStub /> with a real <BarCodeScanner /> wrapper.
+// Native camera capture and exact server-authorized token validation are implemented independently.
 //
 // Guest registration is implemented independently in CampGuestWalkupForm.
 import React, { useEffect, useMemo, useState } from 'react';
@@ -39,6 +34,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCampCheckinSync } from '@/hooks/useCampCheckinSync';
 import { enqueueOp } from '@/lib/checkinQueue';
 import { useToast } from '@/hooks/use-toast';
+import { CampQrScanner } from '@/components/CampQrScanner';
+import { checkInNativeToken, decodeCampToken } from '@/lib/nativeCampCheckin';
 import { CampGuestWalkupForm } from '@/components/CampGuestWalkupForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -75,6 +72,8 @@ export default function CampMobileCheckinScreen() {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState('scan');
   const [manualToken, setManualToken] = useState('');
+  const [checkinMessage, setCheckinMessage] = useState('');
+  const access = useQuery({ queryKey: ['camp-checkin-access', campId, user?.id], enabled: !!campId && isAuthenticated, queryFn: async () => { const r = await (supabase.rpc as any)('can_register_camp_guest', { p_camp_id: campId }); if (r.error) throw r.error; return r.data === true; } });
 
   const { isOnline, queueCount, isFlushing, flushNow, refreshQueue } = useCampCheckinSync(
     campId ?? '',
@@ -157,46 +156,26 @@ export default function CampMobileCheckinScreen() {
     },
   });
 
-  const handleScanned = (decoded: string) => {
-    const trimmed = decoded.trim();
-    let token = trimmed;
+  const scanning = React.useRef(false);
+  const handleScanned = async (decoded: string): Promise<string> => {
+    if (scanning.current) throw new Error('A check-in is already being processed.');
+    if (!user || access.data !== true) throw new Error('Camp registration staff access required.');
+    scanning.current = true;
     try {
-      // RN doesn't have URL constructor on all engines; guard.
-      const url = new URL(trimmed);
-      const candidate =
-        url.searchParams.get('token') || url.pathname.split('/').filter(Boolean).pop() || '';
-      if (candidate) token = candidate;
-    } catch {
-      // not a URL — use the raw value
-    }
-
-    const match = enrollments.find(
-      (e) =>
-        e.qr_code_token === token ||
-        (e.qr_code_token && e.qr_code_token.startsWith(token)),
-    );
-    if (!match) {
-      toast({
-        title: 'No match',
-        description: 'No enrollment found for that QR code.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    if (match.status === 'checked_in') {
-      toast({
-        title: 'Already checked in',
-        description: `Athlete #${match.jersey_number || match.id.slice(0, 8)}`,
-      });
-      return;
-    }
-    checkInMutation.mutate(match.id);
+      const token = decodeCampToken(decoded);
+      if (!isOnline) {
+        await enqueueOp({ kind: 'qr_check_in', campId: campId!, payload: { token, staffId: user.id } });
+        await refreshQueue();
+        return 'QR saved offline. Check-in will be validated when connected.';
+      }
+      const result = await checkInNativeToken(campId!, token, user.id);
+      await queryClient.invalidateQueries({ queryKey: ['camp-ops-enrollments', campId] });
+      return result.status === 'already_checked_in' ? 'Already checked in. No duplicate was created.' : 'Athlete checked in.';
+    } finally { scanning.current = false; }
   };
-
-  const handleManualSubmit = () => {
-    if (!manualToken.trim()) return;
-    handleScanned(manualToken);
-    setManualToken('');
+  const handleManualSubmit = async () => {
+    try { const result = await handleScanned(manualToken); setCheckinMessage(result); setManualToken(''); }
+    catch (error: any) { setCheckinMessage(error.message || 'Could not check in.'); }
   };
 
   const stats = useMemo(() => {
@@ -326,36 +305,11 @@ export default function CampMobileCheckinScreen() {
           </TabsList>
 
           <TabsContent value="scan">
-            <Card>
-              <CardHeader style={{ paddingBottom: spacing.xs }}>
-                <CardTitle>Scan athlete QR</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {/* PORT-PENDING: when expo-camera/expo-barcode-scanner is added to package.json,
-                    replace this stub with a real <BarCodeScanner onBarCodeScanned={...} />.
-                    On mount, request permission via
-                      const { status } = await Camera.requestCameraPermissionsAsync();
-                    Handle "granted" / "denied" states with user-facing messaging and a
-                    Settings deep-link. Decoded string should be passed to handleScanned(). */}
-                <View style={styles.scanStub}>
-                  <QrCode size={48} color={colors.mutedForeground} />
-                  <Text style={[styles.muted, { textAlign: 'center', marginTop: 12 }]}>
-                    Camera-based QR scanning is not yet wired in the native app. Use the Manual tab
-                    to paste a token.
-                  </Text>
-                  <Button
-                    variant="outline"
-                    style={{ marginTop: 12 }}
-                    onPress={() => setTab('manual')}>
-                    Open manual entry
-                  </Button>
-                </View>
-              </CardContent>
-            </Card>
+            {access.data === true ? <CampQrScanner onCode={handleScanned} onManual={() => setTab('manual')} /> : <Text style={styles.muted}>{access.isPending ? 'Checking check-in access…' : 'Only camp registration staff can check in athletes.'}</Text>}
           </TabsContent>
 
           <TabsContent value="manual">
-            <Card>
+            {access.data === true ? <Card>
               <CardHeader style={{ paddingBottom: spacing.xs }}>
                 <CardTitle>Enter token</CardTitle>
               </CardHeader>
@@ -365,20 +319,21 @@ export default function CampMobileCheckinScreen() {
                     <Input
                       value={manualToken}
                       onChangeText={setManualToken}
-                      placeholder="Paste QR token"
+                      testID="camp-manual-token" placeholder="Paste complete QR token"
                       onSubmitEditing={handleManualSubmit}
                       autoCapitalize="none"
                       autoCorrect={false}
                     />
                   </View>
                   <Button
-                    onPress={handleManualSubmit}
+                    testID="camp-manual-submit" onPress={() => { void handleManualSubmit(); }}
                     disabled={!manualToken.trim()}
                     style={{ marginLeft: 8 }}>
                     <UserCheck size={16} color={colors.primaryForeground} />
                   </Button>
                 </View>
 
+                <Text testID="camp-manual-result" style={styles.muted}>{checkinMessage}</Text>
                 <Text style={[styles.label, { marginTop: 16 }]}>
                   Pending ({pendingList.length})
                 </Text>
@@ -417,7 +372,7 @@ export default function CampMobileCheckinScreen() {
                   ))
                 )}
               </CardContent>
-            </Card>
+            </Card> : <Text style={styles.muted}>Only camp registration staff can check in athletes.</Text>}
           </TabsContent>
 
           <TabsContent value="walkup">

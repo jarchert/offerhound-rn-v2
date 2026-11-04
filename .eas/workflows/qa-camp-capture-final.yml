@@ -1,0 +1,74 @@
+# Repack only the fresh camera/audio native binaries; separate jobs isolate roles.
+name: OfferHound corrected capture acceptance
+jobs:
+  ios_candidate:
+    type: repack
+    runs_on: macos-medium
+    environment: preview
+    params:
+      build_id: aaef8566-4fff-4681-a3b5-a718c248d461
+      profile: staging
+      message: Verify QR picker readiness and durable audio playback progress
+  android_candidate:
+    type: repack
+    runs_on: linux-medium
+    environment: preview
+    params:
+      build_id: d8abb781-eb4c-4765-baf5-2e0d029699ee
+      profile: staging
+      message: Verify QR picker readiness and durable audio playback progress
+  ios_qr:
+    type: maestro
+    needs: [ios_candidate]
+    runs_on: macos-medium
+    environment: preview
+    params:
+      build_id: ${{ needs.ios_candidate.outputs.build_id }}
+      flow_path: .maestro
+      include_tags: capture-qr
+      record_screen: true
+      retries: 0
+  ios_access:
+    type: maestro
+    needs: [ios_candidate]
+    runs_on: macos-medium
+    environment: preview
+    params:
+      build_id: ${{ needs.ios_candidate.outputs.build_id }}
+      flow_path: .maestro
+      include_tags: capture-access
+      record_screen: true
+      retries: 0
+  android_qr:
+    type: maestro
+    needs: [android_candidate]
+    runs_on: linux-medium-nested-virtualization
+    environment: preview
+    params:
+      build_id: ${{ needs.android_candidate.outputs.build_id }}
+      flow_path: .maestro
+      include_tags: capture-qr
+      record_screen: true
+      retries: 0
+  android_voice:
+    type: maestro
+    needs: [android_candidate]
+    runs_on: linux-medium-nested-virtualization
+    environment: preview
+    params:
+      build_id: ${{ needs.android_candidate.outputs.build_id }}
+      flow_path: .maestro
+      include_tags: capture-android-voice
+      record_screen: true
+      retries: 0
+  android_access:
+    type: maestro
+    needs: [android_candidate]
+    runs_on: linux-medium-nested-virtualization
+    environment: preview
+    params:
+      build_id: ${{ needs.android_candidate.outputs.build_id }}
+      flow_path: .maestro
+      include_tags: capture-access
+      record_screen: true
+      retries: 0

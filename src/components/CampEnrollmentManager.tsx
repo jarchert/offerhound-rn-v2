@@ -1,3 +1,4 @@
+import { CampRegistrantProfileDisclosure } from '@/components/CampRegistrantIdentity';
 // Parity port from Lovable src/components/CampEnrollmentManager.tsx (verbatim logic).
 // Web→RN mapping:
 //   - shadcn Card/Button/Badge/Input/Label/Select/Dialog → src/components/ui/*
@@ -259,6 +260,7 @@ export function CampEnrollmentManager({
             <View key={enrollment.id} style={s.listItem}>
               <Card>
                 <CardContent style={s.itemContent}>
+                  <CampRegistrantProfileDisclosure enrollmentId={enrollment.id} />
                   <View style={s.itemLeft}>
                     {enrollment.jersey_number ? (
                       <View style={s.jerseyBadge}>

@@ -1,0 +1,104 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Full QR validation and native image decoder
+tags: [capture-ios, capture-android, capture-qr]
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.college-coach@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_COLLEGE_COACH_PASSWORD}
+- extendedWaitUntil:
+    visible: ".*Pipeline.*"
+    timeout: 60000
+- runFlow:
+    file: common/open-qa-link.yaml
+    env:
+      QA_LINK: offerhound-staging://camps/${MAESTRO_CAPTURE_CAMP_ID}/mobile-checkin
+- extendedWaitUntil:
+    visible: Scan athlete QR
+    timeout: 60000
+- tapOn:
+    id: camp-qr-manual
+- tapOn:
+    id: camp-manual-token
+- inputText: invalid-prefix
+- hideKeyboard
+- tapOn:
+    id: camp-manual-submit
+- assertVisible: ".*complete.*QR.*"
+- tapOn:
+    id: camp-manual-token
+- longPressOn:
+    id: camp-manual-token
+- tapOn:
+    text: Select All
+    optional: true
+- eraseText: 100
+- inputText: ${MAESTRO_CAPTURE_EXPIRED_TOKEN}
+- hideKeyboard
+- tapOn:
+    id: camp-manual-submit
+- extendedWaitUntil:
+    visible: ".*[Ee]xpired.*"
+    timeout: 30000
+- tapOn:
+    id: camp-manual-token
+- longPressOn:
+    id: camp-manual-token
+- tapOn:
+    text: Select All
+    optional: true
+- eraseText: 100
+- inputText: ${MAESTRO_CAPTURE_MANUAL_TOKEN}
+- hideKeyboard
+- tapOn:
+    id: camp-manual-submit
+- extendedWaitUntil:
+    visible: ".*(Athlete checked in|Already checked in).*"
+    timeout: 30000
+- tapOn:
+    id: camp-manual-token
+- inputText: ${MAESTRO_CAPTURE_MANUAL_TOKEN}
+- hideKeyboard
+- tapOn:
+    id: camp-manual-submit
+- extendedWaitUntil:
+    visible: ".*Already checked in.*"
+    timeout: 30000
+- tapOn: ".*Scan.*"
+- addMedia:
+    - fixtures/capture-qr.png
+- tapOn:
+    id: camp-qr-image
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: '(com.google.android.providers.media.module:id/icon_thumbnail|com.google.android.documentsui:id/thumbnail|com.android.documentsui:id/thumbnail)'
+          timeout: 30000
+      # The observed API-30 picker puts a preview icon over the image center.
+      # Select the lower part of the sole injected QR thumbnail (320x640 fixture device).
+      - tapOn:
+          point: '20%,42%'
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          id: PXGGridLayout-Info
+          index: 0
+          optional: true
+      - tapOn:
+          text: 'Photo, .*'
+          index: 0
+          optional: true
+- extendedWaitUntil:
+    visible: ".*(Athlete checked in|Already checked in).*"
+    timeout: 30000
+- takeScreenshot: capture-native-qr-image
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.college-coach@offerhound.test

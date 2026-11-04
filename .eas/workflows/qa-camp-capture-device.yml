@@ -1,0 +1,10 @@
+# Manual physical iPhone staging build only. No store submission or production release.
+name: OfferHound physical iPhone capture acceptance build
+jobs:
+  ios_device_qa:
+    type: build
+    environment: preview
+    params:
+      platform: ios
+      profile: staging-device
+      message: Physical iPhone staging camera and microphone acceptance

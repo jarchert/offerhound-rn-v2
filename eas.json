@@ -73,6 +73,12 @@
         "EXPO_PUBLIC_SUPABASE_URL": "https://wrrfwvkixlzmnsztjfgg.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_50jrwE_hS2Oq0vCuIcjzFg_1Sw33VrE"
       }
+    },
+    "staging-device": {
+      "extends": "staging",
+      "ios": {
+        "simulator": false
+      }
     }
   },
   "submit": {
