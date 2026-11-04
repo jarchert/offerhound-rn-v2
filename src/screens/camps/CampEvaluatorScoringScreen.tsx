@@ -246,6 +246,14 @@ export default function CampEvaluatorScoringScreen() {
         </Badge>
       </View>
 
+      {activeEnrollment && <View style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.sm }}>
+        <Button variant="outline" testID="evaluation-back-to-athletes"
+          disabled={voiceBusy || saveScore.isPending}
+          onPress={() => { setActiveEnrollment(null); setScoreInput(''); setCoachNotes(''); }}>
+          Back to athlete list
+        </Button>
+      </View>}
+
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         {!activeEnrollment ? (
           <Card>
@@ -323,17 +331,7 @@ export default function CampEvaluatorScoringScreen() {
                   </Badge>
                 ) : null}
               </View>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={voiceBusy || saveScore.isPending}
-                onPress={() => {
-                  setActiveEnrollment(null);
-                  setScoreInput('');
-                  setCoachNotes('');
-                }}>
-                Change
-              </Button>
+
             </CardHeader>
             <CardContent>
               <View style={styles.field}>
