@@ -1,0 +1,14 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: QA scout login restore admin denial and logout
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.scout@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_SCOUT_PASSWORD}
+- runFlow:
+    file: common/role-check.yaml
+    env:
+      QA_EMAIL: qa.scout@offerhound.test
+      QA_ROLE_KEY: scout
+      QA_ROLE_MARKER: "QA Scout"

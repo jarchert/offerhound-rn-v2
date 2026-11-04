@@ -1,6 +1,9 @@
 appId: com.emergentmindlab.offerhoundv2.staging
 ---
-- openLink: offerhound-staging://settings
+- runFlow:
+    file: open-qa-link.yaml
+    env:
+      QA_LINK: offerhound-staging://settings
 - extendedWaitUntil:
     visible: Settings
     timeout: 30000

@@ -1,0 +1,104 @@
+name: OfferHound isolated all-role native authentication
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        type: string
+        required: true
+        description: Finished OfferHound QA simulator or emulator build ID
+      platform:
+        type: choice
+        required: true
+        default: ios
+        options: [ios, android]
+jobs:
+  adult_athlete:
+    name: QA adult_athlete authentication
+    type: maestro
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      flow_path: .maestro/staging-athlete-auth.yaml
+      retries: 0
+  admin:
+    name: QA admin authentication
+    type: maestro
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      flow_path: .maestro/staging-admin-auth.yaml
+      retries: 0
+  u13_athlete:
+    name: QA u13_athlete authentication
+    type: maestro
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      flow_path: .maestro/staging-role-u13-athlete.yaml
+      retries: 0
+  parent:
+    name: QA parent authentication
+    type: maestro
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      flow_path: .maestro/staging-role-parent.yaml
+      retries: 0
+  college_coach:
+    name: QA college_coach authentication
+    type: maestro
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      flow_path: .maestro/staging-role-college-coach.yaml
+      retries: 0
+  club_coach:
+    name: QA club_coach authentication
+    type: maestro
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      flow_path: .maestro/staging-role-club-coach.yaml
+      retries: 0
+  hs_coach:
+    name: QA hs_coach authentication
+    type: maestro
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      flow_path: .maestro/staging-role-hs-coach.yaml
+      retries: 0
+  scout:
+    name: QA scout authentication
+    type: maestro
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      flow_path: .maestro/staging-role-scout.yaml
+      retries: 0
+  agency_owner:
+    name: QA agency_owner authentication
+    type: maestro
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      flow_path: .maestro/staging-role-agency-owner.yaml
+      retries: 0
+  influencer:
+    name: QA influencer authentication
+    type: maestro
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      flow_path: .maestro/staging-role-influencer.yaml
+      retries: 0

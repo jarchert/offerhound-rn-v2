@@ -1,0 +1,14 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: QA influencer login restore admin denial and logout
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.influencer@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_INFLUENCER_PASSWORD}
+- runFlow:
+    file: common/role-check.yaml
+    env:
+      QA_EMAIL: qa.influencer@offerhound.test
+      QA_ROLE_KEY: influencer
+      QA_ROLE_MARKER: "QA Influencer"

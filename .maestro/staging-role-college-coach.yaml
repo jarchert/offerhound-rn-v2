@@ -1,0 +1,14 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: QA college-coach login restore admin denial and logout
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.college-coach@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_COLLEGE_COACH_PASSWORD}
+- runFlow:
+    file: common/role-check.yaml
+    env:
+      QA_EMAIL: qa.college-coach@offerhound.test
+      QA_ROLE_KEY: college-coach
+      QA_ROLE_MARKER: ".*Pipeline.*"

@@ -14,7 +14,10 @@ name: QA athlete login restore admin denial and logout
 - extendedWaitUntil:
     visible: ".*Matches.*"
     timeout: 60000
-- openLink: offerhound-staging://admin
+- runFlow:
+    file: common/open-qa-link.yaml
+    env:
+      QA_LINK: offerhound-staging://admin
 - extendedWaitUntil:
     visible: Admins only
     timeout: 30000
