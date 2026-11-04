@@ -18,3 +18,6 @@ appId: com.emergentmindlab.offerhoundv2.staging
     label: Enter private QA test password
 - hideKeyboard
 - tapOn: Sign In
+- tapOn:
+    text: Not Now
+    optional: true
