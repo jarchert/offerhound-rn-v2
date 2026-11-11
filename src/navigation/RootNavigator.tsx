@@ -1,3 +1,12 @@
+import {SafeAreaProvider} from 'react-native-safe-area-context';
+import {HomeNavigationProvider,HomeNavigationBar} from '@/navigation/HomeNavigation';
+import { clearPendingCampJourney, takePendingCampJourney } from '@/lib/pendingCampJourney';
+import LegalStack from '@/navigation/stacks/LegalStack';
+import WebCompanionScreen from '@/screens/shared/WebCompanionScreen';
+import RoleLandingScreen from '@/screens/shared/RoleLandingScreen';
+import CoachMatchesScreen from '@/screens/coach/CoachAthleteMatchesScreen';
+import ParentTrustSafetyScreen from '@/screens/parent/ParentTrustSafetyScreen';
+import NewsAndLearnScreen from '@/screens/shared/NewsAndLearnScreen';
 // RootNavigator — post-Session 2 rewrite per Part 2 §2.1
 // NO NavigationContainer here (App.tsx owns it). This is the root Stack that
 // branches on auth + role and exposes 9 role navigators + 7 shared stacks.
@@ -68,6 +77,36 @@ import FloatingAICoach from '@/components/FloatingAICoach';
 
 export type RootStackParamList = {
   PublicTabs: undefined;
+  LegalStack: undefined;
+  RoleLanding: undefined;
+  CoachMatches: undefined;
+  ParentTrustSafety: undefined;
+  NewsAndLearn: undefined;
+  WebMarketingCenter: Record<string,string> | undefined;
+  WebAdminOnboarding: Record<string,string> | undefined;
+  WebOptoutAudit: Record<string,string> | undefined;
+  WebTestPasswords: Record<string,string> | undefined;
+  WebHSCoachProfile: Record<string,string> | undefined;
+  WebAgencyProfile: Record<string,string> | undefined;
+  WebSportSample: Record<string,string> | undefined;
+  WebSportSampleGallery: Record<string,string> | undefined;
+  WebSmsTerms: Record<string,string> | undefined;
+  WebAISlides: Record<string,string> | undefined;
+  WebAthleteSlides: Record<string,string> | undefined;
+  WebAthleteProfileSlides: Record<string,string> | undefined;
+  WebCoachSlides: Record<string,string> | undefined;
+  WebAdminInfluencers: Record<string,string> | undefined;
+  WebAdminPodcasts: Record<string,string> | undefined;
+  WebAdminMedia: Record<string,string> | undefined;
+  WebChartSmoke: Record<string,string> | undefined;
+  WebChartArtifacts: Record<string,string> | undefined;
+  WebLetterAnalytics: Record<string,string> | undefined;
+  WebMarketingRender: Record<string,string> | undefined;
+  WebConsent: Record<string,string> | undefined;
+  WebMinorInvite: Record<string,string> | undefined;
+  WebRosterConsent: Record<string,string> | undefined;
+  WebFootballHub: Record<string,string> | undefined;
+
   PublicSportStack: undefined;
   AuthStack: undefined;
   OnboardingStack: undefined;
@@ -146,6 +185,7 @@ export default function RootNavigator() {
     previousUserId.current = user?.id ?? null;
     // Camp routes are available in both auth states. Explicitly discard the
     // old shared route after the signed-out screen graph has committed.
+    if(endedSession)clearPendingCampJourney();
     if (endedSession && navigationRef.isReady()) {
       navigationRef.resetRoot({ index: 0, routes: [{ name: 'PublicTabs' }] });
     }
@@ -157,6 +197,12 @@ export default function RootNavigator() {
   const scoutOrganization = useScoutOrganization();
   const scoutOrg = scoutOrganization.data;
   const isAgency = userRole === 'scout' && !!scoutOrg && ((scoutOrg as any).isOwner || (scoutOrg as any).isMember);
+  React.useEffect(()=>{
+    if(!user||!userRole||isLoading||(userRole==='scout'&&(scoutOrganization.isPending||scoutOrganization.isError)))return;
+    const timer=setTimeout(()=>{if(!navigationRef.isReady())return;const destination=takePendingCampJourney();if(destination)(navigationRef.navigate as any)('CampStack',destination);},0);
+    return()=>clearTimeout(timer);
+  },[user?.id,userRole,isLoading,scoutOrganization.isPending,scoutOrganization.isError,isAgency]);
+
 
   // Session restoration can complete before the asynchronous role lookup.
   if (isLoading || (user && !userRole)) return null;
@@ -196,7 +242,10 @@ export default function RootNavigator() {
     : roleToInitialRoute(effectiveRole);
 
   return (
-    <>
+    <HomeNavigationProvider route={initialRouteName}>
+    <View style={{flex:1}}>
+    <HomeNavigationBar authenticated={!!user}/>
+    <SafeAreaProvider style={{flex:1}}>
     <Stack.Navigator
       key={`${user?.id ?? 'public'}:${initialRouteName}`}
       initialRouteName={initialRouteName}
@@ -209,6 +258,7 @@ export default function RootNavigator() {
           <Stack.Screen name="PublicTabs" component={PublicTabs} />
           <Stack.Screen name="PublicSportStack" component={PublicSportStack} />
           <Stack.Screen name="AuthStack" component={AuthStack} />
+          <Stack.Screen name="OnboardingStack" component={OnboardingStack} />
           <Stack.Screen name="PublicProfileStack" component={PublicProfileStack} />
           <Stack.Screen name="CampStack" component={CampStack} navigationKey="public-camps" />
           <Stack.Screen name="Install" component={InstallScreen} />
@@ -284,9 +334,40 @@ export default function RootNavigator() {
           <Stack.Screen name="NotFound" component={NotFoundScreen} />
         </>
       )}
+      <Stack.Screen name="LegalStack" component={LegalStack} />
+      <Stack.Screen name="RoleLanding" component={RoleLandingScreen} />
+      <Stack.Screen name="CoachMatches" component={CoachMatchesScreen} />
+      <Stack.Screen name="ParentTrustSafety" component={ParentTrustSafetyScreen} />
+      <Stack.Screen name="NewsAndLearn" component={NewsAndLearnScreen} />
+      <Stack.Screen name="WebMarketingCenter" component={WebCompanionScreen} />
+      <Stack.Screen name="WebAdminOnboarding" component={WebCompanionScreen} />
+      <Stack.Screen name="WebOptoutAudit" component={WebCompanionScreen} />
+      <Stack.Screen name="WebTestPasswords" component={WebCompanionScreen} />
+      <Stack.Screen name="WebHSCoachProfile" component={WebCompanionScreen} />
+      <Stack.Screen name="WebAgencyProfile" component={WebCompanionScreen} />
+      <Stack.Screen name="WebSportSample" component={WebCompanionScreen} />
+      <Stack.Screen name="WebSportSampleGallery" component={WebCompanionScreen} />
+      <Stack.Screen name="WebSmsTerms" component={WebCompanionScreen} />
+      <Stack.Screen name="WebAISlides" component={WebCompanionScreen} />
+      <Stack.Screen name="WebAthleteSlides" component={WebCompanionScreen} />
+      <Stack.Screen name="WebAthleteProfileSlides" component={WebCompanionScreen} />
+      <Stack.Screen name="WebCoachSlides" component={WebCompanionScreen} />
+      <Stack.Screen name="WebAdminInfluencers" component={WebCompanionScreen} />
+      <Stack.Screen name="WebAdminPodcasts" component={WebCompanionScreen} />
+      <Stack.Screen name="WebAdminMedia" component={WebCompanionScreen} />
+      <Stack.Screen name="WebChartSmoke" component={WebCompanionScreen} />
+      <Stack.Screen name="WebChartArtifacts" component={WebCompanionScreen} />
+      <Stack.Screen name="WebLetterAnalytics" component={WebCompanionScreen} />
+      <Stack.Screen name="WebMarketingRender" component={WebCompanionScreen} />
+      <Stack.Screen name="WebConsent" component={WebCompanionScreen} />
+      <Stack.Screen name="WebMinorInvite" component={WebCompanionScreen} />
+      <Stack.Screen name="WebRosterConsent" component={WebCompanionScreen} />
+      <Stack.Screen name="WebFootballHub" component={WebCompanionScreen} />
     </Stack.Navigator>
+    </SafeAreaProvider>
     {/* Authenticated-only floating AI coach — never rendered for signed-out users. */}
     {user ? <FloatingAICoach /> : null}
-    </>
+    </View>
+    </HomeNavigationProvider>
   );
 }

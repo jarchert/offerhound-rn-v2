@@ -1,3 +1,4 @@
+import {HomeButton} from '@/navigation/HomeNavigation';
 import React, { createContext, useContext, useEffect, useRef } from 'react';
 import { Modal, Animated, View, Text, Pressable, StyleSheet, Dimensions, ViewStyle, TextStyle, ScrollView } from 'react-native';
 import { X } from 'lucide-react-native';
@@ -43,6 +44,7 @@ export function SheetContent({ children, style }: { children: React.ReactNode; s
       <Pressable style={[s.overlay, align]} onPress={() => ctx.onOpenChange(false)}>
         <Animated.View style={[s.sheet, dims, translate, style]}>
           <Pressable style={s.sheetInner} onPress={(e) => e.stopPropagation()}>
+            <HomeButton confirmLeave beforeNavigate={()=>ctx.onOpenChange(false)}/>
             <ScrollView contentContainerStyle={s.scrollContent}>{children}</ScrollView>
             <Pressable style={s.closeBtn} onPress={() => ctx.onOpenChange(false)} hitSlop={8}>
               <X size={20} color={colors.mutedForeground} />

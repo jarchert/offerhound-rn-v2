@@ -26,7 +26,7 @@ import { useScoutProfile } from '@/hooks/useScoutProfile';
 import { useHSCoachProfile } from '@/hooks/useHSCoachProfile';
 import { roleToInitialRoute } from '@/navigation/RootNavigator';
 
-import { HeroSection } from '@/components/HeroSection';
+import { UserProfileHeader } from '@/components/UserProfileHeader';
 import { AthleteProfile } from '@/components/AthleteProfile';
 import { Footer } from '@/components/Footer';
 import { HighlightMediaWindow } from '@/components/HighlightMediaWindow';
@@ -161,7 +161,7 @@ export default function PublicProfileScreen() {
         </View>
 
         {/* Hero */}
-        <HeroSection isOwnerView={false} profile={profile} />
+        <UserProfileHeader profile={profile} />
 
         {/* Highlight Media */}
         {showHighlight && (

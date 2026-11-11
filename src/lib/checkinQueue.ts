@@ -71,16 +71,9 @@ export async function removeOp(id: string) {
 async function executeOp(op: QueuedOp): Promise<void> {
   if (op.kind === "qr_check_in") { await checkInNativeToken(op.campId, op.payload.token, op.payload.staffId); return; }
   if (op.kind === "check_in") {
-    const { enrollmentId } = op.payload;
-    const { error } = await supabase
-      .from("camp_enrollments")
-      .update({
-        status: "checked_in",
-        checked_in_at: new Date().toISOString(),
-      } as any)
-      .eq("id", enrollmentId);
-    if (error) throw error;
-    return;
+    // Old entries have no staff identity or idempotent token. Keep them for review;
+    // never replay a legacy timestamp update under a different signed-in account.
+    throw new Error('This older saved check-in must be retried from the camp roster.');
   }
 
   if (op.kind === "walkup_register") {

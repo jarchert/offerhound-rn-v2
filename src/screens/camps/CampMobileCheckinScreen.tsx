@@ -1,3 +1,4 @@
+import { CampGuardianWaiver } from '@/components/CampGuardianWaiver';
 // CampMobileCheckinScreen — RN port of Lovable web src/pages/CampMobileCheckin.tsx (433 LOC).
 // Coach-side mobile check-in: scan athlete QR, manual token entry, walk-up registration.
 //
@@ -46,6 +47,7 @@ import { colors, spacing } from '@/lib/theme';
 import type { CampStackParamList } from '@/navigation/stacks/CampStack';
 
 interface Enrollment {
+  full_name?:string;guest_name?:string;
   id: string;
   camp_id: string;
   status: string;
@@ -101,43 +103,43 @@ export default function CampMobileCheckinScreen() {
     enabled: !!campId && isAuthenticated,
   });
 
-  const { data: enrollments = [], isLoading: enrollmentsLoading } = useQuery({
+  const { data: enrollments = [], isLoading: enrollmentsLoading,isError:rosterError,refetch:reloadRoster } = useQuery({
     queryKey: ['camp-ops-enrollments', campId, user?.id],
     queryFn: async () => {
       if (!campId) return [];
       const { data, error } = await supabase
         .from('camp_enrollments')
         .select(
-          'id, camp_id, status, jersey_number, position_group, qr_code_token, checked_in_at, notes',
+          'id, camp_id, guest_name, status, jersey_number, position_group, qr_code_token, checked_in_at, notes',
         )
         .eq('camp_id', campId)
+        .neq('status','cancelled')
         .order('created_at', { ascending: true });
       if (error) throw error;
-      return (data || []) as Enrollment[];
+      const rows=data||[];let names:Record<string,string>={};
+      if(rows.length){const profiles=await supabase.from('camp_registrant_profiles').select('enrollment_id,full_name').in('enrollment_id',rows.filter(row=>row.status!=='checked_in'&&row.status!=='cancelled').slice(0,25).map(row=>row.id));if(profiles.error)throw profiles.error;names=Object.fromEntries((profiles.data||[]).map(p=>[p.enrollment_id,p.full_name]));}
+      return rows.map(row=>({...row,full_name:names[row.id]||row.guest_name||undefined})) as Enrollment[];
     },
-    enabled: !!campId && isAuthenticated,
+    enabled: !!campId && access.data===true,
     refetchInterval: isOnline ? 8000 : false,
   });
 
   const checkInMutation = useMutation({
     mutationFn: async (enrollmentId: string) => {
+      if (!campId || !user?.id) throw new Error('Sign in as camp registration staff.');
+      let enrollment = enrollments.find(row => row.id === enrollmentId);
+      if(!enrollment?.qr_code_token){const fresh=await supabase.from('camp_enrollments').select('qr_code_token').eq('id',enrollmentId).eq('camp_id',campId).single();if(fresh.error)throw fresh.error;enrollment=fresh.data as Enrollment;}
+      if (!enrollment?.qr_code_token) throw new Error('Reload the camp roster before checking in this athlete.');
       if (!isOnline) {
         await enqueueOp({
-          kind: 'check_in',
-          campId: campId ?? '',
-          payload: { enrollmentId },
+          kind: 'qr_check_in',
+          campId,
+          payload: { token: enrollment.qr_code_token, staffId: user.id },
         });
         await refreshQueue();
         return { queued: true as const, enrollmentId };
       }
-      const { error } = await supabase
-        .from('camp_enrollments')
-        .update({
-          status: 'checked_in',
-          checked_in_at: new Date().toISOString(),
-        } as any)
-        .eq('id', enrollmentId);
-      if (error) throw error;
+      await checkInNativeToken(campId, enrollment.qr_code_token, user.id);
       return { queued: false as const, enrollmentId };
     },
     onSuccess: (result) => {
@@ -341,19 +343,19 @@ export default function CampMobileCheckinScreen() {
                   <View style={{ paddingVertical: 24, alignItems: 'center' }}>
                     <ActivityIndicator color={colors.primary} />
                   </View>
-                ) : pendingList.length === 0 ? (
+                ) : rosterError ? <View><Text accessibilityRole="alert" style={styles.muted}>Participants could not load.</Text><Button onPress={()=>void reloadRoster()}>Retry participants</Button></View> : pendingList.length === 0 ? (
                   <Text style={[styles.muted, { textAlign: 'center', paddingVertical: 16 }]}>
-                    Everyone is checked in 🎉
+                    {enrollments.length?'Everyone is checked in 🎉':'No participants have registered yet.'}
                   </Text>
                 ) : (
                   pendingList.map((e) => (
-                    <View key={e.id} style={styles.pendingRow}>
+                    <View key={e.id} style={[styles.pendingRow,{flexDirection:'column',alignItems:'stretch',gap:8}]}>
                       <View style={styles.pendingLeft}>
                         {e.jersey_number ? (
                           <Text style={styles.jersey}>{e.jersey_number}</Text>
                         ) : null}
                         <Text style={styles.pendingId} numberOfLines={1}>
-                          #{e.id.slice(0, 8)}
+                          {e.full_name||e.guest_name||`Registration ${e.id.slice(0,8)}`}
                         </Text>
                         {e.position_group ? (
                           <Badge variant="outline" style={styles.posBadge}>
@@ -361,7 +363,9 @@ export default function CampMobileCheckinScreen() {
                           </Badge>
                         ) : null}
                       </View>
+                      <CampGuardianWaiver campId={campId!} enrollmentId={e.id}/>
                       <Button
+                        accessibilityLabel={`Check in ${e.full_name||e.guest_name||'participant'}`}
                         size="sm"
                         variant="secondary"
                         onPress={() => checkInMutation.mutate(e.id)}
@@ -376,7 +380,7 @@ export default function CampMobileCheckinScreen() {
           </TabsContent>
 
           <TabsContent value="walkup">
-            <CampGuestWalkupForm campId={campId!} positions={camp.positions ?? []} online={isOnline} refreshQueue={refreshQueue} />
+            <CampGuestWalkupForm campId={campId!} positions={camp.positions ?? []} online={isOnline} refreshQueue={refreshQueue} onCheckIn={id=>checkInMutation.mutate(id)} checkInBusy={checkInMutation.isPending} onRoster={()=>navigation.navigate('CampDetail',{campId})} />
           </TabsContent>
         </Tabs>
 

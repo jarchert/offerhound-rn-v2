@@ -1,3 +1,4 @@
+import { File } from 'expo-file-system';
 // Parity port from Lovable src/components/CampHeroImageUpload.tsx (verbatim logic).
 // Web→RN mapping:
 //   - <input type="file"> + Image.onload → expo-image-picker (returns width/height
@@ -153,15 +154,14 @@ export function CampHeroImageUpload({
 
     setUploading(true);
     try {
-      // Bridge file:// → blob for supabase storage upload
-      const resp = await fetch(asset.uri);
-      const blob = await resp.blob();
-      const ext = (asset.fileName?.split('.').pop() || mime.split('/')[1] || 'jpg').toLowerCase();
+      const bytes=await new File(asset.uri).arrayBuffer();
+      if(!bytes.byteLength||bytes.byteLength>MAX_BYTES)throw Error('The image is empty or exceeds the upload size limit.');
+      const ext=mime==='image/png'?'png':mime==='image/webp'?'webp':'jpg';
       const key = campId || randomUuid();
       const path = `${user.id}/${key}.${ext}`;
       const { error: upErr } = await supabase.storage
         .from('camp-images')
-        .upload(path, blob as any, { upsert: true, contentType: mime });
+        .upload(path, bytes, { upsert: true, contentType: mime });
       if (upErr) throw upErr;
       const { data: { publicUrl } } = supabase.storage.from('camp-images').getPublicUrl(path);
       const busted = `${publicUrl}?v=${Date.now()}`;

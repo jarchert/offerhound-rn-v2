@@ -1,3 +1,6 @@
+import { UserProfileHeader } from '@/components/UserProfileHeader';
+import { AthleteProfile } from '@/components/AthleteProfile';
+import { MyCampWaivers } from '@/components/MyCampWaivers';
 // DashboardScreen — RN port of Lovable web src/pages/Dashboard.tsx (athlete/parent landing).
 // Phase 1-2 parity port. The source page also redirected admin/coach/scout to their dashboards;
 // in RN those role splits live in role tab navigators, so this screen targets the athlete/parent role.
@@ -97,7 +100,6 @@ import { ProfileCompletionTracker } from '@/components/ProfileCompletionTracker'
 import { SubscriptionStatus } from '@/components/SubscriptionStatus';
 import { ReferralCard } from '@/components/ReferralCard';
 import { ViewToggle } from '@/components/ViewToggle';
-import { OwnerNav } from '@/components/OwnerNav';
 import { ScrollToTop } from '@/components/ScrollToTop';
 import { TermsAcceptanceBanner } from '@/components/TermsAcceptanceBanner';
 import { OfflineBanner } from '@/components/OfflineBanner';
@@ -513,6 +515,7 @@ export default function DashboardScreen() {
 
   const renderCampsTab = () => (
     <View style={{ gap: spacing.lg }}>
+      <MyCampWaivers />
       <DashboardCampsList />
       <MyCampAlertSubscriptions />
     </View>
@@ -944,8 +947,9 @@ export default function DashboardScreen() {
       >
         <OfflineBanner isOfflineData={isOfflineData} />
         <TermsAcceptanceBanner />
-        <BackButton label="Back" />
+        <BackButton label="Back" fallback={{ name: 'CampStack', params: { screen: 'CampsList' } }} />
 
+        {profile && <><UserProfileHeader profile={profile} /><AthleteProfile profile={profile} /></>}
         {profile && !isParentView && <TranscriptRequestsCard />}
 
         {/* Family / Parent invite — matches Lovable web Dashboard
@@ -1099,7 +1103,6 @@ export default function DashboardScreen() {
       </ScrollView>
 
       <ScrollToTop visible={false} onPress={() => {}} />
-      {isOwnerView && <OwnerNav />}
       <ViewToggle isOwnerView={isOwnerView} onToggle={setIsOwnerView} />
 
       {/* Edit coach notes dialog */}

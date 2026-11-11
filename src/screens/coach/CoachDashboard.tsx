@@ -1,3 +1,4 @@
+import { UserProfileHeader } from '@/components/UserProfileHeader';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -183,6 +184,7 @@ export default function CoachDashboard() {
           />
         }
       >
+        <UserProfileHeader profile={profile} />
         {/* Profile Header */}
         <Card>
           <CardContent style={{ paddingTop: spacing.md }}>

@@ -1,3 +1,5 @@
+import { usePlayerProfile } from '@/hooks/usePlayerProfile';
+import { nilRequest, type PendingNilRequest } from '@/lib/nilRequest';
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, FlatList, TextInput, Pressable, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { Send } from 'lucide-react-native';
@@ -12,6 +14,9 @@ interface ChatMessage { id: string; role: 'user' | 'assistant'; content: string;
 
 export default function NILAdvisorScreen() {
   const { user } = useAuth();
+  const { profile, isLoading: profileLoading } = usePlayerProfile();
+  const [error, setError] = useState<string | null>(null);
+  const pending = useRef<PendingNilRequest | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -19,44 +24,56 @@ export default function NILAdvisorScreen() {
   const listRef = useRef<FlatList>(null);
 
   useEffect(() => {
-    // Create or load most recent chat session
-    if (!user) return;
+    setSessionId(null);
+    setMessages([]);
+    pending.current = null;
+    if (!user || !profile?.id) return;
+    let cancelled = false;
     (async () => {
-      const { data: existing } = await supabase
-        .from('nil_chat_sessions')
-        .select('id')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      let id = existing?.id;
-      if (!id) {
-        const { data: created } = await supabase.from('nil_chat_sessions').insert({ user_id: user.id }).select('id').single();
-        id = created?.id;
-      }
-      if (id) {
-        setSessionId(id);
-        const { data: msgs } = await supabase
-          .from('nil_chat_messages')
-          .select('*')
-          .eq('session_id', id)
-          .order('created_at', { ascending: true });
-        setMessages((msgs || []).map((m: any) => ({ id: m.id, role: m.role, content: m.content })));
-      }
+      try {
+        setError(null);
+        const existing = await supabase.from('nil_chat_sessions').select('id')
+          .eq('user_id', user.id).eq('athlete_profile_id', profile.id)
+          .order('created_at', { ascending: false }).limit(1).maybeSingle();
+        if (existing.error) throw existing.error;
+        let id = existing.data?.id;
+        if (!id) {
+          const created = await supabase.from('nil_chat_sessions')
+            .insert({ user_id: user.id, athlete_profile_id: profile.id }).select('id').single();
+          if (created.error || !created.data?.id) throw created.error || new Error('No session');
+          id = created.data.id;
+        }
+        const msgs = await supabase.from('nil_chat_messages').select('*').eq('session_id', id).order('created_at', { ascending: true });
+        if (msgs.error) throw msgs.error;
+        if (!cancelled) {
+          setSessionId(id);
+          setMessages((msgs.data || []).map((m: any) => ({ id: m.id, role: m.role, content: m.content })));
+        }
+      } catch { if (!cancelled) setError('NIL chat could not be opened. Leave this page and return to retry.'); }
     })();
-  }, [user]);
+    return () => { cancelled = true; };
+  }, [user?.id, profile?.id]);
 
   const send = async () => {
     if (!input.trim() || !sessionId || sending) return;
-    const userMsg: ChatMessage = { id: `u-${Date.now()}`, role: 'user', content: input.trim() };
+    const request = nilRequest(pending.current, sessionId, input.trim());
+    pending.current = request;
+    const userMsg: ChatMessage = { id: request.requestKey, role: 'user', content: request.message };
+    setError(null);
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setSending(true);
     try {
-      const { data } = await supabase.functions.invoke('nil-advisor', { body: { session_id: sessionId, message: userMsg.content } });
+      const { data, error: invokeError } = await supabase.functions.invoke('nil-advisor', { body: { session_id: sessionId, message: userMsg.content, request_key: request.requestKey } });
+      if (invokeError || data?.error || typeof data?.reply !== 'string' || !data.reply) throw invokeError || new Error('No reply');
       if (data?.reply) {
-        setMessages(prev => [...prev, { id: `a-${Date.now()}`, role: 'assistant', content: data.reply }]);
+        setMessages(prev => [...prev, { id: `a-${request.requestKey}`, role: 'assistant', content: data.reply }]);
+        pending.current = null;
       }
+    } catch {
+      setMessages(prev => prev.filter(m => m.id !== request.requestKey));
+      setInput(current => current || request.message);
+      setError('No reply was saved. Your question is restored; try again.');
     } finally {
       setSending(false);
     }
@@ -74,6 +91,8 @@ export default function NILAdvisorScreen() {
         <Text style={s.title}>NIL Advisor</Text>
       </View>
       <NILDisclaimer />
+      {error ? <Text accessibilityRole="alert" style={{color: colors.destructive, padding: spacing.md}}>{error}</Text> : null}
+      {!profileLoading && !profile ? <Text style={{color: colors.foreground, padding: spacing.md}}>Create your athlete profile before starting NIL chat.</Text> : null}
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <FlatList
           ref={listRef}
@@ -104,7 +123,7 @@ export default function NILAdvisorScreen() {
             multiline
             maxLength={1000}
           />
-          <Pressable style={[s.sendBtn, (!input.trim() || sending) && s.disabled]} onPress={send} disabled={!input.trim() || sending}>
+          <Pressable style={[s.sendBtn, (!input.trim() || sending) && s.disabled]} onPress={send} accessibilityRole="button" accessibilityLabel="Send NIL question" disabled={!input.trim() || sending || !sessionId}>
             {sending ? <ActivityIndicator size="small" color={colors.primaryForeground} /> : <Send size={18} color={colors.primaryForeground} />}
           </Pressable>
         </View>

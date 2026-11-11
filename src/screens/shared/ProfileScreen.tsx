@@ -1,3 +1,4 @@
+import { AthleteProfile } from '@/components/AthleteProfile';
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, SafeAreaView, Image, Pressable, Alert } from 'react-native';
 import { useNavigation, NavigationProp, CommonActions } from '@react-navigation/native';
@@ -15,6 +16,13 @@ export default function ProfileScreen() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
   const { user, userRole, signOut } = useAuth();
   const { profile, publishProfile, updateProfile } = usePlayerProfile();
+
+  const birthDate = user?.user_metadata?.date_of_birth;
+  const birth = birthDate ? new Date(`${String(birthDate).slice(0, 10)}T12:00:00`) : null;
+  const now = new Date();
+  const age = birth && Number.isFinite(birth.getTime()) ? now.getFullYear() - birth.getFullYear()
+    - (now.getMonth() < birth.getMonth() || (now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate()) ? 1 : 0) : null;
+  const athleteLabel = age === null ? 'Athlete' : age >= 14 ? 'High school/adult athlete' : 'Youth athlete';
 
   const handlePublishToggle = async () => {
     try {
@@ -38,12 +46,12 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={s.content}>
         <View style={s.card}>
           <View style={s.avatarRow}>
-            <Avatar source={profile?.profile_image_url ? { uri: profile.profile_image_url } : null} fallback={profile?.full_name || user?.email || '?'} size={80} />
+            <Avatar source={profile?.profile_image_url ? { uri: profile.profile_image_url } : null} fallback={profile?.full_name || user?.email || '?'} size={112} />
             <View style={s.avatarInfo}>
               <Text style={s.name}>{profile?.full_name || 'Unnamed athlete'}</Text>
               {profile?.position && <Text style={s.position}>{profile.position}</Text>}
               <View style={s.badgeRow}>
-                {userRole && <Badge variant="secondary">{userRole}</Badge>}
+                {userRole && <Badge variant="secondary">{userRole === 'athlete' ? athleteLabel : userRole}</Badge>}
                 {profile?.is_published ? (
                   <Badge variant="success">Published</Badge>
                 ) : (
@@ -61,6 +69,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {profile && <AthleteProfile profile={profile} />}
         <View style={s.actions}>
           <Button
             variant="default"
@@ -106,7 +115,7 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xxl },
   card: { padding: spacing.md, backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, gap: spacing.md },
-  avatarRow: { flexDirection: 'row', gap: spacing.md, alignItems: 'center' },
+  avatarRow: { flexDirection: 'column', gap: spacing.md, alignItems: 'center' },
   avatarInfo: { flex: 1, gap: 4 },
   name: { fontFamily: typography.fontFamily.heading, fontSize: typography.fontSize.xl, color: colors.foreground, letterSpacing: typography.letterSpacing.heading },
   position: { fontFamily: typography.fontFamily.body, fontSize: typography.fontSize.sm, color: colors.mutedForeground },

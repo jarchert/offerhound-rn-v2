@@ -1,3 +1,4 @@
+import { CAMP_MANAGER_SUPPORTED_SPORTS, CAMP_SPORT_STAT_FOCUS } from '@/lib/data/campManagerSports';
 import { useState } from "react";
 import { View, Text, ScrollView, Pressable, TextInput, Switch as RNSwitch, Linking, Platform } from "react-native";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
@@ -48,10 +49,6 @@ import { CampRecruiterHeatmap } from "@/components/CampRecruiterHeatmap";
 import { CampTop10PacketButton } from "@/components/CampTop10PacketButton";
 import { CampCrossCampInviteDialog } from "@/components/CampCrossCampInviteDialog";
 import { RescheduleCampDialog } from "@/components/RescheduleCampDialog";
-
-// Local stub data — campManagerSports module not yet ported
-const CAMP_MANAGER_SUPPORTED_SPORTS: string[] = ["football","basketball","baseball","soccer","volleyball","lacrosse","hockey","softball","track","wrestling"];
-const CAMP_SPORT_STAT_FOCUS: Record<string, { label: string; stats: string[] }> = {};
 
 const US_STATES = [
   "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD",

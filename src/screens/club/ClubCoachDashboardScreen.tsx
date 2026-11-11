@@ -1,3 +1,4 @@
+import { UserProfileHeader } from '@/components/UserProfileHeader';
 // ClubCoachDashboardScreen — full RN port of Lovable's ClubCoachDashboard.tsx page glue.
 // Web → RN mapping:
 //   - <div>/<header> → <View> + StyleSheet
@@ -205,6 +206,7 @@ export default function ClubCoachDashboardScreen() {
     <TermsAcceptanceGate>
       <CoachNav />
       <ScrollView style={s.root} contentContainerStyle={s.scroll}>
+        <UserProfileHeader profile={clubProfile} />
         {/* Header */}
         <View style={s.header}>
           <View style={s.headerLeft}>

@@ -109,10 +109,10 @@ export function CoachRecommendations() {
         return;
       }
 
-      if (data?.recommendations) {
-        setRecommendations(data.recommendations);
-        toast.success('Generated personalized recommendations!');
-      }
+      if (!Array.isArray(data?.recommendations)) throw new Error('No recommendation result returned');
+      setRecommendations(data.recommendations);
+      if (data.recommendations.length) toast.success('Generated personalized recommendations!');
+      else toast.info('No recommendations yet', 'Refresh your matches and complete your sport and position details, then try again.');
     } catch (err) {
       console.error('Error getting recommendations:', err);
       toast.error('Failed to get recommendations');

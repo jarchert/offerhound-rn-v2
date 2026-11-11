@@ -1,3 +1,4 @@
+import { UserProfileHeader } from '@/components/UserProfileHeader';
 // AgencyDashboardScreen — full RN port of Lovable web `src/pages/AgencyDashboard.tsx`.
 // Keeps tab structure (Overview / Team / Manage Staff / Pipeline / Saved / Messaging /
 // Analytics / Organization / Social) so future visual polish maps 1:1 with the web design.
@@ -98,6 +99,7 @@ export default function AgencyDashboardScreen() {
     <SafeAreaView style={s.root}>
       {/* PORT-PENDING: SEO — web-only meta component, intentionally omitted on RN */}
       <ScrollView contentContainerStyle={s.content}>
+        <UserProfileHeader profile={profile} />
         {/* PORT-PENDING: BackButton — header back is handled by stack navigator on RN */}
 
         {/* Agency Header */}
@@ -127,7 +129,7 @@ export default function AgencyDashboardScreen() {
             <Button
               variant="outline" size="sm"
               leftIcon={<Search size={14} color={colors.primary} />}
-              onPress={() => (nav.getParent() as any)?.navigate('CoachTabs', { screen: 'DirectoryTab' })}
+              onPress={() => nav.navigate('AthleteSearch')}
             >
               Search Athletes
             </Button>
@@ -258,7 +260,7 @@ export default function AgencyDashboardScreen() {
                 {savedAthletes.length === 0 ? (
                   <View style={s.empty}>
                     <Text style={[s.muted, { marginBottom: spacing.sm }]}>No saved athletes yet.</Text>
-                    <Button variant="outline" size="sm" leftIcon={<Search size={14} color={colors.primary} />}>
+                    <Button variant="outline" size="sm" onPress={() => nav.navigate('AthleteSearch')} leftIcon={<Search size={14} color={colors.primary} />}>
                       Search Athletes
                     </Button>
                   </View>

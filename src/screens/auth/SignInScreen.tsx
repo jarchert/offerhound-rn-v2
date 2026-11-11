@@ -1,3 +1,4 @@
+import { PasswordInput } from '@/components/PasswordInput';
 import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, SafeAreaView, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -31,8 +32,8 @@ export default function SignInScreen() {
 
         <TextInput style={s.input} placeholder="Email" placeholderTextColor={colors.mutedForeground}
           value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-        <TextInput style={s.input} placeholder="Password" placeholderTextColor={colors.mutedForeground}
-          value={password} onChangeText={setPassword} secureTextEntry />
+        <PasswordInput style={s.input} placeholder="Password" placeholderTextColor={colors.mutedForeground}
+          value={password} onChangeText={setPassword}  />
 
         <Pressable style={s.primaryBtn} onPress={handleSignIn} disabled={loading}>
           {loading ? <ActivityIndicator color={colors.primaryForeground} /> : <Text style={s.primaryBtnText}>Sign In</Text>}

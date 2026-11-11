@@ -1,3 +1,4 @@
+import { MyCampWaivers } from '@/components/MyCampWaivers';
 import React from 'react';
 import { View, Text, FlatList, StyleSheet, SafeAreaView, Pressable, RefreshControl, Alert, Linking } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
@@ -41,6 +42,7 @@ export default function CampsScreen() {
         <Text style={s.subtitle}>Upcoming college recruiting events</Text>
       </View>
       <FlatList
+        ListHeaderComponent={<MyCampWaivers />}
         data={camps}
         keyExtractor={c => c.id}
         contentContainerStyle={s.list}

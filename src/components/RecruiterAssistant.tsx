@@ -24,7 +24,7 @@ import { ScrollArea } from '@/components/ui/ScrollArea';
 import { PatentPendingBadge } from '@/components/ui/PatentPendingBadge';
 import { toast } from '@/components/ui/toast';
 import { colors, typography, spacing, radius } from '@/lib/theme';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, SUPABASE_ANON_KEY } from '@/integrations/supabase/client';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { useContactEvents } from '@/hooks/useContactEvents';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -102,6 +102,7 @@ export function RecruiterAssistant() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          apikey: SUPABASE_ANON_KEY,
           Authorization: `Bearer ${session?.access_token ?? ''}`,
         },
         body: JSON.stringify({

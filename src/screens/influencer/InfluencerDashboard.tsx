@@ -1,3 +1,4 @@
+import { UserProfileHeader } from '@/components/UserProfileHeader';
 // InfluencerDashboard — Lovable parity: tabbed studio for verified influencers.
 // Tabs: Composer | Library | Schedule | Syndication | Analytics.
 // SportsNewsFeed anchors the bottom as a sharable newsroom rail.
@@ -50,6 +51,7 @@ export default function InfluencerDashboard() {
           <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />
         }
       >
+        <UserProfileHeader profile={profile} />
         <View style={s.header}>
           <View style={{ flex: 1 }}>
             <Text style={s.title}>{profile?.display_name || 'Influencer'}</Text>

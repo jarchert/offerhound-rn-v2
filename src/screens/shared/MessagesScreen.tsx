@@ -39,7 +39,7 @@ interface Conversation {
   other_user_image: string | null;
   last_message: string | null;
   last_message_at: string | null;
-  last_message_sender_id: string | null;
+  last_message_sender_user_id: string | null;
   last_message_read: boolean;
   unread_count: number;
 }
@@ -47,7 +47,7 @@ interface Conversation {
 interface ThreadMessage {
   id: string;
   conversation_id: string;
-  sender_id: string;
+  sender_user_id: string;
   content: string;
   created_at: string;
   read_at: string | null;
@@ -117,13 +117,13 @@ export default function MessagesScreen() {
             try {
               const { data: lastMsg } = await supabase
                 .from('messages')
-                .select('content,sender_id,read_at')
+                .select('content,sender_user_id,read_at')
                 .eq('conversation_id', c.id)
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
               lastMessage = (lastMsg as any)?.content ?? null;
-              lastMessageSenderId = (lastMsg as any)?.sender_id ?? null;
+              lastMessageSenderId = (lastMsg as any)?.sender_user_id ?? null;
               lastMessageRead = !!(lastMsg as any)?.read_at;
             } catch {
               /* ignore */
@@ -136,7 +136,7 @@ export default function MessagesScreen() {
                 .select('id', { count: 'exact', head: true })
                 .eq('conversation_id', c.id)
                 .is('read_at', null)
-                .neq('sender_id', user.id);
+                .neq('sender_user_id', user.id);
               unreadCount = count || 0;
             } catch {
               /* ignore */
@@ -149,7 +149,7 @@ export default function MessagesScreen() {
               other_user_image: otherImage,
               last_message: lastMessage,
               last_message_at: c.last_message_at ?? null,
-              last_message_sender_id: lastMessageSenderId,
+              last_message_sender_user_id: lastMessageSenderId,
               last_message_read: lastMessageRead,
               unread_count: unreadCount,
             };
@@ -235,7 +235,7 @@ export default function MessagesScreen() {
         }
         ItemSeparatorComponent={() => <View style={s.sep} />}
         renderItem={({ item }) => {
-          const isMyLast = item.last_message_sender_id === user?.id;
+          const isMyLast = item.last_message_sender_user_id === user?.id;
           return (
             <Pressable style={s.row} onPress={() => setActiveId(item.id)}>
               <Avatar
@@ -302,7 +302,7 @@ function ActiveThread({
       try {
         const { data, error } = await supabase
           .from('messages')
-          .select('id,conversation_id,sender_id,content,created_at,read_at')
+          .select('id,conversation_id,sender_user_id,content,created_at,read_at')
           .eq('conversation_id', conversation.id)
           .order('created_at', { ascending: true });
         if (error) throw error;
@@ -322,17 +322,12 @@ function ActiveThread({
   const sendMessage = useMutation({
     mutationFn: async (content: string) => {
       if (!user) throw new Error('Not signed in');
-      const { data, error } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversation.id,
-          sender_id: user.id,
-          content,
-        } as any)
-        .select()
-        .maybeSingle();
-      if (error) throw error;
-      return data as any as ThreadMessage;
+      const { data, error } = await supabase.functions.invoke('send-direct-message', {
+        body: { conversationId: conversation.id, message: content },
+      });
+      if (error || data?.error) throw error || new Error(data.error);
+      return data;
+
     },
     onMutate: async (content: string) => {
       if (!user) return;
@@ -341,7 +336,7 @@ function ActiveThread({
       const optimistic: ThreadMessage = {
         id: `optimistic-${Date.now()}`,
         conversation_id: conversation.id,
-        sender_id: user.id,
+        sender_user_id: user.id,
         content,
         created_at: new Date().toISOString(),
         read_at: null,
@@ -354,6 +349,7 @@ function ActiveThread({
       return { prev, optimisticId: optimistic.id };
     },
     onError: (err: any, _vars, ctx) => {
+      setDraft(current => current || _vars);
       if (ctx?.prev) {
         qc.setQueryData(['messages', conversation.id], ctx.prev);
       }
@@ -380,12 +376,12 @@ function ActiveThread({
   React.useEffect(() => {
     if (!user || messages.length === 0) return;
     const unreadIds = messages
-      .filter((m) => m.sender_id !== user.id && !m.read_at && !m.pending)
+      .filter((m) => m.sender_user_id !== user.id && !m.read_at && !m.pending)
       .map((m) => m.id);
     if (unreadIds.length === 0) return;
     void supabase
       .from('messages')
-      .update({ read_at: new Date().toISOString() } as any)
+      .update({ is_read: true, read_at: new Date().toISOString() } as any)
       .in('id', unreadIds);
   }, [messages, user]);
 
@@ -421,7 +417,7 @@ function ActiveThread({
             }
           }}
           renderItem={({ item }) => {
-            const isMine = item.sender_id === user?.id;
+            const isMine = item.sender_user_id === user?.id;
             return (
               <View style={[s.msgRow, isMine && s.msgRowMine]}>
                 <View

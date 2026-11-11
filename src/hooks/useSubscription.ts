@@ -54,17 +54,12 @@ interface RoleEntitlement {
 }
 
 async function fetchRoleEntitlement(userId: string): Promise<RoleEntitlement> {
-  // Three parallel reads; any non-null match → free server-side entitlement.
+  // Billing exemptions are separate from recruiter verification and account role labels.
   const [adminRes, coachRes, scoutRes] = await Promise.all([
-    supabase
-      .from('user_roles' as never)
-      .select('role')
-      .eq('user_id', userId)
-      .eq('role', 'admin')
-      .maybeSingle(),
+    supabase.rpc('is_admin'),
     supabase
       .from('coach_profiles')
-      .select('id')
+      .select('id, is_club_coach')
       .eq('user_id', userId)
       .maybeSingle(),
     supabase
@@ -74,9 +69,9 @@ async function fetchRoleEntitlement(userId: string): Promise<RoleEntitlement> {
       .maybeSingle(),
   ]);
 
-  const isAdmin = !!adminRes.data;
-  const isCoach = !!coachRes.data;
-  const isScout = !!scoutRes.data;
+  const isAdmin = !adminRes.error && adminRes.data === true;
+  const isCoach = !coachRes.error && !!coachRes.data && coachRes.data.is_club_coach === false;
+  const isScout = !scoutRes.error && !!scoutRes.data;
   return {
     isAdmin,
     isCoach,
@@ -91,6 +86,7 @@ async function fetchActiveSubscription(userId: string): Promise<UserSubscription
     .select('*')
     .eq('user_id', userId)
     .eq('is_active', true)
+    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -113,6 +109,7 @@ async function callValidateReceipt(args: ValidateReceiptArgs) {
     body: args,
   });
   if (error) throw error;
+  if (data?.error) throw new Error(data.error);
   return data;
 }
 

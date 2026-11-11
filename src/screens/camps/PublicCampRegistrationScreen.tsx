@@ -1,3 +1,7 @@
+import {formatNativeCampDay as formatDate,readPublicCampCount} from '@/lib/campPublicDisplay';
+import { rememberCampJourney } from '@/lib/pendingCampJourney';
+import { CampRegistrationQR } from "@/components/CampRegistrationQR";
+import { CampGuardianWaiver } from '@/components/CampGuardianWaiver';
 import { CampParticipantsPanel } from '@/components/CampParticipantsPanel';
 import { CampRegistrantIdentityForm, emptyNativeIdentity, validateNativeIdentity } from '@/components/CampRegistrantIdentity';
 import { makeGuestRequestKey } from '@/lib/nativeCampGuest';
@@ -78,17 +82,6 @@ interface FormState {
   hudl: string;
 }
 
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  } catch {
-    return iso;
-  }
-}
 
 export default function PublicCampRegistrationScreen() {
   const route = useRoute<RouteProp<CampStackParamList, 'CampDetail'>>();
@@ -125,17 +118,9 @@ export default function PublicCampRegistrationScreen() {
     retry: false,
   });
 
-  const { data: enrollmentCount = 0 } = useQuery({
+  const { data: enrollmentCount, isError: countUnavailable } = useQuery({
     queryKey: ['public-camp-count', campId],
-    queryFn: async () => {
-      if (!campId) return 0;
-      const { count } = await supabase
-        .from('camp_enrollments')
-        .select('id', { count: 'exact', head: true })
-        .eq('camp_id', campId)
-        .neq('status', 'cancelled');
-      return count || 0;
-    },
+    queryFn: () => readPublicCampCount(supabase, campId!),
     enabled: !!camp,
   });
 
@@ -187,7 +172,7 @@ export default function PublicCampRegistrationScreen() {
 
   const capacityFull = useMemo(() => {
     if (!camp?.capacity) return false;
-    return enrollmentCount >= camp.capacity;
+    return typeof enrollmentCount === 'number' && enrollmentCount >= camp.capacity;
   }, [camp, enrollmentCount]);
 
   const isActiveEnrollment =
@@ -322,11 +307,12 @@ export default function PublicCampRegistrationScreen() {
   const handleEnroll = async () => {
     setServerError(null);
     if (!isAuthenticated) {
-      // PORT-PENDING: web pushes to /auth?redirect=/camps/:id; RN bounces to Auth root.
+      // Preserve the camp across the authenticated navigator remount.
       try {
-        navigation.navigate('Auth' as never);
+        rememberCampJourney(campId!);
+        navigation.navigate('AuthStack', { screen:'Auth' });
       } catch {
-        /* noop */
+        setServerError('Sign-in could not open. Return to camp details and retry.');
       }
       return;
     }
@@ -480,6 +466,7 @@ export default function PublicCampRegistrationScreen() {
           </View>
         </View>
 
+        <CampRegistrationQR campId={campId!} actorId={user?.id} />
         <CampParticipantsPanel campId={campId!} campName={c.name} />
 
         <Card style={s.heroCard}>
@@ -534,8 +521,7 @@ export default function PublicCampRegistrationScreen() {
                 <Users size={16} color={colors.primary} />
                 <View style={{ flex: 1 }}>
                   <Text style={s.factPrimary}>
-                    {enrollmentCount}
-                    {c.capacity ? ` / ${c.capacity}` : ''} registered
+                    {typeof enrollmentCount === 'number' ? `${enrollmentCount}${c.capacity ? ` / ${c.capacity}` : ''} registered` : countUnavailable ? 'Availability confirmed during registration' : 'Checking availability…'}
                   </Text>
                   {capacityFull ? (
                     <Text style={s.destructiveText}>Camp is full</Text>
@@ -635,6 +621,7 @@ export default function PublicCampRegistrationScreen() {
                       and will follow up with check-in details.
                     </Text>
                   </View>
+                  {existingEnrollment && <CampGuardianWaiver campId={campId!} enrollmentId={(existingEnrollment as any).id}/>}
                   {existingEnrollment ? (
                     <View style={{ alignItems: 'center', marginTop: spacing.sm }}>
                       <Button
@@ -687,10 +674,11 @@ export default function PublicCampRegistrationScreen() {
                 </View>
               ) : !isAuthenticated ? (
                 <View style={{ alignItems: 'center', gap: spacing.sm }}>
-                  <Text style={s.muted}>Sign in or create an account to register.</Text>
+                  <Text style={s.muted}>Register with your OfferHound account, or use the camp registration QR above without an account.</Text>
                   <Button size="lg" onPress={handleEnroll}>
                     Sign in to Register
                   </Button>
+                  {!!serverError&&<Text accessibilityRole="alert" style={{color:colors.destructive}}>{serverError}</Text>}
                 </View>
               ) : (
                 <View style={{ gap: spacing.md }}>
@@ -769,7 +757,7 @@ export default function PublicCampRegistrationScreen() {
 
               {!c.is_free && !isConfirmed ? (
                 <Text style={[s.muted, { textAlign: 'center', marginTop: spacing.sm }]}>
-                  Payment will be coordinated by the camp organizer after registration.
+                  Pay camp staff when you arrive. Staff collect and record your payment at camp.
                 </Text>
               ) : null}
             </View>

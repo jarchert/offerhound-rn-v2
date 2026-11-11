@@ -1,3 +1,5 @@
+import { PasswordInput } from '@/components/PasswordInput';
+import { clearPendingCampJourney } from '@/lib/pendingCampJourney';
 // AuthScreen — RN port of Lovable web src/pages/Auth.tsx (413 LOC).
 // Combined sign-in / sign-up tabs + forgot-password subview + post-link reset-mode subview.
 // In native we don't have URL `?mode=reset` query params — that flow lands on
@@ -8,7 +10,7 @@
 // Translation notes (web → native):
 // - shadcn Tabs → simple two-button segmented control.
 // - shadcn Card → Card / CardHeader / CardTitle / CardContent / CardFooter from ui/Card.
-// - shadcn PasswordInput → TextInput with secureTextEntry (no eye toggle yet).
+// - shadcn PasswordInput → accessible native PasswordInput with Show/Hide toggle.
 // - lucide-react → lucide-react-native.
 // - useToast → Alert.alert.
 // - useNavigate("/parent/dashboard") → nav.navigate('Parent', { screen: 'Dashboard' }) etc.
@@ -78,6 +80,7 @@ function validateAge(dob: string): string | null {
 
 export default function AuthScreen() {
   const nav = useNavigation<NavigationProp<any>>();
+  useEffect(()=>nav.addListener('beforeRemove',()=>clearPendingCampJourney()),[nav]);
   const route = useRoute<RouteProp<Record<string, AuthRouteParams>, string>>();
   const { signInWithEmail, signUpWithEmail, user } = useAuth();
 
@@ -114,22 +117,15 @@ export default function AuthScreen() {
     (async () => {
       if (!user || !parentToken) return;
       try {
-        const { data: invitation, error: findError } = await supabase
-          .from('parent_athlete_relationships')
-          .select('*')
-          .eq('invitation_token', parentToken)
-          .single();
+        const { data: athleteProfileId, error: linkError } = await supabase.rpc(
+          'accept_parent_invitation', { p_token: parentToken }
+        );
         if (cancelled) return;
-        if (findError || !invitation) {
-          Alert.alert('Invalid Invitation', 'This invitation link is invalid or has expired.');
+        if (linkError || !athleteProfileId) {
+          Alert.alert('Invalid Invitation', 'This invitation could not be accepted. Please request a new invitation.');
           setParentToken(null);
           return;
         }
-        const { error: updateError } = await supabase
-          .from('parent_athlete_relationships')
-          .update({ parent_user_id: user.id, invitation_accepted: true, invitation_token: null })
-          .eq('id', (invitation as any).id);
-        if (updateError) throw updateError;
         Alert.alert('Linked to athlete!', 'You now have full parent access to this profile.');
         setParentToken(null);
       } catch (err) {
@@ -252,24 +248,24 @@ export default function AuthScreen() {
             </CardHeader>
             <CardContent style={s.cardBody}>
               <Text style={s.label}>New Password</Text>
-              <TextInput
+              <PasswordInput
                 style={s.input}
                 placeholder="••••••••"
                 placeholderTextColor={colors.mutedForeground}
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry
+
                 editable={!isLoading}
               />
               {passwordError ? <Text style={s.error}>{passwordError}</Text> : null}
               <Text style={s.label}>Confirm Password</Text>
-              <TextInput
+              <PasswordInput
                 style={s.input}
                 placeholder="••••••••"
                 placeholderTextColor={colors.mutedForeground}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-                secureTextEntry
+
                 editable={!isLoading}
               />
               {confirmPasswordError ? <Text style={s.error}>{confirmPasswordError}</Text> : null}
@@ -335,7 +331,7 @@ export default function AuthScreen() {
   return (
     <SafeAreaView style={s.container}>
       <ScrollView contentContainerStyle={s.content}>
-        <BackButton label="Back" />
+        <BackButton label="Back" onPress={()=>{clearPendingCampJourney();if(nav.canGoBack())nav.goBack();else nav.navigate('PublicTabs');}} />
         <Card style={s.card}>
           <CardHeader>
             <View style={s.logoWrap}>
@@ -386,13 +382,13 @@ export default function AuthScreen() {
             </View>
             <View style={s.inputWithIcon}>
               <Lock size={16} color={colors.mutedForeground} style={s.inputIcon} />
-              <TextInput
+              <PasswordInput
                 style={[s.input, s.inputPaddedLeft]}
                 placeholder="••••••••"
                 placeholderTextColor={colors.mutedForeground}
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry
+
                 editable={!isLoading}
               />
             </View>
@@ -403,13 +399,13 @@ export default function AuthScreen() {
                 <Text style={s.label}>Confirm Password</Text>
                 <View style={s.inputWithIcon}>
                   <Lock size={16} color={colors.mutedForeground} style={s.inputIcon} />
-                  <TextInput
+                  <PasswordInput
                     style={[s.input, s.inputPaddedLeft]}
                     placeholder="••••••••"
                     placeholderTextColor={colors.mutedForeground}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
-                    secureTextEntry
+
                     editable={!isLoading}
                   />
                 </View>

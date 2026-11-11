@@ -61,4 +61,12 @@ await test(() => {
   assert.throws(() => voice.nativeRecordingDuration(9600, 0), /interrupted/);
   assert.throws(() => voice.nativeRecordingDuration(9600, NaN), /interrupted/);
 });
+await test(async () => {
+  const op = await queueExports.enqueueOp({ kind: 'check_in', campId: 'camp', payload: { enrollmentId: 'legacy-athlete' } });
+  assert.equal((await queueExports.flushQueue('camp', 'staff')).failed, 1);
+  const retained = (await queueExports.listQueue('camp', 'staff')).find(item => item.id === op.id);
+  assert.match(retained.lastError, /older saved check-in must be retried from the camp roster/);
+  assert.equal(retained.attempts, 1);
+  await queueExports.removeOp(op.id);
+});
 console.log(`Native camp capture: PASS (${passed} parsing, RPC, persistence retry, deletion and actual offline-queue cases; mocked transport)`);

@@ -482,17 +482,17 @@ const s = StyleSheet.create({
   wrap: { gap: spacing.md, padding: spacing.sm },
 
   overviewContent: { padding: spacing.md, gap: spacing.md },
-  overviewRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  overviewRow: { flexDirection: 'column', alignItems: 'center', gap: spacing.md },
   avatarBubble: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 112,
+    height: 112,
+    borderRadius: 56,
     backgroundColor: colors.secondary,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  avatarImg: { width: 64, height: 64, borderRadius: 32 },
+  avatarImg: { width: 112, height: 112, borderRadius: 56 },
   overviewName: {
     fontFamily: typography.fontFamily.bodySemiBold,
     fontSize: typography.fontSize.base,

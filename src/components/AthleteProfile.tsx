@@ -1,3 +1,4 @@
+import { SPORTS_CONFIG, type SportType } from '@/lib/data/sports';
 // Ported from Lovable src/components/AthleteProfile.tsx — verbatim RN port.
 // Web tailwind classes mapped to StyleSheet using theme tokens. External links
 // open via Linking.openURL. Structure, text, and gating mirror the web component.
@@ -52,7 +53,9 @@ function LinkButton({ icon, label, url }: LinkButtonProps) {
 
 export function AthleteProfile({ profile }: AthleteProfileProps) {
   const firstName = profile.full_name?.split(' ')[0] || 'Athlete';
-  const stats = (profile.stats as any[]) || [];
+  const stats = Array.isArray(profile.stats) ? profile.stats : [];
+  const sport = profile.sport || 'football';
+  const sportConfig = SPORTS_CONFIG[sport as SportType];
   const highlights: string[] = profile.highlights || [];
 
   return (
@@ -63,6 +66,13 @@ export function AthleteProfile({ profile }: AthleteProfileProps) {
       style={s.section}
     >
       <View style={s.container}>
+        {sport !== 'football' && <Card style={{ padding: spacing.md, marginBottom: spacing.md }}>
+          <Text style={s.cardHeading}>{sportConfig?.displayName || sport} stats</Text>
+          {(sportConfig?.stats || []).map(stat => {
+            const value = profile.sport_stats?.[stat.key] ?? profile[stat.key];
+            return <Text key={stat.key} style={s.aboutBody}>{stat.label}: {value === null || value === undefined || value === '' ? 'Not provided' : String(value)}{value != null && value !== '' && stat.unit ? ` ${stat.unit}` : ''}</Text>;
+          })}
+        </Card>}
         {/* Section header */}
         <View style={s.sectionHeader}>
           <Text style={s.sectionTitle}>
@@ -127,7 +137,7 @@ export function AthleteProfile({ profile }: AthleteProfileProps) {
           </CardGradient>
 
           {/* Stats Card */}
-          <CardGradient style={s.statsCard}>
+          {sport === 'football' && <CardGradient style={s.statsCard}>
             <Text style={s.cardHeading}>Season Statistics</Text>
 
             {stats.length > 0 ? (
@@ -213,9 +223,13 @@ export function AthleteProfile({ profile }: AthleteProfileProps) {
                 }}
               />
             </View>
-          </CardGradient>
+          </CardGradient>}
         </View>
 
+        <Card style={{ padding: spacing.md, marginBottom: spacing.md }}>
+          <Text style={s.cardHeading}>Biography</Text>
+          <Text style={s.aboutBody}>{profile.bio || profile.biography || profile.what_makes_me_special || 'Biography not added yet.'}</Text>
+        </Card>
         {/* About Me Section */}
         <View style={s.aboutSection}>
           <View style={s.sectionHeader}>

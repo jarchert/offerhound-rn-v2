@@ -1,3 +1,5 @@
+import { rememberCampJourney } from '@/lib/pendingCampJourney';
+import { AddToCalendarButton } from '@/components/AddToCalendarButton';
 // CampAthleteDeliverablesScreen — RN port of Lovable web src/pages/CampAthleteDeliverables.tsx (116 LOC).
 // Athlete-side post-camp page. Pulls camp + enrollment from Supabase and shows
 // four tabs: Report (PDF export), Highlight reel, Rate camp (NPS), Refund.
@@ -64,25 +66,27 @@ export default function CampAthleteDeliverablesScreen() {
       // current navigator (deep link directly into deliverables shouldn't
       // crash if auth route is unmounted).
       try {
-        navigation.navigate('Auth' as never);
+        rememberCampJourney(campId,enrollmentId);
+        navigation.navigate('AuthStack', {screen:'Auth'});
       } catch {
         /* noop */
       }
     }
   }, [user, authLoading, navigation]);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['camp-deliverables', campId, enrollmentId],
-    enabled: !!campId && !!enrollmentId,
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ['camp-deliverables', campId, enrollmentId,user?.id],
+    enabled: !authLoading && !!user && !!campId && !!enrollmentId,
     queryFn: async () => {
       const [enrollmentRes, campRes] = await Promise.all([
-        supabase.from('camp_enrollments').select('*').eq('id', enrollmentId).maybeSingle(),
+        supabase.from('camp_enrollments').select('*').eq('id', enrollmentId).eq('camp_id',campId).maybeSingle(),
         supabase
           .from('camps')
           .select('id,name,description,sport,start_date,end_date,start_time,end_time,location,city,state')
           .eq('id', campId)
           .maybeSingle(),
       ]);
+      if(enrollmentRes.error||campRes.error)throw enrollmentRes.error||campRes.error;
       return {
         enrollment: enrollmentRes.data as Enrollment | null,
         camp: campRes.data as Camp | null,
@@ -100,13 +104,14 @@ export default function CampAthleteDeliverablesScreen() {
     );
   }
 
+  if(isError)return <SafeAreaView style={s.container}><View style={s.center}><Text style={s.muted}>Camp results could not load.</Text><Button onPress={()=>void refetch()}>Retry camp results</Button><Button variant="outline" onPress={()=>navigation.navigate('CampDetail',{campId})}>Return to camp</Button></View></SafeAreaView>;
   if (!data?.camp || !data?.enrollment) {
     return (
       <SafeAreaView style={s.container}>
         <View style={s.center}>
           <Text style={s.muted}>Camp not found.</Text>
-          <Button variant="outline" onPress={() => navigation.goBack()} style={{ marginTop: spacing.md }}>
-            Go home
+          <Button variant="outline" onPress={() => navigation.navigate('CampDetail',{campId})} style={{ marginTop: spacing.md }}>
+            Return to camp
           </Button>
         </View>
       </SafeAreaView>
@@ -124,7 +129,7 @@ export default function CampAthleteDeliverablesScreen() {
         <Button
           variant="ghost"
           size="sm"
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation.navigate('CampDetail',{campId})}
           leftIcon={<ArrowLeft size={16} color={colors.foreground} />}
           style={s.backBtn}
         >
@@ -134,26 +139,7 @@ export default function CampAthleteDeliverablesScreen() {
         <Text style={s.title}>{camp.name}</Text>
         <Text style={s.subtitle}>{subtitle}</Text>
 
-        {/* PORT-PENDING action row: AddToCalendar / SpectatorShare / ReportExport */}
-        <Card style={s.placeholderCard}>
-          <CardContent style={s.placeholderInner}>
-            <Text style={s.placeholderTitle}>Quick actions (coming soon)</Text>
-            <Text style={s.muted}>
-              Add-to-calendar, spectator share, and the recruiter PDF export are pending RN ports of
-              {' '}AddToCalendarButton, CampSpectatorShareButton, and CampReportExportButton.
-            </Text>
-          </CardContent>
-        </Card>
-
-        {/* PORT-PENDING: CampSmsOptInToggle (Twilio opt-in) */}
-        <Card style={s.placeholderCard}>
-          <CardContent style={s.placeholderInner}>
-            <Text style={s.placeholderTitle}>SMS alerts</Text>
-            <Text style={s.muted}>
-              SMS opt-in toggle is pending the RN port of CampSmsOptInToggle.
-            </Text>
-          </CardContent>
-        </Card>
+        <View style={{gap:12}}><AddToCalendarButton camp={camp}/><Button variant="outline" onPress={()=>navigation.navigate('CampDetail',{campId})}>Camp details & registration</Button></View>
 
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList>
@@ -168,9 +154,7 @@ export default function CampAthleteDeliverablesScreen() {
               <CardContent style={s.tabPaneCenter}>
                 <Text style={s.tabPaneHeading}>Recruiter-ready report</Text>
                 <Text style={[s.muted, { maxWidth: 420 }]}>
-                  Share a summary of this camp with college coaches. Detailed PDF
-                  exports with evaluator breakdowns will arrive when the server-side
-                  pipeline ships.
+                  Download the available evaluation report from the camp website. Missing evaluations remain marked as unavailable.
                 </Text>
                 <CampReportExportButton
                   campName={camp.name}

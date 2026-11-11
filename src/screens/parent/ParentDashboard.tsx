@@ -1,3 +1,4 @@
+import { UserProfileHeader } from '@/components/UserProfileHeader';
 // ParentDashboard — RN port of Lovable src/pages/ParentDashboard.tsx (~563 LOC).
 //
 // Web → RN adaptations:
@@ -338,8 +339,10 @@ export default function ParentDashboard() {
     <SafeAreaView style={s.container}>
       <Navbar />
       <ScrollView contentContainerStyle={s.content}>
-        <BackButton label="Back" />
+        <UserProfileHeader profile={user?.user_metadata} label="Parent/guardian" />
+        <BackButton label="Back" fallback={{ name: 'CampStack', params: { screen: 'CampsList' } }} />
 
+        <Button variant="outline" onPress={() => nav.navigate('CampStack' as any, { screen: 'CampsList' })}>Camps & waivers</Button>
         {/* Header */}
         <View style={s.headerRow}>
           <View style={s.headerIcon}>

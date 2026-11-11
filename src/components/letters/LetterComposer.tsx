@@ -1,3 +1,4 @@
+import { supabase } from '@/integrations/supabase/client';
 // Parity port from Lovable src/components/letters/LetterComposer.tsx.
 // Web→RN mapping: shadcn Card/Button/Input/Label/Textarea/Badge/Dialog → @/components/ui/*;
 // lucide-react → lucide-react-native; sonner toast → @/components/ui/toast;
@@ -163,19 +164,9 @@ export function LetterComposer({
         };
         body.athleteInfo = body.recipientInfo;
       }
-      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-      const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-      const response = await fetch(`${supabaseUrl}/functions/v1/generate-coach-scout-letter`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${supabaseKey}` },
-        body: JSON.stringify(body),
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({} as any));
-        toast.error(errorData.error || 'Failed to generate letter');
-        return;
-      }
-      const data = await response.json();
+      const { data, error } = await supabase.functions.invoke('generate-coach-scout-letter', { body });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       if (data.letter) { setLetterContent(data.letter); toast.success('Letter generated for this contact!'); }
     } catch (error) {
       console.error('Error generating letter:', error);

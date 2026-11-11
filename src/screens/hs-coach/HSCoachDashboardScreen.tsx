@@ -1,3 +1,4 @@
+import { UserProfileHeader } from '@/components/UserProfileHeader';
 // HSCoachDashboardScreen — full RN port of Lovable web `src/pages/HSCoachDashboard.tsx`.
 // Preserves the 16-tab dashboard structure (Overview, Roster, AI Matches, Team Needs,
 // Referrals, Endorsements, Transcripts, Film, Pipeline, Calendar, Staff, Contacts,
@@ -175,6 +176,7 @@ export default function HSCoachDashboardScreen() {
       {/* PORT-PENDING: SEO — web-only meta component, intentionally omitted on RN */}
       <SafeAreaView style={s.root}>
         <ScrollView contentContainerStyle={s.content}>
+        <UserProfileHeader profile={hsProfile} />
           {/* Header */}
           <View style={s.header}>
             <View style={{ flex: 1 }}>

@@ -1,3 +1,4 @@
+import { UserProfileHeader } from '@/components/UserProfileHeader';
 // ScoutDashboard — full parity port of Lovable web ScoutDashboard.tsx
 // Inlines minimal RN versions of ScoutPipeline, ScoutAnalyticsDashboard,
 // ScoutQuickStartGuide, and TransferPortalFeed (no new files).
@@ -188,7 +189,7 @@ export default function ScoutDashboard() {
     (nav as any).navigate('Messages', recipientName ? { recipientName } : undefined);
   };
   const goSearchAthletes = () => {
-    (nav as any).navigate('PublicTabs', { screen: 'PublicAthletes' });
+    (nav as any).navigate('AthleteSearch');
   };
   const goLetters = () => {
     (nav as any).navigate('ScoutTabs', { screen: 'LettersTab' });
@@ -225,6 +226,7 @@ export default function ScoutDashboard() {
           />
         }
       >
+        <UserProfileHeader profile={profile} />
         {/* Profile Header */}
         <Card>
           <CardContent style={{ paddingTop: spacing.md }}>

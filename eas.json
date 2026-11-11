@@ -71,8 +71,10 @@
         "EXPO_INCLUDE_WIDGETS": "false",
         "EXPO_INCLUDE_LIVE_ACTIVITIES": "false",
         "EXPO_PUBLIC_SUPABASE_URL": "https://wrrfwvkixlzmnsztjfgg.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_50jrwE_hS2Oq0vCuIcjzFg_1Sw33VrE"
-      }
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_50jrwE_hS2Oq0vCuIcjzFg_1Sw33VrE",
+        "EXPO_PUBLIC_CAMP_CONSENT_WEB_URL": "https://friday-night-recruiting.lovable.app"
+      },
+      "autoIncrement": true
     },
     "staging-device": {
       "extends": "staging",

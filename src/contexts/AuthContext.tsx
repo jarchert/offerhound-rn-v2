@@ -1,3 +1,5 @@
+import * as Linking from 'expo-linking';
+import { openNativeOAuth, completeNativeOAuth, isNativeOAuthCallback } from '@/lib/nativeOAuth';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { AppRole } from '@/integrations/supabase/types';
@@ -49,7 +51,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userRole, setUserRole] = useState<AppRole | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    let live = true;
+    const restore = async () => {
+      const initial = await Linking.getInitialURL();
+      if (initial && isNativeOAuthCallback(initial)) {
+        const result = await completeNativeOAuth(initial);
+        if (result.error && live) toast.error(result.error.message);
+      }
+      return await supabase.auth.getSession();
+    };
+    restore().then(({ data: { session } }) => {
+      if (!live) return;
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -57,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         registerForPushNotifications(session.user.id).catch(e => console.warn('[push] register failed', e));
       }
       setIsLoading(false);
-    });
+    }).catch(() => { if (live) { setIsLoading(false); toast.error('Session restoration failed. Please sign in again.'); } });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
@@ -68,7 +80,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else setUserRole(null);
     });
 
-    return () => subscription.unsubscribe();
+    const callback = Linking.addEventListener('url', ({ url }) => {
+      if (isNativeOAuthCallback(url)) void completeNativeOAuth(url).then(result => { if (result.error && live) toast.error(result.error.message); });
+    });
+    return () => { live = false; callback.remove(); subscription.unsubscribe(); };
   }, []);
 
   const fetchUserRole = async (userId: string) => {
@@ -157,10 +172,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google', options: { redirectTo: REDIRECT_SCHEME },
-    });
-    return { error: error as Error | null };
+    const result = await openNativeOAuth('google');
+    if (result.error) toast.error(result.error.message);
+    return result;
   };
 
   const signInWithApple = async () => {
@@ -169,10 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await nativeAppleSignIn();
         return { error: null };
       }
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple', options: { redirectTo: REDIRECT_SCHEME },
-      });
-      return { error: error as Error | null };
+      return await openNativeOAuth('apple');
     } catch (e) {
       return { error: e as Error };
     }
@@ -202,9 +213,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithProvider = async (provider: Provider) => {
-    const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: REDIRECT_SCHEME } });
-    if (error) toast.error(error.message);
-    return { error: error as Error | null };
+    const result = await openNativeOAuth(provider);
+    if (result.error) toast.error(result.error.message);
+    return result;
   };
 
   const resetPassword = async (email: string) => {

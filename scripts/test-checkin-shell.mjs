@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
+const queuedTimers=[];
+const setTimeout=fn=>{queuedTimers.push(fn);return queuedTimers.length;};
+const clearTimeout=()=>{};
 let keyboardVisible = false;
 let activeRoute = 'CampMobileCheckin';
 let hooks;
@@ -16,7 +19,7 @@ function load(path, imports) {
   const exports = {};
   const source = fs.readFileSync(new URL(path, import.meta.url), 'utf8');
   const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.React, esModuleInterop: true } }).outputText;
-  vm.runInNewContext(js, { exports, require(name) { assert(name in imports, name); return imports[name]; } });
+  vm.runInNewContext(js, { exports, setTimeout, clearTimeout, require(name) { assert(name in imports, name); return imports[name]; } });
   return exports;
 }
 const overlay = load('../src/components/FloatingAICoach.tsx', {
@@ -53,7 +56,8 @@ const rootReact = {
   useRef: value => previousUserRef ??= { current: value },
   useEffect: fn => rootEffects.push(fn),
 };
-const resets = [];
+const resets = [], destinations=[];
+const pending=load('../src/lib/pendingCampJourney.ts',{});
 const rootSource = fs.readFileSync(new URL('../src/navigation/RootNavigator.tsx', import.meta.url), 'utf8');
 const rootImports = Object.fromEntries(ts.preProcessFile(rootSource).importedFiles.map(file => [file.fileName, { __esModule: true, default: 'Screen' }]));
 Object.assign(rootImports, {
@@ -61,15 +65,21 @@ Object.assign(rootImports, {
   'react-native': { ActivityIndicator: 'ActivityIndicator', Pressable: 'Pressable', SafeAreaView: 'SafeAreaView', Text: 'Text', View: 'View' },
   '@react-navigation/native-stack': { createNativeStackNavigator: () => ({ Navigator: 'Navigator', Screen: 'Screen' }) },
   '@/contexts/AuthContext': { useAuth: () => ({ user: signedInUser, userRole: signedInUser ? 'coach' : null, isLoading: false }) },
-  '@/navigation/navigationRef': { navigationRef: { isReady: () => true, resetRoot: state => resets.push(state) } },
+  '@/navigation/navigationRef': { navigationRef: { isReady: () => true, resetRoot: state => resets.push(state), navigate:(name,params)=>destinations.push({name,params}) } },
   '@/hooks/useScoutOrganization': { useScoutOrganization: () => ({ data: null, isPending: false, isError: false }) },
+  '@/lib/pendingCampJourney':pending,
   '@/lib/theme': { colors: {} },
 });
 const root = load('../src/navigation/RootNavigator.tsx', rootImports);
 for (const [id, expectedResets] of [[null, 0], ['owner-a', 0], [null, 1], [null, 1], ['staff-b', 1], [null, 2]]) {
   signedInUser = id ? { id } : null; rootEffects = [];
-  root.default(); rootEffects.forEach(effect => effect());
+  root.default(); rootEffects.forEach(effect => effect());queuedTimers.splice(0).forEach(fn=>fn());
   assert.equal(resets.length, expectedResets, 'Ending an authenticated session must discard the shared camp route');
 }
 assert(resets.every(state => state.index === 0 && state.routes.length === 1 && state.routes[0].name === 'PublicTabs'));
 console.log('Root logout reset: PASS (two independent sessions; cold public navigation preserved)');
+
+pending.rememberCampJourney('20000000-0000-4000-8000-000000000001');signedInUser={id:'returning-athlete'};rootEffects=[];root.default();rootEffects.forEach(effect=>effect());queuedTimers.splice(0).forEach(fn=>fn());
+assert.equal(destinations.length,1);assert.equal(destinations[0].name,'CampStack');assert.equal(destinations[0].params.screen,'CampDetail');
+rootEffects=[];root.default();rootEffects.forEach(effect=>effect());queuedTimers.splice(0).forEach(fn=>fn());assert.equal(destinations.length,1);
+console.log('Root sign-in return: PASS (actual root effect dispatches saved camp after auth readiness, one time only).');
