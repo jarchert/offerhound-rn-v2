@@ -70,3 +70,18 @@ await test(async () => {
   await queueExports.removeOp(op.id);
 });
 console.log(`Native camp capture: PASS (${passed} parsing, RPC, persistence retry, deletion and actual offline-queue cases; mocked transport)`);
+
+// Exercise the manager's actual handler so a partial token cannot become a full
+// first-match enrollment before the shared server helper validates it.
+const opsSource=fs.readFileSync(new URL('../src/components/CampCheckInOps.tsx',import.meta.url),'utf8');
+const opsHandler=opsSource.slice(opsSource.indexOf('  const handleScan = async () => {'),opsSource.indexOf('  const handleAutoAssignGroups ='));
+async function managerScan(input,{checked=false,reject=false}={}){
+ const code=ts.transpileModule(opsHandler+'\nexports.scan=handleScan;',{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+ const calls=[],errors=[],success=[],cleared=[],exported={};const token='10000000-0000-4000-8000-000000000001';
+ vm.runInNewContext(code,{exports:exported,scanInput:input,decodeCampToken:qr.decodeCampToken,enrollments:[{id:'first',qr_code_token:token,status:checked?'checked_in':'registered'},{id:'second',qr_code_token:'10000000-0000-4000-8000-000000000002',status:'registered'}],checkIn:{mutateAsync:async id=>{calls.push(id);if(reject)throw Error('Current waiver required')}},toast:{error:(...x)=>errors.push(x),success:(...x)=>success.push(x)},setScanInput:x=>cleared.push(x),scanRef:{current:{focus(){}}}});await exported.scan();return{calls,errors,success,cleared};
+}
+for(const input of ['10000000','10000000-0000-4000-8000-00000000000','https://invalid.example/10000000-0000-4000-8000-000000000001']){const r=await managerScan(input);assert.equal(r.calls.length,0);assert.equal(r.errors.length,1);assert.equal(r.cleared.length,0);}
+for(const input of ['10000000-0000-4000-8000-000000000002','https://offer-hound.com/check-in?token=10000000-0000-4000-8000-000000000002']){const r=await managerScan(input);assert.equal(r.calls[0],'second');}
+assert.equal((await managerScan('10000000-0000-4000-8000-000000000001',{checked:true})).calls.length,0);
+assert.equal((await managerScan('10000000-0000-4000-8000-000000000001',{reject:true})).cleared.length,0);
+console.log('Manager check-in actual handler PASS: rejects partial/shared-prefix and foreign URLs, resolves only complete exact tokens, accepts trusted QR URLs, preserves server-rejected input and avoids duplicate check-in.');

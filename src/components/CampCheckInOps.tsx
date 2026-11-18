@@ -1,5 +1,5 @@
 import { useAuth } from '@/hooks/useAuth';
-import { checkInNativeToken } from '@/lib/nativeCampCheckin';
+import { checkInNativeToken, decodeCampToken } from '@/lib/nativeCampCheckin';
 // Ported verbatim from Lovable src/components/CampCheckInOps.tsx
 // Web → RN mapping:
 //   - Tailwind classes → StyleSheet using @/lib/theme tokens
@@ -125,9 +125,11 @@ export function CampCheckInOps({ campId, campName, drillStations = [], positions
   });
 
   const handleScan = async () => {
-    const token = scanInput.trim();
-    if (!token) return;
-    const match = enrollments.find(e => e.qr_code_token === token || e.qr_code_token?.startsWith(token));
+    if (!scanInput.trim()) return;
+    let token: string;
+    try { token = decodeCampToken(scanInput); }
+    catch (error: any) { toast.error('Complete QR code required', error.message); return; }
+    const match = enrollments.find(e => e.qr_code_token?.toLowerCase() === token);
     if (match) {
       if (match.status === 'checked_in') {
         toast.success('Already Checked In', `Athlete #${match.jersey_number || match.id.slice(0, 8)} is already checked in.`);
