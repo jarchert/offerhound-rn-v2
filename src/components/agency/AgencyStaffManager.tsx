@@ -1,3 +1,5 @@
+import {inviteAgencyStaff,revokeAgencyStaff} from '@/lib/agencyStaff';
+import {agencyDirectorySearch} from '@/lib/agencyDirectorySearch';
 // Ported from Lovable web: src/components/agency/AgencyStaffManager.tsx
 // Translations:
 //   <div>/<p>/<h3>/<span> → <View>/<Text>
@@ -10,10 +12,11 @@
 //   <Avatar> shadcn (composed) → unified Avatar({source, fallback, size})
 //   sonner toast → @/components/ui/toast wrapper
 //   Data logic (queries, mutations, filters) unchanged
+import {saveOwnedStaffRecord} from '@/lib/staffRecords';
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, ActivityIndicator,
-  Modal, Pressable, FlatList,
+  Modal, Pressable, FlatList, Alert,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -77,7 +80,7 @@ export function AgencyStaffManager({ organizationId, organizationName }: AgencyS
   });
 
   // Fetch staff via coaching_staff table (owner-based)
-  const { data: staff = [], isLoading } = useQuery({
+  const { data: staff = [], isLoading,isError:staffFailed,refetch:retryStaff } = useQuery({
     queryKey: ['agency-staff', user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -94,16 +97,16 @@ export function AgencyStaffManager({ organizationId, organizationName }: AgencyS
   });
 
   // Search scout directory
-  const { data: directoryResults = [], isFetching: directoryLoading } = useQuery({
-    queryKey: ['scout-directory-search', directorySearch],
+  const { data: directoryResults = [], isFetching: directoryLoading,isError:directoryFailed,refetch:retryDirectory } = useQuery({
+    queryKey: ['scout-directory-search',user?.id,directorySearch],
     queryFn: async () => {
       if (!directorySearch || directorySearch.length < 2) return [];
       const { data, error } = await supabase
         .from('scout_profiles')
         .select('id, user_id, name, title, specialization, image_url, is_verified')
-        .or(`name.ilike.%${directorySearch}%,title.ilike.%${directorySearch}%,specialization.ilike.%${directorySearch}%`)
+        .or(agencyDirectorySearch(directorySearch))
         .limit(20);
-      if (error) return [];
+      if (error) throw error;
       const staffUserIds = staff.filter((s: any) => s.linked_user_id).map((s: any) => s.linked_user_id);
       return (data || []).filter((s: any) => s.user_id !== user?.id && !staffUserIds.includes(s.user_id));
     },
@@ -113,57 +116,26 @@ export function AgencyStaffManager({ organizationId, organizationName }: AgencyS
   const assignScout = useMutation({
     mutationFn: async (scout: any) => {
       if (!user || !organizationId) throw new Error('Missing context');
-      const { error: staffErr } = await supabase.from('coaching_staff').insert({
-        owner_user_id: user.id,
-        name: scout.name,
-        email: null,
-        role: selectedRole,
-        title: scout.title || null,
-        status: 'active',
-        accepted_at: new Date().toISOString(),
-        linked_user_id: scout.user_id,
-      });
-      if (staffErr) throw staffErr;
-      if (organizationId) {
-        await supabase.from('organization_members').insert({
-          organization_id: organizationId,
-          user_id: scout.user_id,
-          role: selectedRole,
-          invited_by: user.id,
-          invitation_accepted: true,
-          joined_at: new Date().toISOString(),
-        });
-      }
+      return inviteAgencyStaff(supabase,{organizationId,userId:scout.user_id,role:selectedRole,name:scout.name,title:scout.title||null});
     },
     onSuccess: (_d, scout: any) => {
       queryClient.invalidateQueries({ queryKey: ['agency-staff'] });
       queryClient.invalidateQueries({ queryKey: ['scout-directory-search'] });
-      toast.success(`${scout.name} added to ${organizationName}`);
+      toast.success(`Invitation ready for ${scout.name} to accept. No email or text was sent.`);
       setShowDirectoryDialog(false);
       setDirectorySearch('');
     },
-    onError: (e: any) => toast.error(e.message || 'Failed to assign scout'),
+    onError: (e: any) => toast.error(e.message || 'Failed to invite scout'),
   });
 
   const addMember = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error('Not authenticated');
-      const { error } = await supabase.from('coaching_staff').insert({
-        owner_user_id: user.id,
-        name: form.name,
-        email: form.email || null,
-        phone: form.phone || null,
-        role: form.role,
-        title: form.title || null,
-        notes: form.notes || null,
-        status: 'invited',
-        invited_at: new Date().toISOString(),
-      });
-      if (error) throw error;
+      return saveOwnedStaffRecord(supabase,user.id,{name:form.name,email:form.email||null,phone:form.phone||null,role:form.role,title:form.title||null,notes:[form.territory?`Territory: ${form.territory}`:'',form.notes].filter(Boolean).join('\n')||null,status:'invited'});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agency-staff'] });
-      toast.success(`${form.name} has been invited to ${organizationName}`);
+      toast.success(`${form.name} added as a staff record. No invitation was sent.`);
       resetForm();
       setShowAddDialog(false);
     },
@@ -173,8 +145,7 @@ export function AgencyStaffManager({ organizationId, organizationName }: AgencyS
   const updateMember = useMutation({
     mutationFn: async (updates: { id: string; [key: string]: any }) => {
       const { id, ...data } = updates;
-      const { error } = await supabase.from('coaching_staff').update(data).eq('id', id);
-      if (error) throw error;
+      return saveOwnedStaffRecord(supabase,user?.id||'',data,id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agency-staff'] });
@@ -186,8 +157,7 @@ export function AgencyStaffManager({ organizationId, organizationName }: AgencyS
 
   const removeMember = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('coaching_staff').update({ status: 'removed' }).eq('id', id);
-      if (error) throw error;
+      return revokeAgencyStaff(supabase,id,organizationId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agency-staff'] });
@@ -213,6 +183,7 @@ export function AgencyStaffManager({ organizationId, organizationName }: AgencyS
   const initials = (name?: string) =>
     (name || '').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
 
+  if(staffFailed)return <Button onPress={()=>void retryStaff()}>Could not load agency staff. Retry</Button>;
   return (
     <ScrollView contentContainerStyle={s.page}>
       {/* Stats row */}
@@ -351,7 +322,7 @@ export function AgencyStaffManager({ organizationId, organizationName }: AgencyS
                         <Edit size={16} color={colors.foreground} />
                         <Text style={menuStyles.itemText}>Edit</Text>
                       </Pressable>
-                      {member.status === 'invited' && (
+                      {member.status === 'invited' && !member.linked_user_id && !member.staff_user_id && (
                         <Pressable style={menuStyles.item} onPress={() => { setMenuOpenId(null); updateMember.mutate({ id: member.id, status: 'active', accepted_at: new Date().toISOString() }); }}>
                           <CheckCircle2 size={16} color={colors.foreground} />
                           <Text style={menuStyles.itemText}>Mark Active</Text>
@@ -370,7 +341,7 @@ export function AgencyStaffManager({ organizationId, organizationName }: AgencyS
                         </Pressable>
                       )}
                       <View style={menuStyles.separator} />
-                      <Pressable style={menuStyles.item} onPress={() => { setMenuOpenId(null); removeMember.mutate(member.id); }}>
+                      <Pressable style={menuStyles.item} onPress={() => {setMenuOpenId(null);Alert.alert('Remove this staff record?',member.name,[{text:'Cancel',style:'cancel'},{text:'Remove',style:'destructive',onPress:()=>removeMember.mutate(member.id)}]);}}>
                         <Trash2 size={16} color={colors.destructive} />
                         <Text style={[menuStyles.itemText, { color: colors.destructive }]}>Remove</Text>
                       </Pressable>
@@ -388,7 +359,7 @@ export function AgencyStaffManager({ organizationId, organizationName }: AgencyS
         <DialogContent style={{ maxWidth: 520 }}>
           <DialogHeader>
             <DialogTitle>Add Staff Member</DialogTitle>
-            <DialogDescription>Invite a new recruiter, scout, or coordinator to {organizationName}.</DialogDescription>
+            <DialogDescription>Save contact details in your staff directory. Use Add from Directory to invite an OfferHound scout to join {organizationName}.</DialogDescription>
           </DialogHeader>
           <View style={{ gap: spacing.md }}>
             <View style={s.formRow}>
@@ -540,7 +511,7 @@ export function AgencyStaffManager({ organizationId, organizationName }: AgencyS
                 <View style={{ alignItems: 'center', paddingVertical: 24 }}>
                   <ActivityIndicator color={colors.mutedForeground} />
                 </View>
-              ) : directoryResults.length === 0 ? (
+              ) : directoryFailed ? <Button onPress={()=>void retryDirectory()}>Could not search scouts. Retry</Button> : directoryResults.length === 0 ? (
                 <Text style={s.dirHint}>No scouts found matching "{directorySearch}"</Text>
               ) : (
                 <FlatList

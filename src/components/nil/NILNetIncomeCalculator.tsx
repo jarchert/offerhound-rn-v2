@@ -34,15 +34,16 @@ export function NILNetIncomeCalculator({ athleteProfileId }: NILNetIncomeCalcula
   const { schoolInterests } = useNILSchoolData(athleteProfileId);
   const states = Object.keys(STATE_TAX_DATA).sort();
 
-  const [grossIncome, setGrossIncome] = useState('50000');
+  const [grossIncome, setGrossIncome] = useState('');
   const [selectedState, setSelectedState] = useState(
-    (schoolInterests as any)?.[0]?.state || 'Texas'
+    (schoolInterests as any)?.[0]?.state || ''
   );
+  const validIncome = /^\d+(\.\d{1,2})?$/.test(grossIncome.trim()) && Number.isFinite(Number(grossIncome)) && Number(grossIncome)>0 && Number(grossIncome)<=1000000000;
 
   const calculation = useMemo(() => {
     const gross = parseFloat(grossIncome) || 0;
     const tax = STATE_TAX_DATA[selectedState];
-    if (!tax) return null;
+    if (!tax || !validIncome) return null;
 
     const federalTax = gross * 0.22;
     const selfEmploymentTax = gross * 0.153;
@@ -60,15 +61,15 @@ export function NILNetIncomeCalculator({ athleteProfileId }: NILNetIncomeCalcula
 
   const comparisons = useMemo(() => {
     const gross = parseFloat(grossIncome) || 0;
-    if (!schoolInterests || schoolInterests.length === 0) return [];
+    if (!validIncome || !schoolInterests || schoolInterests.length === 0) return [];
     return schoolInterests.map((interest: any) => {
       const state = interest.state || '';
       const tax = STATE_TAX_DATA[state];
-      if (!tax) return { school: interest.school_name, state, net: gross, rate: 0 };
+      if (!tax) return null;
       const totalRate = 22 + 15.3 + tax.rate + tax.localRate;
       const net = gross * (1 - totalRate / 100);
       return { school: interest.school_name, state, net, rate: totalRate };
-    }).sort((a: any, b: any) => b.net - a.net);
+    }).filter((item):item is NonNullable<typeof item> => !!item).sort((a: any, b: any) => b.net - a.net);
   }, [grossIncome, schoolInterests]);
 
   const breakdownItems = calculation ? [
@@ -87,9 +88,10 @@ export function NILNetIncomeCalculator({ athleteProfileId }: NILNetIncomeCalcula
             <Calculator size={20} color={colors.primary} />
             <CardTitle>Net Income Calculator</CardTitle>
           </View>
-          <CardDescription>Estimate your take-home NIL earnings after all taxes</CardDescription>
+          <CardDescription>Illustrative income model using historical assumptions; not a tax forecast.</CardDescription>
         </CardHeader>
         <CardContent style={{ gap: spacing.md }}>
+          <Text style={styles.noteText}>Enter a positive income and choose a state. Model assumptions: flat 22% federal and 15.3% self-employment amounts, plus the selected historical state/local rates. Deductions, progressive brackets and personal circumstances are not modeled. Unknown rates are not treated as zero.</Text>
           <View style={styles.inputRow}>
             <View style={styles.inputCell}>
               <Label>Gross NIL Income ($)</Label>

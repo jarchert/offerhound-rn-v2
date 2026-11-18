@@ -11,6 +11,7 @@
  *  - useQuery + supabase preserved verbatim
  */
 import React from 'react';
+import {Button} from '@/components/ui/Button';
 import { View, Text, StyleSheet } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { TrendingUp, Eye, Users, FileText, Calendar } from 'lucide-react-native';
@@ -25,7 +26,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
 export function InfluencerAnalytics({ influencerId }: { influencerId: string }) {
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading, isError, refetch } = useQuery({
     queryKey: ['influencer-analytics', influencerId],
     queryFn: async () => {
       const [posts, blogs, gallery, follows, scheduled] = await Promise.all([
@@ -54,6 +55,7 @@ export function InfluencerAnalytics({ influencerId }: { influencerId: string }) 
           .eq('influencer_id', influencerId)
           .eq('post_status', 'scheduled'),
       ]);
+      for (const result of [posts,blogs,gallery,follows,scheduled]) {if(result.error) throw result.error;if(typeof result.count !== 'number') throw new Error('Creator analytics were not confirmed');}
       return {
         posts: posts.count || 0,
         blogs: blogs.count || 0,
@@ -64,6 +66,9 @@ export function InfluencerAnalytics({ influencerId }: { influencerId: string }) 
     },
     enabled: !!influencerId,
   });
+
+  if (isError) return <Button onPress={() => void refetch()}>Could not load creator analytics. Retry</Button>;
+  if (isLoading) return <Text>Loading creator analytics…</Text>;
 
   const tiles = [
     { label: 'Followers', value: stats?.followers ?? 0, Icon: Users },

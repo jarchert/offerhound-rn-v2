@@ -41,7 +41,7 @@ function capitalize(s: string) {
 }
 
 export function ParentInfluencerApprovals() {
-  const { data: requests = [] } = useParentInfluencerApprovals();
+  const { data: requests = [], isLoading, isError, refetch } = useParentInfluencerApprovals();
   const respond = useRespondToApproval();
   const [influencers, setInfluencers] = useState<Record<string, any>>({});
   const [athletes, setAthletes] = useState<Record<string, any>>({});
@@ -68,6 +68,9 @@ export function ParentInfluencerApprovals() {
   }, [requests]);
 
   const pending = (requests as any[]).filter((r: any) => r.status === 'pending');
+
+  if (isError) return <Button onPress={() => void refetch()}>Could not load message requests. Retry</Button>;
+  if (isLoading) return <Text>Loading message requests…</Text>;
 
   return (
     <Card>

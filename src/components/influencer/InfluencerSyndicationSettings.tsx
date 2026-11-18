@@ -13,7 +13,10 @@
  *  - tailwind classes → StyleSheet using theme tokens
  *  - fetch() preserved (works in RN; supabase client preserved)
  */
-import React, { useState } from 'react';
+import {useAuth} from '@/hooks/useAuth';
+import {useCreatorSyndication} from '@/hooks/useCreatorSyndication';
+import {saveCreatorSyndication} from '@/lib/creatorSyndication';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, Linking } from 'react-native';
 import { Webhook, ExternalLink, Send } from 'lucide-react-native';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
@@ -38,59 +41,25 @@ export function InfluencerSyndicationSettings({
   initialEnabled,
   onSaved,
 }: InfluencerSyndicationSettingsProps) {
-  const [url, setUrl] = useState(initialUrl || '');
-  const [enabled, setEnabled] = useState(!!initialEnabled);
+  const {user}=useAuth();
+  const {data: settings, isLoading, isError, refetch}=useCreatorSyndication(influencerId);
+  const hydrated=useRef<string|null>(null);
+  const [url, setUrl] = useState('');
+  const [enabled, setEnabled] = useState(false);
+  useEffect(()=>{if(!isLoading&&!isError&&hydrated.current!==influencerId){hydrated.current=influencerId;setUrl(settings?.webhook_url||'');setEnabled(!!settings?.enabled);}},[influencerId,settings,isLoading,isError]);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
 
   const save = async () => {
-    if (enabled && !/^https?:\/\//.test(url.trim())) {
-      toast.error('Enter a valid webhook URL (must start with http:// or https://)');
-      return;
-    }
+    if (!user || isError || isLoading) return;
     setSaving(true);
-    const { error } = await supabase
-      .from('influencer_profiles' as any)
-      .update({
-        syndication_webhook_url: url.trim() || null,
-        syndication_enabled: enabled && !!url.trim(),
-      })
-      .eq('id', influencerId);
-    setSaving(false);
-    if (error) {
-      toast.error('Failed to save', error.message);
-      return;
-    }
-    toast.success('Syndication settings saved');
-    onSaved?.();
+    try {await saveCreatorSyndication(supabase,user.id,influencerId,url,enabled);await refetch();toast.success('Syndication settings saved');onSaved?.();}
+    catch(error:any){toast.error(error.message || 'Settings save was not confirmed.');}
+    finally {setSaving(false);}
   };
-
-  const sendTest = async () => {
-    if (!url.trim()) {
-      toast.error('Enter a webhook URL first');
-      return;
-    }
-    setTesting(true);
-    try {
-      await fetch(url.trim(), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        // RN fetch ignores `mode`, but we keep payload identical to web
-        body: JSON.stringify({
-          source: 'offerhound',
-          content_type: 'test',
-          title: 'Test from OfferHound',
-          description: 'If you see this in your Zap/Scenario history, syndication is wired up correctly.',
-          timestamp: new Date().toISOString(),
-        }),
-      });
-      toast.success('Test sent — check your Zap/Scenario history');
-    } catch (e) {
-      toast.error('Test failed', e instanceof Error ? e.message : 'Unknown error');
-    } finally {
-      setTesting(false);
-    }
-  };
+  const sendTest = () => toast.error('Test delivery is unavailable in this environment.');
+  if (isError) return <Button onPress={() => void refetch()}>Could not load private sharing settings. Retry</Button>;
+  if (isLoading) return <Text>Loading private sharing settings…</Text>;
 
   return (
     <Card>
@@ -150,11 +119,11 @@ export function InfluencerSyndicationSettings({
           </Button>
           <Button
             onPress={sendTest}
-            disabled={testing}
+            disabled={true}
             variant="outline"
             leftIcon={<Send size={16} color={colors.foreground} />}
           >
-            {testing ? 'Sending...' : 'Send Test'}
+            Test delivery unavailable
           </Button>
         </View>
       </CardContent>

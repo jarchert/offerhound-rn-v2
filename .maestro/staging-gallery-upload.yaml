@@ -1,0 +1,77 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Synthetic gallery picker upload with externally reconciled cleanup
+---
+- addMedia:
+    - fixtures/qa-gallery.png
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.adult-athlete@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_ADULT_PASSWORD}
+- extendedWaitUntil:
+    visible:
+      id: athlete-tab-profile
+    timeout: 60000
+- tapOn:
+    id: athlete-tab-profile
+- runFlow:
+    file: common/reveal-control.yaml
+    env:
+      QA_SCROLL_ID: profile-edit-button
+- tapOn:
+    id: profile-edit-button
+- runFlow:
+    file: common/reveal-text.yaml
+    env:
+      QA_SCROLL_TEXT: ^Add$
+- tapOn: ^Add$
+- tapOn:
+    text: Allow Full Access
+    optional: true
+- tapOn:
+    text: Allow Access to All Photos
+    optional: true
+- takeScreenshot: gallery-system-picker
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - runFlow:
+          when:
+            visible:
+              id: PXGGridLayout-Info
+          commands:
+            - tapOn:
+                id: PXGGridLayout-Info
+                index: 0
+      - runFlow:
+          when:
+            notVisible:
+              id: PXGGridLayout-Info
+          commands:
+            - tapOn:
+                text: Photo, .*
+                index: 0
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      # Select below the separate preview action. Android returns immediately;
+      # never tap the gallery's Add control again after returning to the app.
+      - tapOn:
+          point: "12%,43%"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          text: ^Add$
+          optional: true
+      - tapOn:
+          text: ^Done$
+          optional: true
+- extendedWaitUntil:
+    visible: 1 / 12 images
+    timeout: 60000
+- takeScreenshot: gallery-synthetic-upload-confirmed
+- stopApp

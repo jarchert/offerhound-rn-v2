@@ -40,7 +40,7 @@ export const ProfileCardGenerator = () => {
 
   const profileUrl = profile.custom_url
     ? getProfileUrl(profile.custom_url)
-    : `https://offerhound.app/p/${profile.id}`;
+    : getProfileUrl(profile.id);
   const name = profile.full_name || 'Athlete';
   const initials = name
     .split(' ')

@@ -1,3 +1,5 @@
+import {acceptedRoster,openRoster} from '@/lib/teamMembership';
+import { UserProfileHeader } from '@/components/UserProfileHeader';
 // ClubCoachDashboardScreen — full RN port of Lovable's ClubCoachDashboard.tsx page glue.
 // Web → RN mapping:
 //   - <div>/<header> → <View> + StyleSheet
@@ -78,10 +80,11 @@ export default function ClubCoachDashboardScreen() {
   const nav = useNavigation<Nav>();
   const { user, isAuthenticated, loading: authLoading, signOut } = useAuth();
   const { data: profile, isLoading: profileLoading, isFetched: profileFetched } = useCoachProfile();
-  const { data: savedAthletes } = useSavedAthletes();
+  const { data: savedAthletes, isError: savedAthletesError, refetch: retrySavedAthletes } = useSavedAthletes();
   const { data: stats } = useCoachActivityStats();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<string>('overview');
+  const [staffRecipient,setStaffRecipient]=useState<any>(null);
   const [websiteModalOpen, setWebsiteModalOpen] = useState(false);
   const isWeb = !isNativePlatform();
 
@@ -101,7 +104,7 @@ export default function ClubCoachDashboardScreen() {
       if (!user) return [] as any[];
       const { data } = await supabase
         .from('teams')
-        .select('*, team_rosters(id, status)')
+        .select('*, team_rosters(id,athlete_profile_id,status,removed_at,athlete_accepted_at)')
         .eq('coach_user_id', user.id)
         .order('created_at', { ascending: false });
       return (data || []) as any[];
@@ -114,10 +117,10 @@ export default function ClubCoachDashboardScreen() {
     let total = 0, active = 0, pending = 0, parentPending = 0;
     teams.forEach((t: any) => {
       (t.team_rosters || []).forEach((r: any) => {
-        total++;
-        if (r.status === 'approved' || r.status === 'complete') active++;
-        else if (r.status === 'invited' || r.status === 'joined') pending++;
-        else if (r.status === 'parent_pending') parentPending++;
+        if(!openRoster(r)||t.status!=='active')return;
+        if(acceptedRoster(r)){total++;active++;}
+        else if(r.status==='parent_pending')parentPending++;
+        else pending++;
       });
     });
     return { total, active, pending, parentPending };
@@ -131,7 +134,7 @@ export default function ClubCoachDashboardScreen() {
         .from('team_rosters')
         .select('athlete_profile_id, teams!inner(coach_user_id)')
         .eq('teams.coach_user_id', user.id)
-        .not('athlete_profile_id', 'is', null);
+        .not('athlete_profile_id', 'is', null).not('athlete_accepted_at','is',null).is('removed_at',null).not('status','in','(removed,transferred,declined)').eq('teams.status','active');
       const profileIds = (rosterAthletes || []).map((r: any) => r.athlete_profile_id).filter(Boolean);
       if (profileIds.length === 0) return { unsubscribed: 0, lockedContacts: 0 };
       const { count: lockedCount } = await supabase
@@ -205,6 +208,7 @@ export default function ClubCoachDashboardScreen() {
     <TermsAcceptanceGate>
       <CoachNav />
       <ScrollView style={s.root} contentContainerStyle={s.scroll}>
+        <UserProfileHeader profile={{...clubProfile,name:profile?.name,organization:clubProfile?.club_name,profile_image_url:clubProfile?.club_logo_url||profile?.image_url}} />
         {/* Header */}
         <View style={s.header}>
           <View style={s.headerLeft}>
@@ -265,12 +269,12 @@ export default function ClubCoachDashboardScreen() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabListScroll}>
+          <ScrollView testID="club-dashboard-tab-strip" horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabListScroll}>
             <TabsList style={s.tabsList}>
               {TAB_DEFS.map(({ value, label, icon: Icon }) => (
-                <TabsTrigger key={value} value={value} style={s.tabsTrigger}>
+                <TabsTrigger testID={`club-tab-${value}`} key={value} value={value} style={s.tabsTrigger}>
                   <View style={s.tabsTriggerInner}>
-                    <Icon size={14} color={activeTab === value ? colors.primaryForeground : colors.primary} />
+                    <Icon size={14} color={activeTab === value ? colors.foreground : colors.primary} />
                     <Text style={[s.tabsTriggerLabel, activeTab === value && s.tabsTriggerLabelActive]}>{label}</Text>
                   </View>
                 </TabsTrigger>
@@ -383,8 +387,8 @@ export default function ClubCoachDashboardScreen() {
           {/* Staff */}
           <TabsContent value="staff">
             <View style={s.tabBody}>
-              <StaffManager onMessageStaff={() => {}} />
-              <StaffMessaging />
+              <StaffManager onMessageStaff={member=>setStaffRecipient(member)} />
+              <StaffMessaging key={staffRecipient?.id||'all'} initialRecipient={staffRecipient||undefined} />
             </View>
           </TabsContent>
 
@@ -496,7 +500,7 @@ export default function ClubCoachDashboardScreen() {
                   <CardDescription>Athletes you've saved for your teams or recruiting recommendations</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {savedAthletes && savedAthletes.length > 0 ? (
+                  {savedAthletesError ? <Button variant="outline" onPress={()=>void retrySavedAthletes()}>Could not load saved athletes. Retry</Button> : savedAthletes && savedAthletes.length > 0 ? (
                     <View style={s.savedGrid}>
                       {savedAthletes.map((saved: any) => (
                         <View key={saved.id} style={s.savedCard}>
@@ -509,7 +513,7 @@ export default function ClubCoachDashboardScreen() {
                               <Badge variant={saved.priority === 'high' ? 'default' : 'secondary'}>{String(saved.priority || 'normal')}</Badge>
                             </View>
                           </View>
-                          <Button variant="outline" size="sm" style={s.fullW} onPress={() => {/* PORT-PENDING: deep link to public profile */}}>View Profile</Button>
+                          <Button variant="outline" size="sm" style={s.fullW} disabled={!saved.athlete?.id} onPress={() => {if(saved.athlete?.id)nav.navigate('PublicProfileStack' as any,{screen:'PublicProfile',params:{customUrl:saved.athlete.custom_url||saved.athlete.id}} as any);}}>View Profile</Button>
                         </View>
                       ))}
                     </View>
@@ -628,7 +632,7 @@ const s = StyleSheet.create({
   tabsTrigger: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, minWidth: 70 },
   tabsTriggerInner: { alignItems: 'center', gap: 2 },
   tabsTriggerLabel: { fontFamily: typography.fontFamily.bodyMedium, fontSize: 10, color: colors.primary },
-  tabsTriggerLabelActive: { color: colors.primaryForeground },
+  tabsTriggerLabelActive: { color: colors.foreground },
 
   tabBody: { gap: spacing.md, paddingTop: spacing.sm },
 

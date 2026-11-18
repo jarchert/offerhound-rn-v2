@@ -225,12 +225,8 @@ export default function GalleryScreen() {
               <GalleryImageManager
                 athleteId={p.id}
                 galleryImages={(p.gallery_images as any) || []}
-                onImagesUpdated={async (images: any) => {
-                  await supabase
-                    .from('player_profiles')
-                    .update({ gallery_images: images } as any)
-                    .eq('id', p.id);
-                  fetchProfile();
+                onImagesUpdated={async () => {
+                  await fetchProfile();
                 }}
               />
             </View>

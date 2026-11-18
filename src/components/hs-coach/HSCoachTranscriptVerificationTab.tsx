@@ -66,46 +66,49 @@ export function HSCoachTranscriptVerificationTab() {
   const [submitting, setSubmitting] = useState(false);
 
   // Get roster athlete profile IDs
-  const { data: rosterIds } = useQuery({
+  const { data: rosterIds,isError:rosterError,refetch:refetchRoster } = useQuery({
     queryKey: ['hs-coach-roster-ids', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data } = await supabase
+      const { data,error } = await supabase
         .from('team_rosters')
         .select('athlete_profile_id, teams!inner(coach_user_id)')
         .eq('teams.coach_user_id', user.id)
-        .not('athlete_profile_id', 'is', null);
+        .not('athlete_profile_id', 'is', null).is('removed_at',null).not('status','in','(removed,transferred,declined)').not('athlete_accepted_at','is',null).eq('teams.status','active');
+      if(error)throw error;
       return (data || []).map((r: any) => r.athlete_profile_id);
     },
     enabled: !!user,
   });
 
   // Get transcripts for roster athletes
-  const { data: transcripts, isLoading } = useQuery({
-    queryKey: ['hs-coach-roster-transcripts', rosterIds],
+  const { data: transcripts,isLoading,isError:dataError,refetch:refetchData } = useQuery({
+    queryKey: ['hs-coach-roster-transcripts',user?.id,rosterIds],
     queryFn: async () => {
       if (!rosterIds || rosterIds.length === 0) return [];
-      const { data } = await supabase
+      const { data,error } = await supabase
         .from('academic_transcripts')
         .select(
           'id, file_name, gpa, semester, year, is_official, created_at, athlete_profile_id, player_profiles:athlete_profile_id(full_name, profile_image_url, school)'
         )
         .in('athlete_profile_id', rosterIds)
         .order('created_at', { ascending: false });
+      if(error)throw error;
       return data || [];
     },
     enabled: !!rosterIds && rosterIds.length > 0,
   });
 
   // Existing verifications by this HS coach
-  const { data: existingVerifications } = useQuery({
+  const { data: existingVerifications,isError:verificationError,refetch:refetchVerifications } = useQuery({
     queryKey: ['hs-coach-verifications', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data } = await supabase
+      const { data,error } = await supabase
         .from('transcript_verifications')
         .select('transcript_id, badge_level, verified_at')
         .eq('verifier_user_id', user.id);
+      if(error)throw error;
       return data || [];
     },
     enabled: !!user,
@@ -120,7 +123,7 @@ export function HSCoachTranscriptVerificationTab() {
     if (!user || !hsProfile) return;
     setSubmitting(true);
     try {
-      const { error } = await supabase.from('transcript_verifications').insert({
+      const { data:verified,error } = await supabase.from('transcript_verifications').insert({
         transcript_id: transcriptId,
         verifier_user_id: user.id,
         verifier_role: 'high_school_coach',
@@ -130,8 +133,8 @@ export function HSCoachTranscriptVerificationTab() {
         verification_status: 'verified',
         verification_notes: notes.trim() || null,
         badge_level: badgeLevel,
-      });
-      if (error) throw error;
+      }).select('id,transcript_id,verifier_user_id,verifier_name,verifier_role').single();
+      if(error||!verified?.id||verified.transcript_id!==transcriptId||verified.verifier_user_id!==user.id||!verified.verifier_name||!verified.verifier_role)throw error||Error('Transcript verification was not confirmed.');
       toast({
         title: 'Transcript verified',
         description: `${badgeLevel.toUpperCase()} badge issued.`,
@@ -150,6 +153,8 @@ export function HSCoachTranscriptVerificationTab() {
     }
   };
 
+  if(dataError||verificationError)return <Button onPress={()=>{void refetchData();void refetchVerifications();}}>Retry loading transcripts and verification status</Button>;
+  if(rosterError)return <Button onPress={()=>void refetchRoster()}>Retry loading accepted team members</Button>;
   return (
     <ScrollView contentContainerStyle={s.root}>
       <Card>
@@ -172,7 +177,7 @@ export function HSCoachTranscriptVerificationTab() {
             <View style={s.emptyWrap}>
               <FileText size={40} color={colors.mutedForeground} />
               <Text style={s.emptyText}>
-                No transcripts uploaded by your roster athletes yet.
+                No shared transcripts are available. Roster membership alone does not grant access to private transcripts.
               </Text>
             </View>
           ) : (

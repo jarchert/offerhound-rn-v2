@@ -30,9 +30,9 @@ import { colors, typography, spacing, radius } from '@/lib/theme';
 export default function ScoutLettersScreen() {
   const nav = useNavigation<any>();
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const { data: profile, isLoading: profileLoading, isFetched: profileFetched } = useScoutProfile();
+  const { data: profile, isLoading: profileLoading, isFetched: profileFetched, error: profileError, refetch: retryProfile } = useScoutProfile();
   const { data: orgData } = useScoutOrganization();
-  const { history, isLoading: historyLoading, addToHistory, deleteFromHistory } = useScoutLetterHistory();
+  const { history, isLoading: historyLoading, error:historyError, refetch:retryHistory, addToHistory, deleteFromHistory } = useScoutLetterHistory();
   const { data: savedAthletes = [] } = useScoutSavedAthletes();
   const { toast } = useToast();
   const [isSending, setIsSending] = useState(false);
@@ -71,7 +71,9 @@ export default function ScoutLettersScreen() {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error || 'Failed to send email');
       }
-      await addToHistory({
+      const delivery=await response.json().catch(()=>null);
+      if(delivery?.success!==true||delivery?.delivery?.status!=='provider_accepted')throw Error(delivery?.error||'Email delivery was not confirmed. Your draft is kept.');
+      try{await addToHistory({
         recipient_name: data.recipientName,
         recipient_email: data.recipientEmail,
         recipient_type: data.recipientType,
@@ -79,7 +81,7 @@ export default function ScoutLettersScreen() {
         letter_type: data.letterType,
         letter_content: data.letterContent,
         in_response_to_type: data.inResponseToType || null,
-      } as any);
+      } as any);}catch{toast({title:'Email accepted, but history could not be saved. Do not resend.',variant:'destructive'});return;}
       toast({ title: `Letter sent to ${data.recipientEmail}!` });
     } catch (e: any) {
       toast({ title: e?.message ?? 'Failed to send email', variant: 'destructive' });
@@ -96,7 +98,8 @@ export default function ScoutLettersScreen() {
       </SafeAreaView>
     );
   }
-  if (!profile) return null;
+  if (profileError) return <SafeAreaView style={s.center}><Text accessibilityRole="alert">Scout profile could not be loaded.</Text><Button onPress={() => void retryProfile()}>Retry profile</Button></SafeAreaView>;
+  if (!profile) return <SafeAreaView style={s.center}><BackButton /><Text>Complete your scout profile to use letters.</Text></SafeAreaView>;
 
   const p = profile as any;
 
@@ -116,6 +119,7 @@ export default function ScoutLettersScreen() {
     <SafeAreaView style={s.root}>
       <View style={s.header}>
         <BackButton label="Back" />
+        {historyError?<View><Text accessibilityRole="alert" style={{color:colors.destructive}}>Letter history could not be loaded.</Text><Button onPress={()=>void retryHistory()}>Retry letter history</Button></View>:null}
         <Text style={s.headerTitle}>Scout Letter Center</Text>
       </View>
       <ScrollView contentContainerStyle={s.content}>

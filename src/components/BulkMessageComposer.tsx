@@ -1,3 +1,4 @@
+import {withThemeAlpha} from '@/lib/theme';
 import React, { useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import {
@@ -710,7 +711,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.secondary + "4D",
+    backgroundColor: withThemeAlpha('secondary','4D'),
   },
   previewSubject: {
     marginBottom: spacing.xs,

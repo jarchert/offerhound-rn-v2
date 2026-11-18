@@ -1,0 +1,45 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Admin creator review list loads without changing review status
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.admin@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_ADMIN_PASSWORD}
+- extendedWaitUntil:
+    visible: Platform overview
+    timeout: 60000
+- tapOn:
+    id: admin-content-tab
+- extendedWaitUntil:
+    visible: Creator review
+    timeout: 45000
+- extendedWaitUntil:
+    visible: ".*QA Influencer.*"
+    timeout: 45000
+- assertNotVisible: Could not load creators. Retry
+- assertVisible: Verify
+- assertVisible: Reject verification
+- scrollUntilVisible:
+    element: ^History$
+    direction: DOWN
+    timeout: 30000
+    centerElement: true
+- swipe:
+    start: 95%, 68%
+    end: 95%, 40%
+    duration: 400
+- tapOn: ^History$
+- runFlow:
+    file: common/reveal-text.yaml
+    env:
+      QA_SCROLL_TEXT: No recorded creator reviews.
+- extendedWaitUntil:
+    visible: No recorded creator reviews.
+    timeout: 45000
+- assertNotVisible: Could not load review history. Retry
+- takeScreenshot: admin-creator-history-loaded
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.admin@offerhound.test

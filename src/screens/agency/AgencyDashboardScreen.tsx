@@ -1,3 +1,6 @@
+import {AddToPipelineDialog} from '@/components/AddToPipelineDialog';
+import {useLetterCenter} from '@/hooks/useLetterCenter';
+import { UserProfileHeader } from '@/components/UserProfileHeader';
 // AgencyDashboardScreen — full RN port of Lovable web `src/pages/AgencyDashboard.tsx`.
 // Keeps tab structure (Overview / Team / Manage Staff / Pipeline / Saved / Messaging /
 // Analytics / Organization / Social) so future visual polish maps 1:1 with the web design.
@@ -18,6 +21,7 @@ import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 
 import { useAuth } from '@/hooks/useAuth';
+import { useRecruiterCounts } from '@/hooks/useRecruiterCounts';
 import { useScoutProfile } from '@/hooks/useScoutProfile';
 import { useScoutOrganization } from '@/hooks/useScoutOrganization';
 import { useScoutSavedAthletes } from '@/hooks/useScoutSavedAthletes';
@@ -46,28 +50,33 @@ import type { RootStackParamList } from '@/navigation/RootNavigator';
 
 export default function AgencyDashboardScreen() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
+  const {goToLetterForAthlete}=useLetterCenter();
+  const [pipelineAthlete,setPipelineAthlete]=React.useState<any>(null);
   const { user, isAuthenticated, loading: authLoading } = useAuth();
-  const { data: profile, isLoading: profileLoading } = useScoutProfile();
-  const { data: orgData } = useScoutOrganization();
-  const { data: savedAthletes = [] } = useScoutSavedAthletes();
-  const { data: activity = [] } = useScoutActivity(10);
-  const { history: letterHistory } = useScoutLetterHistory();
+  const {data: recruiterCounts, isError: countsFailed, refetch: retryCounts} = useRecruiterCounts();
+  const { data: profile, isLoading: profileLoading, error: profileError, refetch: retryProfile } = useScoutProfile();
+  const { data: orgData,isLoading:organizationLoading,isError:organizationFailed,refetch:retryOrganization } = useScoutOrganization();
+  const { data: savedAthletes = [], isError:savedFailed, refetch:retrySaved } = useScoutSavedAthletes();
+  const { data: activity = [], isError: activityFailed, refetch: retryActivity } = useScoutActivity(10);
+  const { history: letterHistory, error: lettersError, refetch: retryLetters } = useScoutLetterHistory();
   const [tab, setTab] = React.useState('overview');
 
   const org = (orgData as any)?.organization;
   const isOwner = (orgData as any)?.isOwner;
   const memberRole = (orgData as any)?.memberRole;
 
-  const { data: staffCount = 0 } = useQuery({
+  const { data: staffCount = 0, isError: staffFailed, refetch: retryStaff } = useQuery({
     queryKey: ['agency-staff-count', user?.id],
     queryFn: async () => {
       if (!user) return 0;
-      const { count } = await supabase
+      const { count, error } = await supabase
         .from('coaching_staff')
         .select('*', { count: 'exact', head: true })
         .eq('owner_user_id', user.id)
         .neq('status', 'removed');
-      return count || 0;
+      if (error) throw error;
+      if(typeof count!=='number')throw new Error('Staff count was not confirmed.');
+      return count;
     },
     enabled: !!user,
   });
@@ -76,13 +85,17 @@ export default function AgencyDashboardScreen() {
     if (!authLoading && !isAuthenticated) nav.navigate('AuthStack' as never);
   }, [authLoading, isAuthenticated, nav]);
 
-  if (authLoading || profileLoading) {
+  if (authLoading || profileLoading || organizationLoading) {
     return (
       <View style={s.loaderRoot}>
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
+
+  if (profileError) return <View style={s.loaderRoot}><Text accessibilityRole="alert">Recruiter profile could not be loaded.</Text><Button onPress={() => void retryProfile()}>Retry profile</Button></View>;
+
+  if(organizationFailed)return <View style={s.loaderRoot}><Text accessibilityRole="alert">Your agency could not be loaded.</Text><Button onPress={()=>void retryOrganization()}>Retry agency</Button></View>;
 
   const agencyName = org?.name || 'Your Agency';
   const profileName = (profile as any)?.name
@@ -98,6 +111,7 @@ export default function AgencyDashboardScreen() {
     <SafeAreaView style={s.root}>
       {/* PORT-PENDING: SEO — web-only meta component, intentionally omitted on RN */}
       <ScrollView contentContainerStyle={s.content}>
+        <UserProfileHeader profile={profile} />
         {/* PORT-PENDING: BackButton — header back is handled by stack navigator on RN */}
 
         {/* Agency Header */}
@@ -127,7 +141,7 @@ export default function AgencyDashboardScreen() {
             <Button
               variant="outline" size="sm"
               leftIcon={<Search size={14} color={colors.primary} />}
-              onPress={() => (nav.getParent() as any)?.navigate('CoachTabs', { screen: 'DirectoryTab' })}
+              onPress={() => nav.navigate('AthleteSearch')}
             >
               Search Athletes
             </Button>
@@ -150,11 +164,12 @@ export default function AgencyDashboardScreen() {
 
         {/* Stats Row */}
         <View style={s.statsGrid}>
-          <StatMini icon={<UserPlus size={22} color={colors.primary} />} value={staffCount} label="Staff" />
-          <StatMini icon={<Heart size={22} color={colors.primary} />} value={savedAthletes.length} label="Saved Athletes" />
-          <StatMini icon={<FileText size={22} color={colors.primary} />} value={(letterHistory as any[]).length} label="Letters Sent" />
-          <StatMini icon={<Eye size={22} color={colors.primary} />} value={profileViews} label="Profiles Viewed" />
-          <StatMini icon={<Star size={22} color={colors.primary} />} value={searches} label="Searches" />
+          {(countsFailed || activityFailed || staffFailed || lettersError) ? <Button onPress={() => {void retryCounts();void retryActivity();void retryStaff();void retryLetters();}}>Some dashboard data could not be loaded. Retry</Button> : null}
+          <StatMini icon={<UserPlus size={22} color={colors.primary} />} value={staffFailed ? "Unavailable" : staffCount} label="Staff" />
+          <StatMini icon={<Heart size={22} color={colors.primary} />} value={savedFailed ? "Unavailable" : savedAthletes.length} label="Saved Athletes" />
+          <StatMini icon={<FileText size={22} color={colors.primary} />} value={countsFailed ? "Unavailable" : recruiterCounts?.lettersSent ?? "—"} label="Letters Sent" />
+          <StatMini icon={<Eye size={22} color={colors.primary} />} value={countsFailed ? "Unavailable" : recruiterCounts?.profilesViewed ?? "—"} label="Profiles Viewed" />
+          <StatMini icon={<Star size={22} color={colors.primary} />} value={countsFailed ? "Unavailable" : recruiterCounts?.searches ?? "—"} label="Searches" />
         </View>
 
         {/* Main Tabs */}
@@ -178,7 +193,7 @@ export default function AgencyDashboardScreen() {
               <Card>
                 <CardHeader><CardTitle>Recent Activity</CardTitle></CardHeader>
                 <CardContent>
-                  {(activity as any[]).length === 0 ? (
+                  {activityFailed ? <Button onPress={() => void retryActivity()}>Could not load activity. Retry</Button> : (activity as any[]).length === 0 ? (
                     <Text style={s.muted}>No recent activity.</Text>
                   ) : (
                     <View style={{ gap: spacing.sm }}>
@@ -255,10 +270,10 @@ export default function AgencyDashboardScreen() {
             <Card>
               <CardHeader><CardTitle>Saved Athletes ({savedAthletes.length})</CardTitle></CardHeader>
               <CardContent>
-                {savedAthletes.length === 0 ? (
+                {savedFailed ? <Button onPress={()=>void retrySaved()}>Could not load saved athletes. Retry</Button> : savedAthletes.length === 0 ? (
                   <View style={s.empty}>
                     <Text style={[s.muted, { marginBottom: spacing.sm }]}>No saved athletes yet.</Text>
-                    <Button variant="outline" size="sm" leftIcon={<Search size={14} color={colors.primary} />}>
+                    <Button variant="outline" size="sm" onPress={() => nav.navigate('AthleteSearch')} leftIcon={<Search size={14} color={colors.primary} />}>
                       Search Athletes
                     </Button>
                   </View>
@@ -282,18 +297,13 @@ export default function AgencyDashboardScreen() {
                         </View>
                         <View style={s.savedActions}>
                           {item.priority ? <Badge variant="outline">{item.priority}</Badge> : null}
-                          <Button variant="ghost" size="sm">View</Button>
+                          <Button size="sm" variant="outline" disabled={item.athlete_unavailable} onPress={()=>setPipelineAthlete(item.athlete)}>Add to pipeline</Button>
+                          <Button variant="ghost" size="sm" disabled={item.athlete_unavailable||!item.athlete?.id} onPress={() => nav.navigate('PublicProfileStack' as any,{screen:'PublicProfile',params:{customUrl:item.athlete.custom_url||item.athlete.id}})}>View</Button>
                           <Button
                             variant="outline" size="sm"
                             leftIcon={<Mail size={14} color={colors.primary} />}
-                            onPress={() => nav.navigate('LetterComposer', {
-                              seed: {
-                                recipientCategory: 'athlete',
-                                recipientName: item.athlete?.full_name || '',
-                                organizationName: item.athlete?.school || '',
-                                letterType: 'initial-interest',
-                              },
-                            })}
+                            disabled={item.athlete_unavailable}
+                            onPress={()=>goToLetterForAthlete(item.athlete)}
                           >
                             Letter
                           </Button>
@@ -377,7 +387,7 @@ export default function AgencyDashboardScreen() {
   );
 }
 
-function StatMini({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) {
+function StatMini({ icon, value, label }: { icon: React.ReactNode; value: number | string; label: string }) {
   return (
     <Card style={s.statCard}>
       <CardContent style={s.statContent}>

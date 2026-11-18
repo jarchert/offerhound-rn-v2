@@ -1,0 +1,25 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: Essential Only
+    timeout: 60000
+- tapOn: Essential Only
+# iOS Keychain survives clearState; explicitly leave any retained session.
+- runFlow:
+    when:
+      visible:
+        id: header-settings
+    commands:
+      - tapOn:
+          id: header-settings
+      - runFlow:
+          file: reveal-control.yaml
+          env:
+            QA_SCROLL_ID: settings-sign-out
+      - tapOn:
+          id: settings-sign-out
+- extendedWaitUntil:
+    visible: ".*Account.*"
+    timeout: 30000

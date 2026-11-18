@@ -1,3 +1,8 @@
+import {ParentAthleteEditor} from '@/components/ParentAthleteEditor';
+import {GuardianManagement} from '@/components/GuardianManagement';
+import {AthleteSearchListingCard} from '@/components/AthleteSearchListingCard';
+import {TeamMembershipCard} from '@/components/TeamMembershipCard';
+import { UserProfileHeader } from '@/components/UserProfileHeader';
 // ParentDashboard — RN port of Lovable src/pages/ParentDashboard.tsx (~563 LOC).
 //
 // Web → RN adaptations:
@@ -130,10 +135,9 @@ export default function ParentDashboard() {
   const [coppaByAthlete, setCoppaByAthlete] = useState<Record<string, CoppaStatus>>({});
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError,setLoadError]=useState(false);
 
   // Add-linked-athlete form state
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteSubmitting, setInviteSubmitting] = useState(false);
 
   // Delete confirmation dialog state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -151,6 +155,7 @@ export default function ParentDashboard() {
   const fetchAthletes = useCallback(async () => {
     if (!user) return;
     setIsLoading(true);
+    setLoadError(false);
     try {
       // 1) Pull accepted parent↔athlete relationship rows
       const { data: relData, error: relErr } = await supabase
@@ -175,6 +180,7 @@ export default function ParentDashboard() {
         .in('id', ids);
       if (profErr) throw profErr;
 
+      if((profiles||[]).length!==new Set(ids).size)throw Error('Some linked athlete profiles could not be loaded.');
       const mapped = (profiles || []) as LinkedAthlete[];
       setAthletes(mapped);
       setSelectedAthleteId((prev) =>
@@ -188,10 +194,11 @@ export default function ParentDashboard() {
       });
       if (under13.length > 0) {
         const userIds = under13.map((a) => a.user_id);
-        const { data: coppaRows } = await supabase
+        const { data: coppaRows, error: coppaError } = await supabase
           .from('coppa_parent_verifications' as any)
           .select('athlete_user_id, verified_at, created_at')
           .in('athlete_user_id', userIds);
+        if(coppaError)throw coppaError;
         const byUser = new Map<string, any>();
         (coppaRows || []).forEach((r: any) => byUser.set(r.athlete_user_id, r));
         const next: Record<string, CoppaStatus> = {};
@@ -220,6 +227,7 @@ export default function ParentDashboard() {
         setCoppaByAthlete(next);
       }
     } catch (err: any) {
+      setLoadError(true);
       console.error('[ParentDashboard] fetchAthletes failed', err);
       toast.error('Could not load linked athletes', err?.message);
     } finally {
@@ -238,71 +246,16 @@ export default function ParentDashboard() {
   const athleteAge = selectedAthlete ? calculateAge(selectedAthlete.date_of_birth) : null;
   const canDelete = athleteAge !== null && athleteAge < 19;
 
-  // ─── Add-linked-athlete form ────────────────────────────────────────────────
-  const handleInviteAthlete = async () => {
-    if (!user) return;
-    const email = inviteEmail.trim().toLowerCase();
-    if (!email || !email.includes('@')) {
-      toast.error('Enter a valid athlete email');
-      return;
-    }
-    setInviteSubmitting(true);
-    try {
-      // Look up athlete profile by email
-      const { data: profile, error: lookupErr } = await supabase
-        .from('player_profiles')
-        .select('id, full_name, email')
-        .eq('email', email)
-        .maybeSingle();
-      if (lookupErr) throw lookupErr;
-      if (!profile) {
-        toast.error(
-          'No athlete found with that email',
-          'They must create their OfferHound athlete profile first.'
-        );
-        return;
-      }
-
-      // Insert pending relationship row (mirrors useParentInvitation)
-      const { error: insertErr } = await supabase.from('parent_athlete_relationships').insert({
-        parent_user_id: user.id,
-        athlete_profile_id: profile.id,
-        relationship_type: 'parent',
-        invitation_email: email,
-        invitation_sent_at: new Date().toISOString(),
-        invitation_accepted: false,
-        invited_by: user.id,
-      });
-      if (insertErr) {
-        if (insertErr.code === '23505') {
-          toast.error('Invitation already exists for this athlete');
-        } else {
-          throw insertErr;
-        }
-        return;
-      }
-
-      toast.success('Invitation sent', `Waiting for ${profile.full_name ?? 'athlete'} to accept.`);
-      setInviteEmail('');
-      // Note: relationship will appear in list once athlete accepts.
-    } catch (err: any) {
-      console.error('[ParentDashboard] invite failed', err);
-      toast.error('Invite failed', err?.message ?? 'Please try again.');
-    } finally {
-      setInviteSubmitting(false);
-    }
-  };
-
   // ─── Parent-initiated profile delete (under-19 only) ───────────────────────
   const handleDeleteProfile = async () => {
     if (!selectedAthlete || !canDelete) return;
     setIsDeleting(true);
     try {
-      const { error } = await supabase
+      const { data:deleted,error } = await supabase
         .from('player_profiles')
         .delete()
-        .eq('id', selectedAthlete.id);
-      if (error) throw error;
+        .eq('id', selectedAthlete.id).select('id').single();
+      if (error||deleted?.id!==selectedAthlete.id) throw error||Error('Profile deletion was not authorized or confirmed.');
       toast.success(
         'Profile deleted',
         `${selectedAthlete.full_name ?? 'Athlete'}'s profile has been permanently deleted.`
@@ -332,14 +285,21 @@ export default function ParentDashboard() {
     );
   }
 
+  if(loadError)return <SafeAreaView style={s.container}><ScrollView contentContainerStyle={s.content}>
+        <GuardianManagement parent /><UserProfileHeader profile={user?.user_metadata} label="Parent/guardian"/><Text style={s.h1}>Parent View</Text><Text style={s.muted}>Linked athlete information could not be loaded. Please retry to confirm current access and safety status.</Text><Button onPress={()=>void fetchAthletes()}>Retry linked athletes</Button></ScrollView></SafeAreaView>;
+
   const selectedCoppa = selectedAthleteId ? coppaByAthlete[selectedAthleteId] : null;
 
   return (
     <SafeAreaView style={s.container}>
       <Navbar />
       <ScrollView contentContainerStyle={s.content}>
-        <BackButton label="Back" />
+        <UserProfileHeader profile={user?.user_metadata} label="Parent/guardian" />
+        <BackButton label="Back" fallback={{ name: 'CampStack', params: { screen: 'CampsList' } }} />
 
+        <Button variant="outline" onPress={() => nav.navigate('CampStack' as any, { screen: 'CampsList' })}>Camps & waivers</Button>
+        {selectedAthlete?.id&&<TeamMembershipCard key={selectedAthlete.id} profileId={selectedAthlete.id} minorSafe={!!selectedAthlete.is_minor_safe} guardian/>}
+        {selectedAthlete?.id&&<AthleteSearchListingCard key={`search:${selectedAthlete.id}`} profileId={selectedAthlete.id}/>}
         {/* Header */}
         <View style={s.headerRow}>
           <View style={s.headerIcon}>
@@ -349,7 +309,7 @@ export default function ParentDashboard() {
             <View style={s.headerTitleRow}>
               <Text style={s.h1}>Parent View</Text>
               <Badge variant="secondary">
-                <Eye size={10} color={colors.primary} /> Viewer
+                <Eye size={10} color={colors.primary} /> Guardian
               </Badge>
             </View>
             <Text style={s.muted}>
@@ -438,6 +398,7 @@ export default function ParentDashboard() {
                 </CardContent>
               </Card>
 
+              <ParentAthleteEditor key={`editor:${selectedAthlete.id}`} profileId={selectedAthlete.id} onSaved={()=>void fetchAthletes()}/>
               {/* Profile details */}
               <Card>
                 <CardHeader>
@@ -593,38 +554,7 @@ export default function ParentDashboard() {
           )
         )}
 
-        {/* Add-linked-athlete form (always available) */}
-        <Card>
-          <CardHeader>
-            <View style={s.row}>
-              <UserPlus size={18} color={colors.foreground} />
-              <CardTitle>Link another athlete</CardTitle>
-            </View>
-            <CardDescription>
-              Enter your athlete's email to send them a parent-link invitation.
-            </CardDescription>
-          </CardHeader>
-          <CardContent style={{ gap: spacing.sm }}>
-            <View style={{ gap: spacing.xs }}>
-              <Label>Athlete email</Label>
-              <Input
-                value={inviteEmail}
-                onChangeText={setInviteEmail}
-                placeholder="athlete@example.com"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
-            <Button
-              onPress={handleInviteAthlete}
-              disabled={inviteSubmitting || !inviteEmail.trim()}
-              loading={inviteSubmitting}
-            >
-              Send invitation
-            </Button>
-          </CardContent>
-        </Card>
+        <GuardianManagement parent />
       </ScrollView>
       <Footer />
 

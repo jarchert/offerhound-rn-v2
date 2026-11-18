@@ -1,0 +1,22 @@
+name: OfferHound admin history read retest on existing candidate
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        type: string
+        required: true
+      platform:
+        type: choice
+        required: true
+        default: android
+        options: [ios, android]
+jobs:
+  admin_history:
+    type: maestro
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      flow_path: .maestro/staging-admin-creator-history-readonly.yaml
+      record_screen: true
+      retries: 0

@@ -1,3 +1,6 @@
+import * as Crypto from 'expo-crypto';
+import {uploadTranscriptFile} from '@/lib/transcriptUpload';
+import { removeDocument } from '@/lib/removeDocument';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -48,48 +51,19 @@ export function useTranscripts() {
        isOfficial?: boolean;
        notes?: string;
     }) => {
-       if (!user || !profile?.id) throw new Error("Profile not ready");
-       if (params.file.size > 10 * 1024 * 1024) throw new Error("File must be 10MB or less");
-       if (params.file.type !== "application/pdf") throw new Error("Only PDF files are supported");
-
-       const ts = Date.now();
-        const safeName = params.file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const path = `${user.id}/${ts}_${safeName}`;
-
-        const { error: uploadErr } = await supabase.storage
-          .from("transcripts")
-          .upload(path, params.file, { contentType: "application/pdf", upsert: false });
-        if (uploadErr) throw uploadErr;
-
-        const { data, error } = await supabase
-          .from("academic_transcripts")
-          .insert({
-             user_id: user.id,
-             athlete_profile_id: profile.id,
-             file_name: params.file.name,
-             file_path: path,
-             file_size_bytes: params.file.size,
-             semester: params.semester || null,
-             year: params.year || null,
-             gpa: params.gpa || null,
-             is_official: params.isOfficial ?? false,
-             notes: params.notes || null,
-          })
-          .select()
-          .single();
-        if (error) throw error;
-        return data as AcademicTranscript;
+       if (!user || !profile?.id) throw new Error('Profile not ready');
+       return await uploadTranscriptFile(supabase,{userId:user.id,athleteProfileId:profile.id,uploadId:Crypto.randomUUID(),...params}) as AcademicTranscript;
      },
      onSuccess: () => queryClient.invalidateQueries({ queryKey: ["academic_transcripts"] }),
   });
 
   const remove = useMutation({
      mutationFn: async (transcript: AcademicTranscript) => {
-        await supabase.storage.from("transcripts").remove([transcript.file_path]);
-        const { error } = await supabase.from("academic_transcripts").delete().eq("id", transcript.id);
-        if (error) throw error;
+        if (!user || transcript.user_id !== user.id) throw Error('Sign in as the document owner.');
+        const result=await removeDocument(supabase,{table:'academic_transcripts',bucket:'transcripts',id:transcript.id,path:transcript.file_path,scope:{user_id:user.id}});
+        if(result.cleanupPending)throw Error('Transcript removed from your list; private file cleanup could not be confirmed.');
      },
-     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["academic_transcripts"] }),
+     onSettled: () => queryClient.invalidateQueries({ queryKey: ["academic_transcripts"] }),
   });
 
   const getDownloadUrl = async (transcript: AcademicTranscript): Promise<string | null> => {

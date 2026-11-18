@@ -1,3 +1,5 @@
+import {useLetterCenter} from '@/hooks/useLetterCenter';
+import { UserProfileHeader } from '@/components/UserProfileHeader';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -71,8 +73,9 @@ const TABS: { key: InnerTab; label: string; icon: any }[] = [
 export default function CoachDashboard() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
   const { user } = useAuth();
+  const {goToLetterForAthlete}=useLetterCenter();
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = useCoachProfile();
-  const { data: savedAthletes = [], isLoading: athletesLoading, refetch: refetchAthletes } =
+  const { data: savedAthletes = [], isLoading: athletesLoading, isError: athletesError, refetch: refetchAthletes } =
     useSavedAthletes() as any;
   const { data: stats } = useCoachActivityStats();
   const removeSavedAthlete = useRemoveSavedAthlete();
@@ -85,6 +88,7 @@ export default function CoachDashboard() {
   const { tier, isActive: subActive } = useSubscription();
   const hasCampManagerEntitlement = subActive && (tier === 'camp-manager-annual' || tier === 'camp-manager-event' || tier === 'club-coach');
 
+  const [staffRecipient,setStaffRecipient]=useState<any>(null);
   const [editForm, setEditForm] = useState({
     name: '',
     school: '',
@@ -137,17 +141,18 @@ export default function CoachDashboard() {
     }
   };
 
-  const goPipeline = () => {
-    (nav as any).navigate('CoachTabs', { screen: 'PipelineTab' });
+  const goPipeline = (athlete?:any) => {
+    (nav as any).navigate('CoachTabs', { screen: 'PipelineTab', params:athlete?.id?{initialAthlete:athlete}:undefined });
   };
   const goCamps = () => {
     (nav as any).navigate('CoachTabs', { screen: 'CampsTab' });
   };
-  const goMessages = (athleteName?: string) => {
-    (nav as any).navigate('Messages', athleteName ? { recipientName: athleteName } : undefined);
+  const goMessages = (athlete?:any) => {
+    if(athlete?.id)(nav as any).navigate('DirectMessageDraft',{athleteProfileId:athlete.id});
+    else (nav as any).navigate('Messages');
   };
   const goLetter = (athlete: any) => {
-    (nav as any).navigate('LetterComposer', { seed: { athlete } });
+    goToLetterForAthlete(athlete);
   };
 
   if (profileLoading) {
@@ -183,10 +188,12 @@ export default function CoachDashboard() {
           />
         }
       >
+        <UserProfileHeader profile={profile} />
         {/* Profile Header */}
         <Card>
           <CardContent style={{ paddingTop: spacing.md }}>
             <View style={s.headerRow}>
+              <View style={s.headerIdentity}>
               <Avatar
                 size={64}
                 source={(profile as any).image_url ? { uri: (profile as any).image_url } : undefined}
@@ -199,7 +206,9 @@ export default function CoachDashboard() {
                 ) : null}
                 <Text style={s.muted}>{(profile as any).school}</Text>
               </View>
+              </View>
               <Button
+                testID="coach-edit-profile"
                 size="sm"
                 variant="outline"
                 onPress={() => {
@@ -233,6 +242,7 @@ export default function CoachDashboard() {
             return (
               <Pressable
                 key={t.key}
+                testID={`coach-tab-${t.key}`}
                 onPress={() => setActiveTab(t.key)}
                 style={[s.tab, active && s.tabActive]}
               >
@@ -294,6 +304,7 @@ export default function CoachDashboard() {
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
               <Button
                 size="sm"
+                disabled={athletesLoading || athletesError}
                 onPress={() => setBulkComposerOpen(true)}
                 leftIcon={<Send size={14} color={colors.primaryForeground} />}
               >
@@ -308,6 +319,8 @@ export default function CoachDashboard() {
             <CardContent style={{ paddingBottom: spacing.md }}>
               {athletesLoading ? (
                 <ActivityIndicator color={colors.primary} />
+              ) : athletesError ? (
+                <Button variant="outline" onPress={()=>void refetchAthletes()}>Could not load saved athletes. Retry</Button>
               ) : savedAthletes.length === 0 ? (
                 <Text style={s.muted}>No saved athletes yet.</Text>
               ) : (
@@ -334,18 +347,21 @@ export default function CoachDashboard() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onPress={() => goMessages(a.full_name)}
+                              disabled={item.athlete_unavailable}
+                              onPress={() => goMessages(a)}
                               leftIcon={<MessageSquare size={12} color={colors.foreground} />}
                             >
                               Message
                             </Button>
                             <Button
                               size="sm"
+                              disabled={item.athlete_unavailable}
                               onPress={() => goLetter(a)}
                               leftIcon={<Send size={12} color={colors.primaryForeground} />}
                             >
                               Letter
                             </Button>
+                            <Button size="sm" variant="outline" disabled={item.athlete_unavailable} onPress={()=>goPipeline(a)}>Add to pipeline</Button>
                             <Button
                               size="sm"
                               variant="ghost"
@@ -519,8 +535,8 @@ export default function CoachDashboard() {
           </Card>
 
             {/* Staff management */}
-            <StaffManager onMessageStaff={() => goMessages()} />
-            <StaffMessaging />
+            <StaffManager onMessageStaff={member=>setStaffRecipient(member)} />
+            <StaffMessaging key={staffRecipient?.id||'all'} initialRecipient={staffRecipient||undefined} />
 
             {/* Social presence */}
             <SocialLinksManager
@@ -580,7 +596,8 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xxl },
   center: { alignItems: 'center', justifyContent: 'center' },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  headerRow: { flexDirection: 'row',flexWrap:'wrap', alignItems: 'center', gap: spacing.md },
+  headerIdentity:{flexDirection:'row',alignItems:'center',gap:spacing.md,flexGrow:1,flexBasis:220,minWidth:0},
   name: {
     fontFamily: typography.fontFamily.heading,
     fontSize: typography.fontSize.lg,

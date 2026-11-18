@@ -73,19 +73,21 @@ export function useCampReportData(campId: string | null, enrollmentId: string | 
     queryFn: async (): Promise<CampReportData | null> => {
       if (!campId || !enrollmentId) return null;
 
-      const [{ data: camp }, { data: enrollment }, { data: perfRow }, { data: aiRow }] = await Promise.all([
+      const initial = await Promise.all([
         supabase.from("camps").select("*").eq("id", campId).maybeSingle(),
         supabase.from("camp_enrollments").select("*").eq("id", enrollmentId).maybeSingle(),
         supabase.from("camp_performance_entries").select("*").eq("camp_id", campId).eq("enrollment_id", enrollmentId).maybeSingle(),
         supabase.from("camp_ai_scores").select("*").eq("camp_id", campId).eq("enrollment_id", enrollmentId).maybeSingle(),
       ]);
 
+      for(const result of initial)if(result.error)throw result.error;
+      const [{data:camp},{data:enrollment},{data:perfRow},{data:aiRow}]=initial;
       if (!camp || !enrollment) return null;
 
       const profileId = (enrollment as any).athlete_profile_id;
-      const [{ data: profile }, { data: badge }, { data: drillEvals }, { data: campPerf }, { data: campAi }] = await Promise.all([
+      const details = await Promise.all([
         profileId
-          ? supabase.from("player_profiles").select("first_name,last_name,position,school,graduation_year").eq("id", profileId).maybeSingle()
+          ? supabase.from("player_profiles").select("full_name,position,school,graduation_year").eq("id", profileId).maybeSingle()
           : Promise.resolve({ data: null }),
         profileId
           ? supabase.from("athlete_verified_badges").select("badge_label,badge_type").eq("athlete_profile_id", profileId).eq("camp_id", campId).maybeSingle()
@@ -97,6 +99,9 @@ export function useCampReportData(campId: string | null, enrollmentId: string | 
         supabase.from("camp_ai_scores").select("athlete_profile_id, composite_score, ai_rank").eq("camp_id", campId).order("composite_score", { ascending: false }),
       ]);
 
+      for(const result of details)if('error' in result&&result.error)throw result.error;
+      const [{data:profile},{data:badge},{data:drillEvals},{data:campPerf},{data:campAi}]=details;
+      const registrant=await supabase.from('camp_registrant_profiles' as any).select('full_name').eq('enrollment_id',enrollmentId).maybeSingle();if(registrant.error)throw registrant.error;
       const fortyAvg = (campPerf || [])
         .map((r: any) => best(r.forty_yard_dash, true))
         .filter((v): v is number => v != null);
@@ -110,9 +115,7 @@ export function useCampReportData(campId: string | null, enrollmentId: string | 
       const p: any = perfRow || {};
       const a: any = aiRow || null;
 
-      const fullName = profile
-        ? `${(profile as any).first_name || ""} ${(profile as any).last_name || ""}`.trim() || "Athlete"
-        : "Athlete";
+      const fullName=(registrant.data as any)?.full_name || (profile as any)?.full_name || (enrollment as any).guest_name || 'Identity unavailable';
 
       return {
         camp: {

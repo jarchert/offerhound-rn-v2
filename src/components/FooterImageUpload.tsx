@@ -1,9 +1,10 @@
+import {normalizeAthleteImageAsset,athleteImagePath,athleteMediaAllowed,validateMediaBytes,saveAthleteMedia} from '@/lib/athleteMedia';
 // FooterImageUpload — RN port of offerhound-repo/src/components/FooterImageUpload.tsx
 //
 // Uploads a footer image to Supabase Storage `profile-images` at
 // `{athleteId}/footer.{ext}` and saves URL to player_profiles.footer_image_url.
 // 5MB cap (parity).
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -23,8 +24,10 @@ export function FooterImageUpload({ athleteId, currentImageUrl, onImageUpdated }
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentImageUrl || null);
   const { toast } = useToast();
+  useEffect(()=>setPreviewUrl(currentImageUrl||null),[athleteId,currentImageUrl]);
 
   const pickAndUpload = async () => {
+    if(!await athleteMediaAllowed(supabase,athleteId,message=>toast({title:'Upload unavailable',description:message,variant:'destructive'})))return;
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
@@ -37,7 +40,7 @@ export function FooterImageUpload({ athleteId, currentImageUrl, onImageUpdated }
         quality: 0.9,
       });
       if (result.canceled || !result.assets?.[0]) return;
-      const asset = result.assets[0];
+      const asset = await normalizeAthleteImageAsset(result.assets[0]);
       if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
         toast({ title: 'File too large', variant: 'destructive' });
         return;
@@ -47,22 +50,20 @@ export function FooterImageUpload({ athleteId, currentImageUrl, onImageUpdated }
       const uriExt = asset.uri.split('.').pop()?.split('?')[0]?.toLowerCase() || 'jpg';
       const fileExt = asset.fileName?.split('.').pop()?.toLowerCase() || uriExt;
       const mimeType = asset.mimeType || `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
-      const filePath = `${athleteId}/footer.${fileExt}`;
+      const filePath = athleteImagePath(athleteId,'footer',fileExt);
 
       const response = await fetch(asset.uri);
       const arrayBuffer = await response.arrayBuffer();
+      validateMediaBytes(arrayBuffer,5*1024*1024);
       const { error } = await supabase.storage
         .from('profile-images')
-        .upload(filePath, arrayBuffer, { contentType: mimeType, upsert: true });
+        .upload(filePath, arrayBuffer, { contentType: mimeType, upsert: false });
       if (error) throw error;
       const {
         data: { publicUrl },
       } = supabase.storage.from('profile-images').getPublicUrl(filePath);
+      await saveAthleteMedia(supabase,athleteId,{footer_image_url: publicUrl },{footer_image_url:currentImageUrl||null},value=>{setPreviewUrl(value);onImageUpdated?.(value);});
       setPreviewUrl(publicUrl);
-      await supabase
-        .from('player_profiles')
-        .update({ footer_image_url: publicUrl })
-        .eq('id', athleteId);
       onImageUpdated?.(publicUrl);
       toast({ title: 'Footer image updated!' });
     } catch (err: any) {

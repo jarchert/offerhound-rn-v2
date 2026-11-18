@@ -1,0 +1,8 @@
+import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';import ts from 'typescript';
+const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/supportChatRequest.ts','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{exports});
+const{supportChatHeaders,supportChatTurns}=exports;
+let calls=0;const client={auth:{getSession:async()=>{calls++;return{data:{session:{access_token:'synthetic-session'}}};}}};
+assert.equal((await supportChatHeaders(client,'public-anon',true)).Authorization,'Bearer synthetic-session');assert.equal(calls,1);assert.equal((await supportChatHeaders(client,'public-anon',false)).Authorization,'Bearer public-anon');assert.equal(calls,1);
+for(const response of[{data:{session:null}},{error:Error('expired')}])await assert.rejects(()=>supportChatHeaders({auth:{getSession:async()=>response}},'anon',true),{name:'SessionRequiredError'});
+const turns=supportChatTurns([{role:'system',content:'untrusted'},{role:'assistant',content:' '},...Array.from({length:24},(_,i)=>({role:i%2?'user':'assistant',content:'x'.repeat(5000)}))]);assert.equal(turns.length,20);assert(turns.every(t=>t.content.length===4000));assert.equal(turns.at(-1).role,'user');assert.throws(()=>supportChatTurns([{role:'assistant',content:'answer'}]));assert.throws(()=>supportChatTurns([]));
+console.log('PASS: actual support-chat requests use session JWT for authenticated personalization, visitors retain anonymous access, expired sessions fail clearly, and request turns exclude system claims and enforce limits.');

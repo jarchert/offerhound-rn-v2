@@ -3,7 +3,7 @@
 // expo-sharing / expo-file-system to save or share it. PDF export is not
 // supported in the mobile client (share as PNG/JPEG instead).
 import { captureRef } from 'react-native-view-shot';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -54,5 +54,6 @@ export async function sendShareCard(params: {
   const { data, error } = await supabase.functions.invoke('send-share-card', { body: params });
   if (error) throw error;
   if ((data as any)?.error) throw new Error((data as any).error);
+  if(data?.success!==true)throw Error('Card delivery could not be confirmed. Check before retrying.');
   return data;
 }

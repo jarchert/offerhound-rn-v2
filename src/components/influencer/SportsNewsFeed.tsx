@@ -18,6 +18,7 @@ import { View, Text, ScrollView, Image, Pressable, StyleSheet, Linking } from 'r
 import { format } from 'date-fns';
 import { Newspaper, ExternalLink, Sparkles, Search } from 'lucide-react-native';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/Card';
+import {Button} from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select';
@@ -37,7 +38,7 @@ const SPORTS = [
 function capitalize(s: string) { return s.length ? s[0].toUpperCase() + s.slice(1) : s; }
 
 export function SportsNewsFeed({ onShareToCompose, compact = false }: Props) {
-  const { data: news = [], isLoading } = useSportsNewsFeed(compact ? 20 : 60);
+  const { data: news = [], isLoading, isError, refetch } = useSportsNewsFeed(compact ? 20 : 60);
   const [sport, setSport] = useState('all');
   const [q, setQ] = useState('');
 
@@ -48,6 +49,8 @@ export function SportsNewsFeed({ onShareToCompose, compact = false }: Props) {
       return true;
     });
   }, [news, sport, q]);
+
+  if (isError) return <Button onPress={() => void refetch()}>Could not load sports news. Retry</Button>;
 
   return (
     <Card>

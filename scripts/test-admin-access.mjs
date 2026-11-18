@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import ts from 'typescript';
+const source = readFileSync(new URL('../src/lib/nativeAdminAccess.ts', import.meta.url), 'utf8');
+const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext } }).outputText;
+const { nativeAdminAccess: decide } = await import('data:text/javascript;base64,' + Buffer.from(js).toString('base64'));
+assert.equal(decide(true, null, null), 'loading');
+assert.equal(decide(false, null, null), 'denied');
+assert.equal(decide(false, 'coach', null), 'loading');
+assert.equal(decide(false, 'coach', { userId: 'coach', allowed: false }), 'denied');
+assert.equal(decide(false, 'admin', { userId: 'admin', allowed: true }), 'allowed');
+assert.equal(decide(true, 'admin', { userId: 'admin', allowed: true }), 'loading');
+assert.equal(decide(false, 'coach', { userId: 'admin', allowed: true }), 'loading');
+assert.equal(decide(false, null, { userId: 'admin', allowed: true }), 'denied');
+assert.equal(decide(false, 'admin', { userId: 'admin', allowed: false }), 'denied');
+console.log('Native admin access state checks: PASS (9 cases)');

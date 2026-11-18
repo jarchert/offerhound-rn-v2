@@ -1,3 +1,4 @@
+import {withThemeAlpha} from '@/lib/theme';
 // Ported from Lovable web: src/components/athlete/SportStatsEditor.tsx
 // Translations:
 //   <div>/<p>/<span> → <View>/<Text>; Pressable for tappable rows
@@ -373,7 +374,7 @@ const s = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.secondary + '33',
+    backgroundColor: withThemeAlpha('secondary','33'),
     padding: spacing.sm + 4,
     gap: spacing.sm + 4,
   },

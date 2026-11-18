@@ -1,3 +1,5 @@
+import {sendRosterInvitation,readRosterInvitationStatus} from '@/lib/rosterInvitation';
+import {teamOwnership} from '@/lib/teamOwnership';
 import { useState, useRef } from "react";
 import { View, Text, ScrollView, Pressable, Platform } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
@@ -23,7 +25,8 @@ import {
 import { colors, typography, spacing } from "@/lib/theme";
 
 interface ClubTeamManagementProps {
-  clubProfileId: string;
+  clubProfileId?: string;
+  hsCoachProfileId?: string;
   userId: string;
 }
 
@@ -54,7 +57,10 @@ const emptyRosterEntry: RosterEntry = {
   zorts_registration_url: "",
 };
 
-export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagementProps) {
+export function ClubTeamManagement({ clubProfileId, hsCoachProfileId, userId }: ClubTeamManagementProps) {
+  const isHighSchool=!!hsCoachProfileId;
+  const ownerId=hsCoachProfileId||clubProfileId;
+  const ownerColumn=isHighSchool?'hs_coach_profile_id':'club_coach_id';
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const csvInputRef = useRef<HTMLInputElement | null>(null);
@@ -76,12 +82,13 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
 
   // Fetch teams
   const { data: teams = [], isLoading } = useQuery({
-    queryKey: ["club-teams", userId],
+    queryKey: ["club-teams", userId,ownerColumn,ownerId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("teams")
         .select("*")
         .eq("coach_user_id", userId)
+        .eq(ownerColumn,ownerId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
@@ -89,15 +96,15 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
   });
 
   // Fetch roster for selected team
-  const { data: roster = [] } = useQuery({
-    queryKey: ["club-roster", selectedTeamId],
+  const { data: roster = [], isError:rosterFailed, refetch:reloadRoster } = useQuery({
+    queryKey: ["club-roster",userId, selectedTeamId],
     queryFn: async () => {
       if (!selectedTeamId) return [];
       const { data, error } = await supabase
         .from("team_rosters")
         .select("*, player_profiles:athlete_profile_id(profile_image_url, full_name)")
         .eq("team_id", selectedTeamId)
-        .neq("status", "removed")
+        .is("removed_at",null).not("status","in","(removed,transferred,declined)")
         .order("athlete_name");
       if (error) throw error;
       return data || [];
@@ -105,9 +112,11 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
     enabled: !!selectedTeamId,
   });
 
+  const invitationStatus=useQuery({queryKey:['club-invitation-status',userId,selectedTeamId],enabled:!!selectedTeamId,queryFn:()=>readRosterInvitationStatus(supabase,selectedTeamId!)});
+
   // Fetch staff for selected team
   const { data: staff = [] } = useQuery({
-    queryKey: ["club-staff", selectedTeamId],
+    queryKey: ["club-staff",userId, selectedTeamId],
     queryFn: async () => {
       if (!selectedTeamId) return [];
       const { data } = await supabase
@@ -122,12 +131,12 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
 
   // Fetch club profile
   const { data: clubProfile } = useQuery({
-    queryKey: ["club-profile", clubProfileId],
+    queryKey: ["team-owner-profile", ownerColumn,ownerId],
     queryFn: async () => {
       const { data } = await supabase
-        .from("club_coach_profiles")
+        .from(isHighSchool?"high_school_coach_profiles":"club_coach_profiles")
         .select("*")
-        .eq("id", clubProfileId)
+        .eq("id", ownerId!)
         .maybeSingle();
       return data;
     },
@@ -136,7 +145,7 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
   // Roster counts per team
   const teamIds = teams.map((t: any) => t.id);
   const { data: rosterCounts = {} } = useQuery({
-    queryKey: ["club-roster-counts", teamIds],
+    queryKey: ["club-roster-counts",userId, teamIds],
     queryFn: async () => {
       if (teamIds.length === 0) return {};
       const counts: Record<string, number> = {};
@@ -145,7 +154,7 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
           .from("team_rosters")
           .select("*", { count: "exact", head: true })
           .eq("team_id", id)
-          .neq("status", "removed");
+          .is("removed_at",null).not("status","in","(removed,transferred,declined)");
         counts[id] = count || 0;
       }
       return counts;
@@ -157,14 +166,14 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
   const createTeam = useMutation({
     mutationFn: async (form: TeamFormData) => {
       const { error } = await supabase.from("teams").insert({
-        club_coach_id: clubProfileId,
+        ...teamOwnership(clubProfileId,hsCoachProfileId,form.level),
         coach_user_id: userId,
         name: form.name,
         sport: form.sport || (clubProfile as any)?.sport || "football",
         gender: form.gender || null,
         age_group: form.age_group || null,
         graduation_year: form.graduation_year ? parseInt(form.graduation_year) : null,
-        level: form.level || "club",
+        level: isHighSchool?"high_school":(form.level || "competitive"),
         season: form.season || null,
         league: form.league || null,
         description: form.description || null,
@@ -188,7 +197,7 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
         gender: form.gender || null,
         age_group: form.age_group || null,
         graduation_year: form.graduation_year ? parseInt(form.graduation_year) : null,
-        level: form.level || "club",
+        level: isHighSchool?"high_school":(form.level || "competitive"),
         season: form.season || null,
         league: form.league || null,
         description: form.description || null,
@@ -220,13 +229,13 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
   const duplicateTeam = useMutation({
     mutationFn: async (team: any) => {
       const { error } = await supabase.from("teams").insert({
-        club_coach_id: clubProfileId,
+        ...teamOwnership(clubProfileId,hsCoachProfileId,team.level),
         coach_user_id: userId,
         name: `${team.name} (Copy)`,
         sport: team.sport,
         gender: team.gender,
         age_group: team.age_group,
-        level: team.level,
+        level: isHighSchool?"high_school":team.level,
         league: team.league,
         description: team.description,
       });
@@ -259,27 +268,17 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
       }).select("id").single();
       if (error) throw error;
 
-      try {
-        const { data: inviteResult, error: inviteErr } = await supabase.functions.invoke(
-          "invite-club-athlete",
-          { body: { rosterId: (inserted as any).id } },
-        );
-        if (inviteErr) console.warn("Invite send warning:", inviteErr);
-        return inviteResult;
-      } catch (e) {
-        console.warn("Invite send failed (roster row still created):", e);
-        return null;
-      }
+      if(!inserted?.id)throw Error('Roster entry was not confirmed. Reload the team before retrying.');
+      try{return await sendRosterInvitation(supabase,inserted.id,entry.date_of_birth);}catch(error:any){return{delivered:0,description:error.message};}
     },
     onSuccess: (result: any) => {
-      queryClient.invalidateQueries({ queryKey: ["club-roster", selectedTeamId] });
+      queryClient.invalidateQueries({ queryKey: ["club-roster",userId, selectedTeamId] });
+      queryClient.invalidateQueries({queryKey:["club-invitation-status",userId,selectedTeamId]});
       queryClient.invalidateQueries({ queryKey: ["club-roster-counts"] });
-      const sent = result?.results?.filter((r: any) => r.success).length || 0;
+      const sent = result?.delivered || 0;
       toast({
         title: "Athlete Added",
-        description: sent > 0
-          ? `Profile created. ${sent} invitation${sent > 1 ? "s" : ""} sent.`
-          : "Profile created. Add contact info to send invites.",
+        description: result?.description || 'Roster entry saved; invitation delivery unconfirmed.',
       });
       setShowRosterDialog(false);
       setRosterForm(emptyRosterEntry);
@@ -289,22 +288,18 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
 
   const resendInvite = useMutation({
     mutationFn: async (rosterId: string) => {
-      const { data, error } = await supabase.functions.invoke("invite-club-athlete", {
-        body: { rosterId, resend: true },
-      });
-      if (error) throw error;
-      return data;
+      const entry=roster.find((r:any)=>r.id===rosterId);if(!entry)throw Error('Reload this roster before resending.');
+      return sendRosterInvitation(supabase,rosterId,(entry as any).date_of_birth,true);
     },
     onSuccess: (result: any) => {
-      const sent = result?.results?.filter((r: any) => r.success).length || 0;
+      const sent = result?.delivered || 0;
       toast({
         title: sent > 0 ? "Invitation Sent" : "No Invites Sent",
-        description: sent > 0
-          ? `${sent} invitation${sent > 1 ? "s" : ""} delivered.`
-          : "Add an athlete or parent email/phone first.",
+        description: result?.description || 'Invitation delivery unconfirmed.',
         variant: sent > 0 ? "default" : "destructive",
       });
-      queryClient.invalidateQueries({ queryKey: ["club-roster", selectedTeamId] });
+      queryClient.invalidateQueries({ queryKey: ["club-roster",userId, selectedTeamId] });
+      queryClient.invalidateQueries({queryKey:["club-invitation-status",userId,selectedTeamId]});
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -315,7 +310,8 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["club-roster", selectedTeamId] });
+      queryClient.invalidateQueries({ queryKey: ["club-roster",userId, selectedTeamId] });
+      queryClient.invalidateQueries({queryKey:["club-invitation-status",userId,selectedTeamId]});
       queryClient.invalidateQueries({ queryKey: ["club-roster-counts"] });
       toast({ title: "Athlete Removed" });
     },
@@ -330,8 +326,9 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["club-roster", selectedTeamId] });
-      queryClient.invalidateQueries({ queryKey: ["club-staff", selectedTeamId] });
+      queryClient.invalidateQueries({ queryKey: ["club-roster",userId, selectedTeamId] });
+      queryClient.invalidateQueries({queryKey:["club-invitation-status",userId,selectedTeamId]});
+      queryClient.invalidateQueries({ queryKey: ["club-staff",userId, selectedTeamId] });
       toast({ title: "Zorts Status Updated" });
     },
   });
@@ -348,7 +345,7 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["club-staff", selectedTeamId] });
+      queryClient.invalidateQueries({ queryKey: ["club-staff",userId, selectedTeamId] });
       toast({ title: "Staff Member Added" });
       setShowStaffDialog(false);
       setStaffForm({ name: "", email: "", role: "assistant_coach" });
@@ -361,12 +358,17 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
       const { error } = await supabase.from("team_rosters").update({
         parent_email: email,
         status: "parent_pending",
-      }).eq("id", rosterId);
+      }).eq("id", rosterId).select('id,date_of_birth').single();
       if (error) throw error;
+      const entry=roster.find((r:any)=>r.id===rosterId);
+      const dob=(entry as any)?.date_of_birth;const adultCutoff=new Date();adultCutoff.setUTCFullYear(adultCutoff.getUTCFullYear()-18);
+      if(!dob||!Number.isFinite(new Date(dob+'T00:00:00Z').getTime())||new Date(dob+'T00:00:00Z')<=adultCutoff||new Date(dob+'T00:00:00Z')>new Date())return{delivered:0,description:'Parent contact saved. Parent invitations require a valid birth date for an athlete under 18.'};
+      try{return await sendRosterInvitation(supabase,rosterId,dob,true);}catch(error:any){return{delivered:0,description:error.message};}
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["club-roster", selectedTeamId] });
-      toast({ title: "Parent Invite Sent", description: "Parent has been notified for approval." });
+    onSuccess: (result:any) => {
+      queryClient.invalidateQueries({ queryKey: ["club-roster",userId, selectedTeamId] });
+      queryClient.invalidateQueries({queryKey:["club-invitation-status",userId,selectedTeamId]});
+      toast({ title: result?.delivered ? "Invitation delivery accepted" : "Parent contact saved", description: result?.description || "Delivery was not confirmed.", variant:result?.delivered?"default":"destructive" });
       setShowParentInviteDialog(false);
       setParentInviteEmail("");
       setSelectedRosterId(null);
@@ -430,7 +432,8 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
       toast({ title: "Upload Error", description: error.message, variant: "destructive" });
     } else {
       toast({ title: `${rows.length} Athletes Imported` });
-      queryClient.invalidateQueries({ queryKey: ["club-roster", selectedTeamId] });
+      queryClient.invalidateQueries({ queryKey: ["club-roster",userId, selectedTeamId] });
+      queryClient.invalidateQueries({queryKey:["club-invitation-status",userId,selectedTeamId]});
       queryClient.invalidateQueries({ queryKey: ["club-roster-counts"] });
     }
   };
@@ -499,7 +502,8 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
                 <Button size="sm" variant="outline" onPress={handleCSVUpload} leftIcon={<Upload size={16} color={colors.foreground} />}>CSV Upload</Button>
               </View>
 
-              {roster.length === 0 ? (
+              {invitationStatus.isError?<View><Text accessibilityRole="alert" style={{color:colors.foreground}}>Could not load invitation status.</Text><Button onPress={()=>invitationStatus.refetch()}>Retry invitation status</Button></View>:null}
+              {rosterFailed?<View><Text accessibilityRole="alert" style={{color:colors.foreground}}>Could not load the team roster.</Text><Button onPress={()=>reloadRoster()}>Retry roster</Button></View>:roster.length === 0 ? (
                 <Card><CardContent style={{ paddingVertical: spacing.xl, alignItems: "center" }}>
                   <Users size={48} color={colors.mutedForeground} />
                   <Text style={{ fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, marginTop: spacing.sm, marginBottom: spacing.xs }}>Empty Roster</Text>
@@ -512,6 +516,7 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
                     <TeamRosterAthleteCard
                       key={r.id}
                       roster={r}
+                      invitationStates={(invitationStatus.data||[]).filter((i:any)=>i.roster_id===r.id).map((i:any)=>`${i.audience}: ${String(i.state).replace(/_/g,' ')}`)}
                       canManage={true}
                       canMessage={true}
                       resendInvitePending={resendInvite.isPending}
@@ -657,11 +662,11 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
             <Shield size={20} color={colors.primary} />
-            <Text style={{ fontSize: typography.fontSize.xl, fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground }}>Club Team Management</Text>
+            <Text style={{ fontSize: typography.fontSize.xl, fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground }}>{isHighSchool?"High School Team Management":"Club Team Management"}</Text>
           </View>
           <Text style={{ fontSize: typography.fontSize.sm, color: colors.mutedForeground }}>Manage teams, rosters, staff, and parent approvals</Text>
         </View>
-        <Button onPress={() => { setEditingTeamId(null); setTeamForm({ ...emptyTeamForm, sport: (clubProfile as any)?.sport || "football" }); setShowTeamDialog(true); }} leftIcon={<Plus size={16} color={colors.primaryForeground} />}>New Team</Button>
+        <Button onPress={() => { setEditingTeamId(null); setTeamForm({ ...emptyTeamForm, level:isHighSchool?"high_school":"competitive", sport: (clubProfile as any)?.sport || "football" }); setShowTeamDialog(true); }} leftIcon={<Plus size={16} color={colors.primaryForeground} />}>New Team</Button>
       </View>
 
       {/* Club Card */}
@@ -671,7 +676,7 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
             <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.md }}>
               <Avatar size={56} source={(clubProfile as any).club_logo_url ? { uri: (clubProfile as any).club_logo_url } : null} fallback={(clubProfile as any).club_name?.charAt(0) || "C"} />
               <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: typography.fontFamily.bodySemiBold, fontSize: typography.fontSize.lg, color: colors.foreground }}>{(clubProfile as any).club_name}</Text>
+                <Text style={{ fontFamily: typography.fontFamily.bodySemiBold, fontSize: typography.fontSize.lg, color: colors.foreground }}>{((clubProfile as any).club_name||(clubProfile as any).school_name)}</Text>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginTop: 4 }}>
                   {(clubProfile as any).sport && <Badge variant="outline">{(clubProfile as any).sport}</Badge>}
                   {(clubProfile as any).team_level && <Badge variant="secondary">{(clubProfile as any).team_level}</Badge>}
@@ -701,7 +706,7 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
           <Users size={48} color={colors.mutedForeground} />
           <Text style={{ fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, marginTop: spacing.sm, marginBottom: spacing.xs }}>No Teams Yet</Text>
           <Text style={{ color: colors.mutedForeground, marginBottom: spacing.sm, textAlign: "center" }}>Create your first team to start managing rosters.</Text>
-          <Button onPress={() => { setTeamForm({ ...emptyTeamForm, sport: (clubProfile as any)?.sport || "football" }); setShowTeamDialog(true); }} leftIcon={<Plus size={16} color={colors.primaryForeground} />}>Create Team</Button>
+          <Button onPress={() => { setTeamForm({ ...emptyTeamForm, level:isHighSchool?"high_school":"competitive", sport: (clubProfile as any)?.sport || "football" }); setShowTeamDialog(true); }} leftIcon={<Plus size={16} color={colors.primaryForeground} />}>Create Team</Button>
         </CardContent></Card>
       ) : (
         <View style={{ gap: spacing.sm }}>
@@ -788,7 +793,7 @@ export function ClubTeamManagement({ clubProfileId, userId }: ClubTeamManagement
             <View><Label>Level</Label>
               <Select value={teamForm.level} onValueChange={(v: string) => setTeamForm(f => ({ ...f, level: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{LEVELS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
+                <SelectContent>{(isHighSchool?["high_school"]:LEVELS).map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
               </Select>
             </View>
             <View><Label>Season</Label><Input value={teamForm.season} onChangeText={(t: string) => setTeamForm(f => ({ ...f, season: t }))} placeholder="Spring 2026" /></View>

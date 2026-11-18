@@ -1,0 +1,20 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+---
+# Keep the swipe in the screen body; native header/footer and nested horizontal
+# lists can misdirect automatic scrollUntilVisible gesture selection.
+- repeat:
+    times: 16
+    commands:
+      - runFlow:
+          when:
+            notVisible:
+              id: ${QA_SCROLL_ID}
+          commands:
+            - swipe:
+                start: 50%, 68%
+                end: 50%, 28%
+                duration: 400
+            - waitForAnimationToEnd:
+                timeout: 3000
+- assertVisible:
+    id: ${QA_SCROLL_ID}

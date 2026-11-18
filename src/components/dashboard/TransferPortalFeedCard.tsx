@@ -24,11 +24,13 @@ export function TransferPortalFeedCard({ sport: sportProp }: { sport?: string } 
   const [news, setNews] = useState<PortalNewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchNews = useCallback(async () => {
     let q = supabase.from('transfer_portal_news').select('*').order('created_at', { ascending: false }).limit(8);
     if (sport) q = q.eq('sport', sport);
-    const { data } = await q;
+    const { data, error: readError } = await q;
+    if (readError) { setError('Feed could not be loaded. Please retry.'); setLoading(false); return; }
     setNews((data as PortalNewsItem[] | null) || []);
     setLoading(false);
   }, [sport]);
@@ -38,10 +40,12 @@ export function TransferPortalFeedCard({ sport: sportProp }: { sport?: string } 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await supabase.functions.invoke('crawl-recruiting-podcasts', { body: sport ? { sport } : {} });
+      setError(null);
+      const result = await supabase.functions.invoke('crawl-recruiting-podcasts', { body: sport ? { sport } : {} });
+      if (result.error || result.data?.error) throw result.error || new Error(result.data.error);
       await fetchNews();
     } catch (e) {
-      // swallow — feed will simply not update
+      setError('Feed refresh failed. Previously loaded stories are still shown. Please retry.');
     }
     setRefreshing(false);
   }, [fetchNews, sport]);
@@ -49,6 +53,7 @@ export function TransferPortalFeedCard({ sport: sportProp }: { sport?: string } 
   return (
     <Card>
       <CardContent style={{ paddingTop: spacing.md, gap: spacing.sm }}>
+        {error ? <Text accessibilityRole="alert" style={{ color: colors.destructive }}>{error}</Text> : null}
         <View style={s.headerRow}>
           <View style={s.titleRow}>
             <Repeat size={18} color={colors.primary} />

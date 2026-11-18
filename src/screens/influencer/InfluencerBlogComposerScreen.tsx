@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import {
   useNavigation,
+  usePreventRemove,
   useRoute,
   NavigationProp,
   RouteProp,
@@ -27,71 +28,88 @@ import { Navbar } from '@/components/Navbar';
 import { BackButton } from '@/components/BackButton';
 import { Card } from '@/components/ui/Card';
 import { colors, typography, spacing, radius } from '@/lib/theme';
+import {useQueryClient} from '@tanstack/react-query';
+import { saveCreatorBlog } from '@/lib/creatorBlog';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 
 type Status = 'draft' | 'published';
-
-function generateSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-}
 
 export default function InfluencerBlogComposerScreen() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'InfluencerBlogComposer'>>();
   const { user } = useAuth() as any;
-  const postId = route.params?.postId;
+  const queryClient=useQueryClient();
+  const [savedPostId,setSavedPostId]=useState<string|undefined>();
+  const postId = savedPostId||route.params?.postId;
   const isEdit = !!postId;
 
   const [title, setTitle] = useState('');
   const [excerpt, setExcerpt] = useState('');
   const [content, setContent] = useState('');
   const [tagsInput, setTagsInput] = useState('');
+  const [heroImageUrl,setHeroImageUrl]=useState('');
+  const [sportsInput,setSportsInput]=useState('');
+  const [visibility,setVisibility]=useState('public');
+  const [updatedAt,setUpdatedAt]=useState<string | undefined>();
   const [status, setStatus] = useState<Status>('draft');
+  const signature=JSON.stringify({title,excerpt,content,tagsInput,heroImageUrl,sportsInput,visibility});
+  const [savedSignature,setSavedSignature]=useState(JSON.stringify({title:'',excerpt:'',content:'',tagsInput:'',heroImageUrl:'',sportsInput:'',visibility:'public'}));
+  usePreventRemove(signature!==savedSignature,({data})=>Alert.alert('Discard unsaved blog edits?','Your changes have not been saved.',[{text:'Keep editing',style:'cancel'},{text:'Discard',style:'destructive',onPress:()=>nav.dispatch(data.action)}]));
 
   const [influencerId, setInfluencerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
 
   // Resolve influencer profile; if editing, also load the post.
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+    setInfluencerId(null);
     (async () => {
       try {
         if (!user?.id) {
-          setLoading(false);
-          return;
+          throw new Error('Sign in to edit a blog post.');
         }
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from('influencer_profiles' as any)
           .select('id')
           .eq('user_id', user.id)
           .maybeSingle();
         if (cancelled) return;
+        if (profileError) throw profileError;
         const id = (profile as any)?.id ?? null;
+        if (!id) throw new Error('Creator profile required.');
         setInfluencerId(id);
 
         if (isEdit && id && postId) {
-          const { data: post } = await supabase
+          const { data: post, error: postError } = await supabase
             .from('influencer_blog_posts' as any)
             .select('*')
             .eq('id', postId)
             .eq('influencer_id', id)
             .maybeSingle();
           if (cancelled) return;
+          if (postError) throw postError;
+          if (!post) throw new Error('This blog post is unavailable.');
           if (post) {
             const p = post as any;
+            setUpdatedAt(p.updated_at);
+            setHeroImageUrl(p.hero_image_url||'');
+            setSportsInput(Array.isArray(p.sport_tags)?p.sport_tags.join(', '):'');
+            setVisibility(p.visibility||'public');
             setTitle(p.title ?? '');
             setExcerpt(p.excerpt ?? '');
-            setContent(p.content ?? '');
+            setContent(p.body_markdown ?? '');
             setTagsInput(Array.isArray(p.tags) ? p.tags.join(', ') : '');
+            setSavedSignature(JSON.stringify({title:p.title??'',excerpt:p.excerpt??'',content:p.body_markdown??'',tagsInput:Array.isArray(p.tags)?p.tags.join(', '):'',heroImageUrl:p.hero_image_url||'',sportsInput:Array.isArray(p.sport_tags)?p.sport_tags.join(', '):'',visibility:p.visibility||'public'}));
             setStatus((p.status as Status) ?? 'draft');
           }
         }
-      } catch (err) {
-        // swallow; surface via Alert on save attempts.
+      } catch (err: any) {
+        if (!cancelled) setLoadError(err?.message || 'Could not load blog editor.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -99,7 +117,7 @@ export default function InfluencerBlogComposerScreen() {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, isEdit, postId]);
+  }, [user?.id, isEdit, postId, retry]);
 
   const parseTags = (raw: string): string[] =>
     raw
@@ -123,33 +141,11 @@ export default function InfluencerBlogComposerScreen() {
     setSaving(true);
     try {
       const targetStatus: Status = publish ? 'published' : 'draft';
-      const tags = parseTags(tagsInput);
-      const payload: Record<string, any> = {
-        influencer_id: influencerId,
-        title: title.trim(),
-        slug: generateSlug(title),
-        excerpt: excerpt.trim() || null,
-        content: content,
-        tags,
-        status: targetStatus,
-      };
-      if (publish) {
-        payload.published_at = new Date().toISOString();
-      }
+      const saved=await saveCreatorBlog(supabase, {influencerId,postId,updatedAt,title,bodyMarkdown:content,excerpt,tags:parseTags(tagsInput),publish,heroImageUrl,sportTags:parseTags(sportsInput),visibility});
+      setSavedPostId(saved.id);setUpdatedAt(saved.updated_at);
 
-      if (isEdit && postId) {
-        const { error } = await supabase
-          .from('influencer_blog_posts' as any)
-          .update(payload)
-          .eq('id', postId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('influencer_blog_posts' as any)
-          .insert(payload);
-        if (error) throw error;
-      }
-
+      void queryClient.invalidateQueries({queryKey:['influencer-blog-posts',influencerId]});
+      setSavedSignature(signature);
       setStatus(targetStatus);
       Alert.alert(
         publish ? 'Published' : 'Draft saved',
@@ -164,6 +160,8 @@ export default function InfluencerBlogComposerScreen() {
       setSaving(false);
     }
   };
+
+  if (loadError) return <SafeAreaView style={s.container}><Navbar /><BackButton /><Text style={s.label}>{loadError}</Text><Pressable onPress={() => setRetry(value => value + 1)}><Text style={s.label}>Retry</Text></Pressable></SafeAreaView>;
 
   if (loading) {
     return (
@@ -193,6 +191,7 @@ export default function InfluencerBlogComposerScreen() {
             <Text style={s.label}>Title</Text>
             <TextInput
               style={s.input}
+              editable={!saving}
               value={title}
               onChangeText={setTitle}
               placeholder="A bold, scroll-stopping title"
@@ -202,6 +201,7 @@ export default function InfluencerBlogComposerScreen() {
             <Text style={s.label}>Excerpt</Text>
             <TextInput
               style={[s.input, s.multiline]}
+              editable={!saving}
               value={excerpt}
               onChangeText={setExcerpt}
               placeholder="2-3 sentence summary used in previews"
@@ -213,6 +213,7 @@ export default function InfluencerBlogComposerScreen() {
             <Text style={s.label}>Content</Text>
             <TextInput
               style={[s.input, s.contentArea]}
+              editable={!saving}
               value={content}
               onChangeText={setContent}
               placeholder="Write the full body of your post here…"
@@ -224,6 +225,7 @@ export default function InfluencerBlogComposerScreen() {
             <Text style={s.label}>Tags</Text>
             <TextInput
               style={s.input}
+              editable={!saving}
               value={tagsInput}
               onChangeText={setTagsInput}
               placeholder="nil, recruiting, training (comma-separated)"
@@ -231,6 +233,15 @@ export default function InfluencerBlogComposerScreen() {
               autoCapitalize="none"
             />
 
+            <Text style={s.label}>Cover image link</Text>
+            <TextInput style={s.input} value={heroImageUrl} onChangeText={setHeroImageUrl} editable={!saving}
+              autoCapitalize="none" keyboardType="url" placeholder="https://…" placeholderTextColor={colors.mutedForeground}/>
+            <Text style={s.label}>Sports</Text>
+            <TextInput style={s.input} value={sportsInput} onChangeText={setSportsInput} editable={!saving}
+              placeholder="football, basketball (comma-separated)" placeholderTextColor={colors.mutedForeground}/>
+            <Text style={s.label}>Who can read this post?</Text>
+            {!['public','logged_in_only'].includes(visibility)&&<Text style={s.label}>This post uses an unsupported audience setting. Choose an audience explicitly before saving.</Text>}
+            <View style={s.statusRow}>{[{value:'public',label:'Everyone'},{value:'logged_in_only',label:'Signed-in members'}].map(option=><Pressable key={option.value} disabled={saving} accessibilityRole="button" accessibilityState={{selected:visibility===option.value}} onPress={()=>setVisibility(option.value)} style={[s.pill,visibility===option.value&&s.pillActive]}><Text style={[s.pillText,visibility===option.value&&s.pillTextActive]}>{option.label}</Text></Pressable>)}</View>
             <Text style={s.label}>Status</Text>
             <View style={s.statusRow}>
               <Pressable
@@ -263,7 +274,7 @@ export default function InfluencerBlogComposerScreen() {
               </Text>
             </Pressable>
             <Pressable
-              onPress={() => submit(true)}
+              onPress={() => Alert.alert('Publish this blog?', 'This makes the post available on your creator profile.', [{text:'Cancel',style:'cancel'},{text:'Publish',onPress:()=>void submit(true)}])}
               disabled={saving}
               style={[s.btn, s.btnPrimary, saving && s.btnDisabled]}
             >

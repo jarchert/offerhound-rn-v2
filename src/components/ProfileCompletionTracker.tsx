@@ -1,3 +1,4 @@
+import {withThemeAlpha} from '@/lib/theme';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -300,9 +301,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.sm + 4,
     borderRadius: radius.md,
-    backgroundColor: colors.secondary + '80',
+    backgroundColor: withThemeAlpha('secondary','80'),
     borderWidth: 1,
-    borderColor: colors.border + '80',
+    borderColor: withThemeAlpha('border','80'),
   },
   unlockText: {
     flex: 1,
@@ -343,7 +344,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: 6,
     borderRadius: radius.sm,
-    backgroundColor: colors.secondary + '4D',
+    backgroundColor: withThemeAlpha('secondary','4D'),
     width: '48%',
   },
   missingChipText: {

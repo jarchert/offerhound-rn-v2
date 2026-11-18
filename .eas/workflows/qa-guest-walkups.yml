@@ -1,0 +1,43 @@
+# Manual guest QA only; native dependencies and staging identity are unchanged.
+name: OfferHound guest walk-up device acceptance
+jobs:
+  android_qa:
+    type: repack
+    runs_on: linux-medium
+    environment: preview
+    params:
+      build_id: 095686eb-cd89-45fc-b437-61f7a89f34cd
+      profile: staging
+      message: Independent native guest walk-up form and retry queue
+  ios_qa:
+    type: repack
+    runs_on: macos-medium
+    environment: preview
+    params:
+      build_id: 9e449038-eabf-4b4a-a979-09f12ca65e41
+      profile: staging
+      message: Independent native guest walk-up form and retry queue
+  guest_ios:
+    type: maestro
+    needs: [ios_qa]
+    runs_on: macos-medium
+    environment: preview
+    params:
+      build_id: ${{ needs.ios_qa.outputs.build_id }}
+      flow_path:
+        - .maestro/staging-guest-ios-owner.yaml
+        - .maestro/staging-guest-ios-staff.yaml
+        - .maestro/staging-guest-denied.yaml
+      retries: 0
+  guest_android:
+    type: maestro
+    needs: [android_qa]
+    runs_on: linux-medium-nested-virtualization
+    environment: preview
+    params:
+      build_id: ${{ needs.android_qa.outputs.build_id }}
+      flow_path:
+        - .maestro/staging-guest-android-owner.yaml
+        - .maestro/staging-guest-android-staff.yaml
+        - .maestro/staging-guest-denied.yaml
+      retries: 0

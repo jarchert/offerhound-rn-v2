@@ -1,3 +1,5 @@
+import {referralSubjectId} from '@/lib/athleteReferral';
+import {withThemeAlpha} from '@/lib/theme';
 // Parity port from Lovable src/components/letters/LetterDashboard.tsx.
 // Web→RN mapping: shadcn Card/Tabs/Dialog/ScrollArea/Input/Button/Badge → @/components/ui/*;
 // react-router-dom useSearchParams → @react-navigation/native useRoute (route.params);
@@ -180,6 +182,8 @@ export function LetterDashboard({ senderType, senderProfile, letterTypes, histor
             <View style={s.composerColumn}>
               {selectedLetterType ? (
                 <LetterComposer
+                  referralRequested={searchParams.intent==='referral'}
+                  subjectAthleteProfileId={searchParams.intent==='referral'?referralSubjectId(searchParams.subjectAthleteProfileId):undefined}
                   senderType={senderType}
                   senderProfile={senderProfile}
                   selectedLetterType={selectedLetterType}
@@ -395,7 +399,7 @@ const s = StyleSheet.create({
   dlgDescText: { fontFamily: typography.fontFamily.body, color: colors.mutedForeground, fontSize: typography.size.xs },
 
   viewerScroll: { maxHeight: 360 },
-  viewerBody: { backgroundColor: colors.secondary + '4D', padding: spacing.md, borderRadius: radius.md },
+  viewerBody: { backgroundColor: withThemeAlpha('secondary','4D'), padding: spacing.md, borderRadius: radius.md },
   viewerText: { fontFamily: typography.fontFamily.body, color: colors.foreground, fontSize: typography.size.sm },
 
   btnText: { fontFamily: typography.fontFamily.bodyMedium, color: colors.foreground, fontSize: typography.size.sm },

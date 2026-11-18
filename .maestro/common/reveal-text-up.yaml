@@ -1,0 +1,16 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+---
+- repeat:
+    times: 16
+    commands:
+      - runFlow:
+          when:
+            notVisible: ${QA_SCROLL_TEXT}
+          commands:
+            - swipe:
+                start: 50%, 32%
+                end: 50%, 72%
+                duration: 400
+            - waitForAnimationToEnd:
+                timeout: 3000
+- assertVisible: ${QA_SCROLL_TEXT}

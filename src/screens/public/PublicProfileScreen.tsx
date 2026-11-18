@@ -1,3 +1,5 @@
+import {useLetterCenter} from '@/hooks/useLetterCenter';
+import {getCanonicalOrigin} from '@/lib/canonicalDomain';
 // Ported from Lovable web src/pages/PublicProfile.tsx (219 LOC).
 // Web → RN translation:
 //   - useParams + useSearchParams → useRoute<RouteProp>().params (no preview query yet)
@@ -26,7 +28,7 @@ import { useScoutProfile } from '@/hooks/useScoutProfile';
 import { useHSCoachProfile } from '@/hooks/useHSCoachProfile';
 import { roleToInitialRoute } from '@/navigation/RootNavigator';
 
-import { HeroSection } from '@/components/HeroSection';
+import { UserProfileHeader } from '@/components/UserProfileHeader';
 import { AthleteProfile } from '@/components/AthleteProfile';
 import { Footer } from '@/components/Footer';
 import { HighlightMediaWindow } from '@/components/HighlightMediaWindow';
@@ -45,13 +47,14 @@ type R = RouteProp<PublicProfileStackParamList, 'PublicProfile'>;
 
 // PORT-PENDING: web hosts profiles at offerhound.com/p/<slug>; replicate
 // production origin until a runtime env source is wired in.
-const SITE_ORIGIN = 'https://offerhound.com';
+const SITE_ORIGIN = getCanonicalOrigin();
 
 export default function PublicProfileScreen() {
   const { params } = useRoute<R>();
   const slug = params?.customUrl;
   const nav = useNavigation<any>();
   const { user, userRole } = useAuth() as any;
+  const {goToLetterForAthlete}=useLetterCenter();
   const homeTarget = (user ? roleToInitialRoute(userRole) : 'AuthStack') as string;
 
   const { data: coachProfile } = useCoachProfile();
@@ -73,10 +76,15 @@ export default function PublicProfileScreen() {
     ? 'scout'
     : 'athlete';
 
-  const { data: profile, isLoading } = useQuery({
-    queryKey: ['public-profile', slug],
+  const { data: profile, isLoading, isError, refetch } = useQuery({
+    queryKey: ['public-profile', slug, user?.id, userRole],
     queryFn: async () => {
       if (!slug) return null;
+      if(user&&['coach','scout','high_school_coach','club_coach','agency','admin'].includes(userRole||'')){
+        const result=await supabase.rpc('get_recruiter_athlete_profile' as any,{p_slug:slug} as any);
+        if(result.error)throw result.error;
+        return Array.isArray(result.data)?result.data[0]||null:result.data||null;
+      }
       let { data } = await supabase
         .from('player_profiles')
         .select('*')
@@ -121,6 +129,7 @@ export default function PublicProfileScreen() {
     );
   }
 
+  if(isError)return <View style={{flex:1,padding:spacing.lg,backgroundColor:colors.background}}><BackButton/><Text style={{color:colors.foreground}}>Could not load this profile.</Text><Button onPress={()=>refetch()}>Retry profile</Button></View>;
   if (!profile) {
     return (
       <View style={s.loading}>
@@ -161,7 +170,7 @@ export default function PublicProfileScreen() {
         </View>
 
         {/* Hero */}
-        <HeroSection isOwnerView={false} profile={profile} />
+        <UserProfileHeader profile={profile} />
 
         {/* Highlight Media */}
         {showHighlight && (
@@ -192,12 +201,14 @@ export default function PublicProfileScreen() {
             />
           )}
 
-          {/* PORT-PENDING: web `LetterButton` (role-aware AI Letter Center router)
-              has no RN equivalent yet. Tracked under session-parity-port. */}
+          {isViewerNotOwner && (isCollegeCoach || isClubCoach || isHSCoach || isScout) ? (
+            <Button accessibilityLabel={`Write letter to ${profile.full_name || 'athlete'}`} onPress={()=>goToLetterForAthlete(profile)}>Write Letter</Button>
+          ) : null}
 
           {isViewerNotOwner && (
             <MessageButton
               recipientId={profile.user_id}
+              athleteProfileId={profile.id}
               recipientName={profile.full_name || 'Athlete'}
             />
           )}

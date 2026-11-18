@@ -1,6 +1,7 @@
+import * as Application from 'expo-application';
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, SafeAreaView, Pressable, Switch } from 'react-native';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { useNavigation, useRoute, NavigationProp } from '@react-navigation/native';
 import { Bell, Moon, Shield, FileText, Trash2, LogOut, ChevronRight, Users, Cookie, Eye, CreditCard, Lock, User } from 'lucide-react-native';
 import { Alert, TextInput, Modal } from 'react-native';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,8 +14,10 @@ import type { RootStackParamList } from '@/navigation/RootNavigator';
 export default function SettingsScreen() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
   const { signOut, user } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme,storageError } = useTheme();
   const [changingPw, setChangingPw] = React.useState(false);
+  const route=useRoute<any>();
+  React.useEffect(()=>{if(route.params?.changePassword){setChangingPw(true);nav.setParams({changePassword:false} as any);}},[route.params?.changePassword]);
   const [newPw, setNewPw] = React.useState('');
   const [pwLoading, setPwLoading] = React.useState(false);
 
@@ -24,15 +27,14 @@ export default function SettingsScreen() {
       return;
     }
     setPwLoading(true);
-    const { error } = await supabase.auth.updateUser({ password: newPw });
-    setPwLoading(false);
-    if (error) {
-      Alert.alert('Error', error.message);
-    } else {
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPw });
+      if (error) throw error;
       Alert.alert('Password updated', 'Your password has been changed.');
       setChangingPw(false);
       setNewPw('');
-    }
+    } catch { Alert.alert('Unable to update password', 'Please try again.'); }
+    finally { setPwLoading(false); }
   };
 
   return (
@@ -47,7 +49,7 @@ export default function SettingsScreen() {
         </SettingsGroup>
 
         <SettingsGroup title="Account Information">
-          <SettingsRow icon={User} label={user?.email ?? 'Email'} onPress={() => {}} />
+          <SettingsRow testID="settings-account-information" icon={User} label={user?.email ?? 'Email'} onPress={() => nav.navigate('SettingsStack' as any, {screen:'AccountSettings'})} />
         </SettingsGroup>
 
         <SettingsGroup title="Security">
@@ -58,15 +60,16 @@ export default function SettingsScreen() {
           <SettingsRow
             icon={Moon}
             label="Dark mode"
-            right={<Switch value={theme === 'dark'} onValueChange={toggleTheme} />}
+            right={<Switch testID="settings-dark-mode" accessibilityLabel="Dark mode" value={theme === 'dark'} onValueChange={toggleTheme} />}
           />
           <SettingsRow
             icon={Bell}
             label="Notifications"
-            onPress={() => nav.navigate('Notifications' as any)}
+            onPress={() => nav.navigate('SettingsStack' as any, { screen: 'NotificationSettings' })}
           />
         </SettingsGroup>
 
+        {storageError && <Text accessibilityRole="alert" style={{color:colors.destructive}}>Theme preference could not be saved on this device.</Text>}
         <SettingsGroup title="Legal">
           <SettingsRow icon={Shield} label="Privacy Policy" onPress={() => nav.navigate('SettingsStack' as any, { screen: 'LegalStack', params: { screen: 'PrivacyPolicy' } })} />
           <SettingsRow icon={FileText} label="Terms of Use" onPress={() => nav.navigate('SettingsStack' as any, { screen: 'LegalStack', params: { screen: 'TermsOfUse' } })} />
@@ -78,20 +81,20 @@ export default function SettingsScreen() {
 
         <SettingsGroup title="Account">
           <SettingsRow icon={Trash2} label="Delete account" onPress={() => nav.navigate('SettingsStack' as any, { screen: 'DeleteAccount' })} destructive />
-          <SettingsRow icon={LogOut} label="Sign out" onPress={async () => { try { await signOut(); } catch {} }} destructive />
+          <SettingsRow testID="settings-sign-out" icon={LogOut} label="Sign out" onPress={async () => { try { await signOut(); } catch { Alert.alert('Sign out failed','Your session is still open. Check your connection and try again.'); } }} destructive />
         </SettingsGroup>
 
         <Pressable style={s.smokeTest} onPress={() => nav.navigate('SmokeTest' as any)}>
           <Text style={s.smokeTestText}>Run Smoke Test →</Text>
         </Pressable>
 
-        <Text style={s.version}>OfferHound v1.0.0 (Build 35)</Text>
+        <Text style={s.version}>OfferHound v{Application.nativeApplicationVersion||'1.0.0'} ({Application.nativeBuildVersion ? `Build ${Application.nativeBuildVersion}` : 'Preview'})</Text>
       </ScrollView>
 
       {/* Change Password Modal */}
       <Modal visible={changingPw} transparent animationType="slide" onRequestClose={() => setChangingPw(false)}>
-        <Pressable style={s.modalBackdrop} onPress={() => setChangingPw(false)}>
-          <View style={s.modalSheet}>
+        <Pressable accessible={false} style={s.modalBackdrop} onPress={() => setChangingPw(false)}>
+          <Pressable accessible={false} style={s.modalSheet} onPress={event=>event.stopPropagation()}>
             <Text style={s.modalTitle}>Change Password</Text>
             <TextInput
               style={s.input}
@@ -102,13 +105,17 @@ export default function SettingsScreen() {
               onChangeText={setNewPw}
             />
             <Pressable
+              accessible accessibilityRole="button" accessibilityLabel="Update password"
               style={[s.pwBtn, pwLoading && s.pwBtnDisabled]}
               onPress={handleChangePassword}
               disabled={pwLoading}
             >
               <Text style={s.pwBtnText}>{pwLoading ? 'Saving...' : 'Update Password'}</Text>
             </Pressable>
-          </View>
+            <Pressable accessible testID="settings-password-cancel" accessibilityRole="button" accessibilityLabel="Cancel password change" disabled={pwLoading} onPress={()=>{setChangingPw(false);setNewPw('');}} style={s.pwBtn}>
+              <Text style={s.pwBtnText}>Cancel</Text>
+            </Pressable>
+          </Pressable>
         </Pressable>
       </Modal>
     </SafeAreaView>
@@ -124,13 +131,14 @@ function SettingsGroup({ title, children }: { title: string; children: React.Rea
   );
 }
 
-function SettingsRow({ icon: Icon, label, onPress, right, destructive }: { icon: any; label: string; onPress?: () => void; right?: React.ReactNode; destructive?: boolean }) {
+function SettingsRow({ icon: Icon, label, onPress, right, destructive, testID }: { testID?:string; icon: any; label: string; onPress?: () => void; right?: React.ReactNode; destructive?: boolean }) {
+  const Row = onPress ? Pressable : View;
   return (
-    <Pressable style={s.row} onPress={onPress} disabled={!onPress}>
+    <Row testID={testID} style={s.row} onPress={onPress} accessibilityRole={onPress?'button':undefined} accessibilityLabel={onPress?label:undefined}>
       <Icon size={18} color={destructive ? colors.destructive : colors.foreground} />
       <Text style={[s.rowLabel, destructive && s.rowDestructive]}>{label}</Text>
       {right ?? (onPress ? <ChevronRight size={16} color={colors.mutedForeground} /> : null)}
-    </Pressable>
+    </Row>
   );
 }
 

@@ -1,3 +1,6 @@
+import {getCanonicalOrigin} from '@/lib/canonicalDomain';
+import {profilePositions} from '@/lib/profilePositions';
+import {getPositionsForSport} from '@/lib/data/sportPositions';
 // AthleteProfileEditScreen — RN equivalent of Lovable's deep profile editor
 // (offerhound-repo/src/pages/Onboarding.tsx + ProfileManagement.tsx).
 //
@@ -80,6 +83,7 @@ export default function AthleteProfileEditScreen() {
       gallery_images: (profile as any).gallery_images || [],
       sports: (profile as any).sports || (profile.sport ? [profile.sport] : []),
       sport_stats: (profile as any).sport_stats || {},
+      positions: profilePositions(profile as any),
       hudl_url: (profile as any).hudl_url || '',
       maxpreps_url: (profile as any).maxpreps_url || '',
       twitter_url: (profile as any).twitter_url || '',
@@ -103,6 +107,8 @@ export default function AthleteProfileEditScreen() {
     setSaving(true);
     try {
       const updates: any = {
+        positions: form.positions,
+        position: form.positions?.[0] || null,
         sports: form.sports,
         sport: form.sports?.[0] || null,
         sport_stats: form.sport_stats,
@@ -312,12 +318,23 @@ export default function AthleteProfileEditScreen() {
                   <SportSelector
                     mode="multi"
                     selectedSports={form.sports || []}
-                    onSportsChange={(sports) => updateField({ sports })}
+                    onSportsChange={(sports) => updateField({ sports,
+                      ...(sports[0] !== primarySport ? {positions: []} : {}) })}
                     max={3}
                   />
                 </CardContent>
               </Card>
 
+              <Card><CardHeader><CardTitle>Positions — {primarySport}</CardTitle></CardHeader><CardContent>
+                <Text style={s.helper}>Select your positions for your primary sport.</Text>
+                <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
+                  {getPositionsForSport(primarySport).map(({label})=><Button key={label}
+                    accessibilityRole="checkbox" accessibilityState={{checked:!!form.positions?.includes(label)}}
+                    variant={form.positions?.includes(label)?'default':'outline'}
+                    onPress={()=>updateField({positions:form.positions?.includes(label)
+                      ? form.positions.filter((p:string)=>p!==label) : [...(form.positions||[]),label]})}>{label}</Button>)}
+                </View>
+              </CardContent></Card>
               <Card>
                 <CardHeader>
                   <CardTitle>Stats — {primarySport}</CardTitle>
@@ -419,7 +436,7 @@ export default function AthleteProfileEditScreen() {
                     autoCapitalize="none"
                   />
                   <Text style={s.helper}>
-                    Your public profile will be at offerhound.com/athlete/{form.custom_url || '<slug>'}
+                    Your public profile will be at {getCanonicalOrigin()}/p/{form.custom_url || '<slug>'}
                   </Text>
                 </CardContent>
               </Card>

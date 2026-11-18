@@ -1,3 +1,5 @@
+import {getCanonicalOrigin} from '@/lib/canonicalDomain';
+import { CampHeroImageUpload } from '@/components/CampHeroImageUpload';
 // Parity port from Lovable src/components/EditCampDialog.tsx (verbatim logic).
 // Web→RN translations:
 //   <div>/<p>/<span>/<h3>/<aside>/<input type=checkbox>/<img> → <View>/<Text>/Checkbox/Image
@@ -77,33 +79,6 @@ interface EditCampDialogProps {
   camp: Camp | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-// GAP: CampHeroImageUpload not yet ported. Minimal inline shim.
-function CampHeroImageUploadShim({
-  currentImageUrl,
-  onRemoved,
-}: {
-  campId?: string;
-  currentImageUrl: string | null;
-  onUploaded: (url: string) => void;
-  onRemoved: () => void;
-}) {
-  return (
-    <View style={s.heroShim}>
-      <Label>Hero Image</Label>
-      {currentImageUrl ? (
-        <View style={s.heroPreviewRow}>
-          <Image source={{ uri: currentImageUrl }} style={s.heroThumb} resizeMode="cover" />
-          <Button variant="outline" size="sm" onPress={onRemoved}>Remove</Button>
-        </View>
-      ) : (
-        <Text style={s.heroEmpty}>
-          (Image upload UI is rendered inline in mobile builds — placeholder.)
-        </Text>
-      )}
-    </View>
-  );
 }
 
 export function EditCampDialog({ camp, open, onOpenChange }: EditCampDialogProps) {
@@ -388,7 +363,7 @@ export function EditCampDialog({ camp, open, onOpenChange }: EditCampDialogProps
               />
             </View>
 
-            <CampHeroImageUploadShim
+            <CampHeroImageUpload
               campId={camp?.id}
               currentImageUrl={form.image_url || null}
               onUploaded={(url) => setForm((prev) => ({ ...prev, image_url: url }))}
@@ -517,7 +492,7 @@ export function EditCampDialog({ camp, open, onOpenChange }: EditCampDialogProps
               <Button
                 variant="outline"
                 size="sm"
-                onPress={() => Linking.openURL(`https://offerhound.app/camps/${camp.id}`)}
+                onPress={() => Linking.openURL(`${getCanonicalOrigin()}/camps/${camp.id}`)}
                 leftIcon={<Eye size={14} color={colors.foreground} />}
               >
                 Open public page

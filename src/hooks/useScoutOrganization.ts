@@ -15,7 +15,8 @@ export function useScoutOrganization() {
          .select("*")
          .eq("owner_user_id", user.id)
          .maybeSingle();
-       if (!ownedErr && ownedOrg) {
+       if (ownedErr) throw ownedErr;
+       if (ownedOrg) {
          return { organization: ownedOrg, isOwner: true, isMember: true, memberRole: "owner" };
        }
 
@@ -26,7 +27,8 @@ export function useScoutOrganization() {
          .eq("user_id", user.id)
          .eq("invitation_accepted", true)
          .maybeSingle();
-       if (!memErr && membership && (membership as any).organization) {
+       if (memErr) throw memErr;
+       if (membership && (membership as any).organization) {
          return {
             organization: (membership as any).organization,
             isOwner: false,

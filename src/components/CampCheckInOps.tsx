@@ -1,3 +1,5 @@
+import { useAuth } from '@/hooks/useAuth';
+import { checkInNativeToken } from '@/lib/nativeCampCheckin';
 // Ported verbatim from Lovable src/components/CampCheckInOps.tsx
 // Web → RN mapping:
 //   - Tailwind classes → StyleSheet using @/lib/theme tokens
@@ -71,6 +73,7 @@ interface CampCheckInOpsProps {
 }
 
 export function CampCheckInOps({ campId, campName, drillStations = [], positions = [] }: CampCheckInOpsProps) {
+  const {user}=useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('checkin');
   const [scanInput, setScanInput] = useState('');
@@ -78,12 +81,13 @@ export function CampCheckInOps({ campId, campName, drillStations = [], positions
   const scanRef = useRef<TextInput>(null);
 
   const { data: enrollments = [], isLoading } = useQuery({
-    queryKey: ['camp-ops-enrollments', campId],
+    queryKey: ['camp-ops-enrollments', campId,user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('camp_enrollments')
         .select('*')
         .eq('camp_id', campId)
+        .neq('status','cancelled')
         .order('created_at', { ascending: true });
       if (error) throw error;
       return (data || []) as Enrollment[];
@@ -93,15 +97,15 @@ export function CampCheckInOps({ campId, campName, drillStations = [], positions
 
   const checkIn = useMutation({
     mutationFn: async (enrollmentId: string) => {
-      const { error } = await supabase
-        .from('camp_enrollments')
-        .update({ status: 'checked_in', checked_in_at: new Date().toISOString() } as any)
-        .eq('id', enrollmentId);
-      if (error) throw error;
+      const token=enrollments.find(row=>row.id===enrollmentId)?.qr_code_token;
+      if(!user||!token)throw Error('Reload this camp roster before checking in the participant.');
+      return await checkInNativeToken(campId,token,user.id);
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      toast.success(result.status==='already_checked_in'?'Already checked in':'Participant checked in');
       queryClient.invalidateQueries({ queryKey: ['camp-ops-enrollments', campId] });
     },
+    onError:(error:any)=>toast.error('Check-in not confirmed',error.message),
   });
 
   const bulkUpdate = useMutation({
@@ -128,8 +132,7 @@ export function CampCheckInOps({ campId, campName, drillStations = [], positions
       if (match.status === 'checked_in') {
         toast.success('Already Checked In', `Athlete #${match.jersey_number || match.id.slice(0, 8)} is already checked in.`);
       } else {
-        await checkIn.mutateAsync(match.id);
-        toast.success('✓ Checked In!', `Athlete #${match.jersey_number || match.id.slice(0, 8)} checked in successfully.`);
+        try{await checkIn.mutateAsync(match.id);}catch{return;}
       }
     } else {
       toast.error('Not Found', 'No enrollment found for this QR code.');
@@ -280,7 +283,7 @@ export function CampCheckInOps({ campId, campName, drillStations = [], positions
                       size="sm"
                       onPress={() => {
                         checkIn.mutate(e.id);
-                        toast.success('✓ Checked In!');
+
                       }}
                       disabled={checkIn.isPending}
                     >

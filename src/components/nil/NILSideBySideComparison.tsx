@@ -37,7 +37,8 @@ function calcSchoolNet(
 ) {
   const fallback = STATE_TAX_DATA[state];
   const stateRate = schoolData?.state_income_tax_rate != null
-    ? Number(schoolData.state_income_tax_rate) : (fallback?.rate ?? 0);
+    ? Number(schoolData.state_income_tax_rate) : fallback?.rate;
+  if (stateRate == null || !Number.isFinite(stateRate) || !Number.isFinite(gross) || gross <= 0) return null;
   const localRate = schoolData?.local_tax_rate != null
     ? Number(schoolData.local_tax_rate) : (fallback?.localRate ?? 0);
   const hasLuxury = schoolData?.has_luxury_tax ?? fallback?.hasLuxury ?? false;
@@ -86,19 +87,21 @@ export function NILSideBySideComparison({ schools, grossIncome, onRemoveSchool }
     return schools.map((s) => {
       const sd: any = schoolData?.find((d: any) => d.school_name === s.name);
       const avgNil = Number(sd?.avg_nil_funding) || 0;
+      const calculation = calcSchoolNet(s.state, actualGross, sd ? {
+        state_income_tax_rate: sd.state_income_tax_rate,
+        local_tax_rate: sd.local_tax_rate,
+        has_luxury_tax: sd.has_luxury_tax,
+      } : undefined);
+      if (!calculation) return null;
       return {
         ...s,
-        ...calcSchoolNet(s.state, actualGross, sd ? {
-          state_income_tax_rate: sd.state_income_tax_rate,
-          local_tax_rate: sd.local_tax_rate,
-          has_luxury_tax: sd.has_luxury_tax,
-        } : undefined),
+        ...calculation,
         avgNil,
         conference: sd?.conference || '',
         division: sd?.division || '',
         city: sd?.city || '',
       };
-    });
+    }).filter((item):item is NonNullable<typeof item> => !!item);
   }, [schools, actualGross, schoolData]);
 
   const bestNet = comparisons.length ? Math.max(...comparisons.map(c => c.net)) : 0;
@@ -132,6 +135,8 @@ export function NILSideBySideComparison({ schools, grossIncome, onRemoveSchool }
 
   return (
     <View style={{ gap: spacing.md }}>
+      <Text style={styles.rangeText}>Illustrative model: 22% federal and 15.3% self-employment amounts plus historical state/local rates; excludes deductions and personal circumstances.</Text>
+      {comparisons.length < schools.length && <Text accessibilityRole="alert" style={styles.rangeText}>Some selected schools have unknown tax data. Their net-income estimates are unavailable.</Text>}
       {/* "Slider" — RN substitute (stepper + numeric input) */}
       <Card>
         <CardContent style={{ gap: spacing.sm, padding: spacing.md }}>

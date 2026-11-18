@@ -1,6 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {creatorContentUrl} from "@/lib/creatorSchedule";
+import {syndicateCreatorActivity} from "@/lib/creatorSyndication";
+import * as Crypto from "expo-crypto";
 import { useAuth } from "@/hooks/useAuth";
+
+function hasStoredId(value:unknown):value is {id:string}{return typeof value === "object" && value !== null && typeof (value as Record<string,unknown>).id === "string" && !!(value as Record<string,unknown>).id;}
 
 /* -------------------- Sports News Feed (scrape job) -------------------- */
 export function useSportsNewsFeed(limit = 30) {
@@ -20,6 +25,8 @@ export function useSportsNewsFeed(limit = 30) {
             .limit(Math.floor(limit / 2)),
        ]);
 
+       if (news.error) throw news.error;
+       if (portal.error) throw portal.error;
        const a = (news.data || []).map((n: any) => ({
          id: `news-${n.id}`,
          title: n.title,
@@ -58,11 +65,12 @@ export function useContentLibrary(influencerId?: string) {
     queryKey: ["influencer-content-library", influencerId],
     queryFn: async () => {
        if (!influencerId) return [];
-       const { data } = await supabase
+       const { data, error } = await supabase
          .from("influencer_content_library" as any)
          .select("*")
          .eq("influencer_id", influencerId)
          .order("created_at", { ascending: false });
+       if (error) throw error;
        return (data || []) as any[];
     },
     enabled: !!influencerId,
@@ -84,7 +92,8 @@ export function useAddLibraryItem() {
        notes?: string;
     }) => {
        if (!user) throw new Error("Not authenticated");
-       const { error } = await supabase.from("influencer_content_library" as any).insert({
+       if (input.assetUrl) creatorContentUrl(input.assetUrl);
+       const { data, error } = await supabase.from("influencer_content_library" as any).insert({
          influencer_id: input.influencerId,
          user_id: user.id,
          title: input.title || null,
@@ -94,8 +103,9 @@ export function useAddLibraryItem() {
          thumbnail_url: input.thumbnailUrl || null,
          tags: input.tags || [],
          notes: input.notes || null,
-       });
+       }).select("id").single();
        if (error) throw error;
+       if (!hasStoredId(data)) throw new Error("Library save was not confirmed. Your input is unchanged.");
     },
     onSuccess: (_d, vars) => {
        qc.invalidateQueries({ queryKey: ["influencer-content-library", vars.influencerId] });
@@ -110,22 +120,28 @@ export function useUploadLibraryAsset() {
     mutationFn: async (input: { influencerId: string; file: File; title?: string }) => {
        if (!user) throw new Error("Not authenticated");
        const ext = (input.file.name.split(".").pop() || "bin").toLowerCase();
-       const path = `${user.id}/library/${crypto.randomUUID()}.${ext}`;
+       const path = `${user.id}/library/${Crypto.randomUUID()}.${ext}`;
+       if (!input.file.type.startsWith("image/") && !input.file.type.startsWith("video/")) throw new Error("Choose an image or video.");
+       const selected = input.file as File & {uri?:string};
+       const bytes = selected.uri ? await (await fetch(selected.uri)).arrayBuffer() : await selected.arrayBuffer();
+       if (!bytes.byteLength || bytes.byteLength > 50 * 1024 * 1024) throw new Error("Choose a nonempty file under 50MB.");
        const { error: upErr } = await supabase.storage
          .from("influencer-media")
-         .upload(path, input.file, { upsert: false });
+         .upload(path, bytes, { upsert: false, contentType: input.file.type });
        if (upErr) throw upErr;
        const url = supabase.storage.from("influencer-media").getPublicUrl(path).data.publicUrl;
        const assetType = input.file.type.startsWith("video") ? "video" : "image";
-       const { error: rowErr } = await supabase.from("influencer_content_library" as any).insert({
+       const { data: stored, error: rowErr } = await supabase.from("influencer_content_library" as any).insert({
          influencer_id: input.influencerId,
          user_id: user.id,
          title: input.title || input.file.name,
          asset_type: assetType,
          asset_url: url,
          thumbnail_url: assetType === "image" ? url : null,
-       });
-       if (rowErr) throw rowErr;
+       }).select("id").single();
+       if (rowErr || !hasStoredId(stored)) {
+         throw new Error("Upload completed, but the library record was not confirmed. Reload the library before uploading again.");
+       }
        return url;
     },
     onSuccess: (_d, vars) => {
@@ -135,14 +151,17 @@ export function useUploadLibraryAsset() {
 }
 
 export function useDeleteLibraryItem() {
+  const {user} = useAuth();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { id: string; influencerId: string }) => {
-       const { error } = await supabase
+       if (!user) throw new Error("Not authenticated");
+       const { data, error } = await supabase
          .from("influencer_content_library" as any)
          .delete()
-         .eq("id", input.id);
+         .eq("id", input.id).eq("influencer_id",input.influencerId).select("id").single();
        if (error) throw error;
+       if ((!hasStoredId(data) || data.id !== input.id)) throw new Error("Removal was not confirmed. Reload before retrying.");
     },
     onSuccess: (_d, vars) => {
        qc.invalidateQueries({ queryKey: ["influencer-content-library", vars.influencerId] });
@@ -156,12 +175,13 @@ export function useScheduledPosts(influencerId?: string) {
     queryKey: ["influencer-scheduled-posts", influencerId],
     queryFn: async () => {
        if (!influencerId) return [];
-       const { data } = await supabase
+       const { data, error } = await supabase
          .from("influencer_activities" as any)
          .select("*")
          .eq("influencer_id", influencerId)
-         .in("post_status", ["scheduled", "draft"])
+         .in("post_status", ["scheduled", "draft", "failed"])
          .order("scheduled_for", { ascending: true, nullsFirst: false });
+       if (error) throw error;
        return (data || []) as any[];
     },
     enabled: !!influencerId,
@@ -169,10 +189,12 @@ export function useScheduledPosts(influencerId?: string) {
 }
 
 export function useSchedulePost() {
+  const {user}=useAuth();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: {
        influencerId: string;
+       existingId?:string;
        title: string;
        description: string;
        mediaUrl?: string;
@@ -184,14 +206,15 @@ export function useSchedulePost() {
        syndicationTargets?: string[]; // e.g. ["webhook"]
        asDraft?: boolean;
     }) => {
+       if (!user) throw new Error("Not authenticated");
+       for (const value of [input.mediaUrl,input.embedUrl,input.ctaUrl]) if(value)creatorContentUrl(value);
+       if (!input.asDraft && input.scheduledFor && (!Number.isFinite(Date.parse(input.scheduledFor)) || Date.parse(input.scheduledFor)<=Date.now())) throw new Error("Choose a future schedule time.");
        const status = input.asDraft
          ? "draft"
          : input.scheduledFor
             ? "scheduled"
             : "published";
-       const { data, error } = await supabase
-         .from("influencer_activities" as any)
-         .insert({
+       const fields = {
             influencer_id: input.influencerId,
             title: input.title,
             description: input.description,
@@ -207,48 +230,43 @@ export function useSchedulePost() {
             scheduled_for: input.scheduledFor || null,
             published_at: status === "published" ? new Date().toISOString() : null,
             syndication_targets: input.syndicationTargets || [],
-         })
-         .select("id")
-         .single();
+       };
+       const {moderation_status: _unchangedModeration, ...editableFields}=fields;
+       const write=input.existingId ? supabase.from("influencer_activities" as any).update(editableFields).eq("id",input.existingId).eq("influencer_id",input.influencerId).in("post_status",["draft","scheduled","failed"]) : supabase.from("influencer_activities" as any).insert(fields);
+       const {data,error}=await write.select("id,post_status,moderation_status").single();
        if (error) throw error;
+       if (!hasStoredId(data)) throw new Error("Post save was not confirmed. Your draft is unchanged; reload the queue before retrying.");
 
-       // If publishing now, fire syndication webhook (non-blocking).
-       if (status === "published" && (input.syndicationTargets || []).includes("webhook")) {
-         try {
-           await supabase.functions.invoke("syndicate-influencer-content", {
-             body: {
-                influencerId: input.influencerId,
-                contentType: "post",
-                title: input.title,
-                description: input.description,
-                imageUrl: input.mediaUrl,
-                tags: input.tags,
-                url: input.ctaUrl,
-             },
-           });
-         } catch { /* non-fatal */ }
-       }
-       return data;
+       const syndication = status === "published" && (input.syndicationTargets || []).includes("webhook")
+         ? await syndicateCreatorActivity(supabase,data.id) : {status:'not_requested' as const};
+
+       const confirmed=data as unknown as Record<string,unknown>;
+       return {id:data.id,post_status:confirmed.post_status,moderation_status:confirmed.moderation_status,syndication};
     },
     onSuccess: (_d, vars) => {
        qc.invalidateQueries({ queryKey: ["influencer-scheduled-posts", vars.influencerId] });
+       qc.invalidateQueries({ queryKey: ["influencer-analytics", vars.influencerId] });
        qc.invalidateQueries({ queryKey: ["influencer-posts", vars.influencerId] });
     },
   });
 }
 
 export function useDeleteScheduledPost() {
+  const {user} = useAuth();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { id: string; influencerId: string }) => {
-       const { error } = await supabase
+       if (!user) throw new Error("Not authenticated");
+       const { data, error } = await supabase
          .from("influencer_activities" as any)
          .delete()
-         .eq("id", input.id);
+         .eq("id", input.id).eq("influencer_id",input.influencerId).in("post_status",["draft","scheduled","failed"]).select("id").single();
        if (error) throw error;
+       if ((!hasStoredId(data) || data.id !== input.id)) throw new Error("Removal was not confirmed. Reload before retrying.");
     },
     onSuccess: (_d, vars) => {
        qc.invalidateQueries({ queryKey: ["influencer-scheduled-posts", vars.influencerId] });
+       qc.invalidateQueries({ queryKey: ["influencer-analytics", vars.influencerId] });
     },
   });
 }
@@ -260,12 +278,13 @@ export function useMessageApprovalStatus(athleteUserId?: string) {
     queryKey: ["influencer-msg-approval", user?.id, athleteUserId],
     queryFn: async () => {
        if (!user || !athleteUserId) return null;
-       const { data } = await supabase
+       const { data, error } = await supabase
          .from("influencer_message_approvals" as any)
          .select("id, status, athlete_profile_id")
          .eq("influencer_user_id", user.id)
          .eq("athlete_user_id", athleteUserId)
          .maybeSingle();
+       if (error) throw error;
        return data as any;
     },
     enabled: !!user && !!athleteUserId,
@@ -305,10 +324,11 @@ export function useParentInfluencerApprovals() {
     queryKey: ["parent-influencer-approvals", user?.id],
     queryFn: async () => {
        if (!user) return [];
-       const { data } = await supabase
+       const { data, error } = await supabase
          .from("influencer_message_approvals" as any)
          .select("*")
          .order("created_at", { ascending: false });
+       if (error) throw error;
        return (data || []) as any[];
     },
     enabled: !!user,
@@ -343,8 +363,10 @@ export function useIsAthleteMinor(athleteProfileId?: string) {
     queryKey: ["is-athlete-minor", athleteProfileId],
     queryFn: async () => {
        if (!athleteProfileId) return false;
-       const { data } = await (supabase.rpc as any)("is_athlete_minor", { profile_id: athleteProfileId });
-       return !!data;
+       const { data, error } = await (supabase.rpc as any)("is_athlete_minor", { profile_id: athleteProfileId });
+       if (error) throw error;
+       if (typeof data !== 'boolean') throw new Error('Athlete age could not be confirmed');
+       return data;
     },
     enabled: !!athleteProfileId,
   });

@@ -1,3 +1,4 @@
+import {getCanonicalOrigin} from '@/lib/canonicalDomain';
 // Ported verbatim from Lovable src/components/SocialLinksManager.tsx
 // Web → RN mapping:
 //   - Tailwind classes → StyleSheet using @/lib/theme tokens
@@ -82,7 +83,7 @@ interface SocialLinksManagerProps {
 
 // GAP: RN has no window.location.origin. Pull a base URL from app config when available.
 const WEB_BASE_URL: string =
-  (Constants.expoConfig?.extra as any)?.webBaseUrl || 'https://offerhound.app';
+  getCanonicalOrigin();
 
 export function SocialLinksManager({
   role,

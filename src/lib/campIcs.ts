@@ -4,7 +4,7 @@
 // native share sheet via expo-sharing (the iOS/Android share sheet exposes
 // "Add to Calendar" via Apple Calendar / Google Calendar / Outlook).
 
-import * as FileSystem from 'expo-file-system';
+import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
 interface IcsCamp {
@@ -40,14 +40,11 @@ function escapeIcs(s: string): string {
 }
 
 export function buildCampIcs(camp: IcsCamp): string {
-  const startDateStr = camp.start_date;
-  const endDateStr = camp.end_date ?? camp.start_date;
-  const startTime = camp.start_time ?? '09:00';
-  const endTime = camp.end_time ?? '17:00';
-
-  const start = new Date(`${startDateStr}T${startTime}:00`);
-  const end = new Date(`${endDateStr}T${endTime}:00`);
-  if (end <= start) end.setHours(start.getHours() + 2);
+  const day=(value:string)=>{const d=new Date(value+'T00:00:00Z');if(!/^\d{4}-\d{2}-\d{2}$/.test(value)||Number.isNaN(d.getTime())||d.toISOString().slice(0,10)!==value)throw Error('The camp date is invalid.');return d;};
+  const start=day(camp.start_date);const end=day(camp.end_date||camp.start_date);if(end<start)throw Error('The camp dates are out of order.');end.setUTCDate(end.getUTCDate()+1);
+  const stampDay=(value:Date)=>value.toISOString().slice(0,10).replaceAll('-','');
+  const hours=[camp.start_time,camp.end_time].filter(Boolean).join(' – ');
+  const description=[camp.description,hours?'Published camp hours: '+hours:'','Camp dates saved. Check OfferHound for local event times.'].filter(Boolean).join('\n');
 
   const now = new Date();
   const locationParts = [camp.location, camp.city, camp.state].filter(Boolean);
@@ -62,10 +59,10 @@ export function buildCampIcs(camp: IcsCamp): string {
     'BEGIN:VEVENT',
     `UID:camp-${camp.id}@offerhound`,
     `DTSTAMP:${formatIcsDate(now)}`,
-    `DTSTART:${formatIcsDate(start)}`,
-    `DTEND:${formatIcsDate(end)}`,
+    `DTSTART;VALUE=DATE:${stampDay(start)}`,
+    `DTEND;VALUE=DATE:${stampDay(end)}`,
     `SUMMARY:${escapeIcs(camp.name)}`,
-    camp.description ? `DESCRIPTION:${escapeIcs(camp.description)}` : '',
+    `DESCRIPTION:${escapeIcs(description)}`,
     location ? `LOCATION:${escapeIcs(location)}` : '',
     'END:VEVENT',
     'END:VCALENDAR',
@@ -78,14 +75,7 @@ export async function downloadCampIcs(camp: IcsCamp): Promise<void> {
   const ics = buildCampIcs(camp);
   const safeName = camp.name.replace(/[^a-z0-9-]+/gi, '-').toLowerCase() || 'camp';
   const filename = `${safeName}.ics`;
-  const dir = (FileSystem as any).cacheDirectory || (FileSystem as any).documentDirectory;
-  const uri = `${dir}${filename}`;
-  await (FileSystem as any).writeAsStringAsync(uri, ics);
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(uri, {
-      mimeType: 'text/calendar',
-      dialogTitle: 'Add to calendar',
-      UTI: 'com.apple.ical.ics',
-    });
-  }
+  if(!await Sharing.isAvailableAsync())throw Error('Calendar sharing is unavailable on this device.');
+  const file=new File(Paths.cache,filename);file.write(ics);
+  await Sharing.shareAsync(file.uri,{mimeType:'text/calendar',dialogTitle:'Save camp dates',UTI:'com.apple.ical.ics'});
 }

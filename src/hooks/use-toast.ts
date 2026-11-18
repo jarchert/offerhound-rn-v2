@@ -7,21 +7,16 @@ type ToastInput = {
   variant?: 'default' | 'destructive';
 };
 
-export function useToast() {
-  return {
-    toast: ({ title, description, variant }: ToastInput) =>
-      Toast.show({
-        type: variant === 'destructive' ? 'error' : 'success',
-        text1: title,
-        text2: description,
-      }),
-    dismiss: () => Toast.hide(),
-  };
-}
-
 export const toast = ({ title, description, variant }: ToastInput) =>
   Toast.show({
     type: variant === 'destructive' ? 'error' : 'success',
     text1: title,
     text2: description,
   });
+
+// Stable callbacks keep consumers' effects and subscriptions from restarting
+// whenever a toast-using screen updates its state.
+const toastApi = { toast, dismiss: () => Toast.hide() };
+export function useToast() {
+  return toastApi;
+}

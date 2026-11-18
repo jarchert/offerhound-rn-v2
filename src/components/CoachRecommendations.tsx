@@ -102,17 +102,17 @@ export function CoachRecommendations() {
         if (status === 429) {
           toast.error('Rate limit exceeded. Please try again in a moment.');
         } else if (status === 402) {
-          toast.error('AI credits exhausted. Please add credits to continue.');
+          toast.error('This AI feature requires an active paid subscription.');
         } else {
           toast.error((error as any).message || 'Failed to get recommendations');
         }
         return;
       }
 
-      if (data?.recommendations) {
-        setRecommendations(data.recommendations);
-        toast.success('Generated personalized recommendations!');
-      }
+      if (!Array.isArray(data?.recommendations)) throw new Error('No recommendation result returned');
+      setRecommendations(data.recommendations);
+      if (data.recommendations.length) toast.success('Generated personalized recommendations!');
+      else toast.info('No recommendations yet', 'Refresh your matches and complete your sport and position details, then try again.');
     } catch (err) {
       console.error('Error getting recommendations:', err);
       toast.error('Failed to get recommendations');

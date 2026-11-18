@@ -1,3 +1,4 @@
+import {getCanonicalOrigin} from '@/lib/canonicalDomain';
 // QuickStartOrganizationScreen — RN port of Lovable src/pages/QuickStartOrganization.tsx (174 LOC).
 // 2-step quick start (Terms → Info) that creates a scout_organizations row + ensures
 // the user has a scout_profiles row linked to the new organization.
@@ -152,9 +153,9 @@ export default function QuickStartOrganizationScreen() {
                 <Checkbox checked={termsAgreed} onCheckedChange={v => setTermsAgreed(!!v)} />
                 <Text style={s.termsText}>
                   I agree to the{' '}
-                  <Text style={s.link} onPress={() => Linking.openURL('https://offerhound.com/terms')}>Terms of Use</Text>
+                  <Text style={s.link} onPress={() => Linking.openURL(getCanonicalOrigin() + '/terms')}>Terms of Use</Text>
                   {' '}and{' '}
-                  <Text style={s.link} onPress={() => Linking.openURL('https://offerhound.com/privacy')}>Privacy Policy</Text>
+                  <Text style={s.link} onPress={() => Linking.openURL(getCanonicalOrigin() + '/privacy')}>Privacy Policy</Text>
                 </Text>
               </Pressable>
               <Button onPress={handleAcceptTerms} disabled={isSubmitting || !termsAgreed} loading={isSubmitting} rightIcon={<ArrowRight size={18} color={colors.primaryForeground} />} style={{ marginTop: spacing.md }}>

@@ -1,3 +1,6 @@
+import {roleShareCard} from '@/lib/roleShareCard';
+import {useHSCoachProfile} from '@/hooks/useHSCoachProfile';
+import {getCanonicalOrigin} from '@/lib/canonicalDomain';
 // ShareRoleCardDialog — RN port of Lovable ShareRoleCardDialog.tsx + RoleCardGenerator.tsx
 // Renders a modal bottom sheet with role-specific contact card + QR code + native share.
 // Roles: athlete | coach | club_coach | hs_coach | scout | influencer
@@ -37,7 +40,7 @@ interface ShareRoleCardDialogProps {
   children?: React.ReactNode;
 }
 
-const APP_PUBLIC_URL = 'https://offer-hound.com';
+const APP_PUBLIC_URL = getCanonicalOrigin();
 
 export function ShareRoleCardDialog({ role, visible, onClose, children }: ShareRoleCardDialogProps) {
   const isControlled = typeof visible === 'boolean';
@@ -53,6 +56,7 @@ export function ShareRoleCardDialog({ role, visible, onClose, children }: ShareR
   const { user } = useAuth();
   const { toast } = useToast();
   const { data: coachProfile } = useCoachProfile();
+  const {data:hsProfile}=useHSCoachProfile();
   const { data: scoutProfile } = useScoutProfile();
   const { profile: playerProfile } = usePlayerProfile();
 
@@ -66,67 +70,8 @@ export function ShareRoleCardDialog({ role, visible, onClose, children }: ShareR
     enabled: !!user && role === 'influencer',
   });
 
-  const card = useMemo(() => {
-    const coach = coachProfile as any;
-    const scout = scoutProfile as any;
-    const player = playerProfile as any;
-    const inf = influencerProfile as any;
-
-    switch (role) {
-      case 'athlete':
-        return {
-          name: player?.full_name || 'Athlete',
-          title: [player?.sport, player?.position].filter(Boolean).join(' · ') || 'Athlete',
-          organization: player?.high_school_name || player?.college_name || '',
-          email: user?.email || '',
-          link: player?.custom_url
-            ? `${APP_PUBLIC_URL}/athlete/${player.custom_url}`
-            : `${APP_PUBLIC_URL}/p/${user?.id}`,
-        };
-      case 'coach':
-        return {
-          name: coach?.name || 'Coach',
-          title: [coach?.position_coached, coach?.division].filter(Boolean).join(' · ') || 'Coach',
-          organization: coach?.school || '',
-          email: coach?.email || user?.email || '',
-          link: `${APP_PUBLIC_URL}/coaches`,
-        };
-      case 'club_coach':
-        return {
-          name: coach?.name || 'Club Coach',
-          title: coach?.position_coached || 'Club Coach',
-          organization: coach?.school || '',
-          email: coach?.email || user?.email || '',
-          link: `${APP_PUBLIC_URL}/coaches`,
-        };
-      case 'hs_coach':
-        return {
-          name: coach?.name || 'HS Coach',
-          title: 'High School Coach',
-          organization: coach?.school || '',
-          email: coach?.email || user?.email || '',
-          link: `${APP_PUBLIC_URL}/coaches`,
-        };
-      case 'scout':
-        return {
-          name: scout?.name || 'Scout',
-          title: [scout?.title, scout?.company].filter(Boolean).join(' · ') || 'Scout',
-          organization: scout?.company || '',
-          email: scout?.email || user?.email || '',
-          link: `${APP_PUBLIC_URL}/scouts`,
-        };
-      case 'influencer':
-        return {
-          name: inf?.display_name || 'Creator',
-          title: 'Sports Media Creator',
-          organization: '',
-          email: user?.email || '',
-          link: inf?.handle ? `${APP_PUBLIC_URL}/influencers/${inf.handle}` : `${APP_PUBLIC_URL}/influencers`,
-        };
-      default:
-        return { name: '', title: '', organization: '', email: '', link: APP_PUBLIC_URL };
-    }
-  }, [role, coachProfile, scoutProfile, playerProfile, influencerProfile, user]);
+  const {data:clubProfile,isError:clubFailed,refetch:reloadClub}=useQuery({queryKey:['club-profile-share',user?.id],enabled:!!user&&role==='club_coach',queryFn:async()=>{const r=await supabase.from('club_coach_profiles').select('id,club_name').eq('user_id',user!.id).maybeSingle();if(r.error)throw r.error;return r.data;}});
+  const card=useMemo(()=>roleShareCard(role,{coach:coachProfile,hs:hsProfile,club:clubFailed?null:clubProfile,scout:scoutProfile,player:playerProfile,influencer:influencerProfile},user,APP_PUBLIC_URL),[role,coachProfile,hsProfile,clubProfile,clubFailed,scoutProfile,playerProfile,influencerProfile,user]);
 
   const titleMap: Record<ShareRole, string> = {
     athlete: 'Share Athlete Card',
@@ -138,6 +83,7 @@ export function ShareRoleCardDialog({ role, visible, onClose, children }: ShareR
   };
 
   const onShare = async () => {
+    if(!card.link)return;
     try {
       await Share.share({
         message: `Connect with ${card.name} on OfferHound: ${card.link}`,
@@ -148,6 +94,7 @@ export function ShareRoleCardDialog({ role, visible, onClose, children }: ShareR
   };
 
   const onCopy = async () => {
+    if(!card.link)return;
     await Clipboard.setStringAsync(card.link);
     toast({ title: 'Link copied to clipboard!' });
   };
@@ -156,21 +103,20 @@ export function ShareRoleCardDialog({ role, visible, onClose, children }: ShareR
     <>
       {/* Uncontrolled: render the child as the trigger */}
       {!isControlled && children ? (
-        <Pressable onPress={handleOpen} accessibilityRole="button">
-          {children}
-        </Pressable>
+        React.isValidElement(children) ? React.cloneElement(children as React.ReactElement<any>,{onPress:handleOpen}) : <Pressable onPress={handleOpen} accessibilityRole="button">{children}</Pressable>
       ) : null}
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={handleClose}>
-        <Pressable style={styles.backdrop} onPress={handleClose}>
-        <Pressable style={styles.sheet} onPress={() => {}}>
+        <Pressable accessible={false} style={styles.backdrop} onPress={handleClose}>
+        <Pressable accessible={false} style={styles.sheet} onPress={event=>event.stopPropagation()}>
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>{titleMap[role]}</Text>
-            <Pressable onPress={handleClose} hitSlop={8}><X size={20} color={colors.mutedForeground} /></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close share card" onPress={handleClose} hitSlop={8}><X size={20} color={colors.mutedForeground} /></Pressable>
           </View>
 
           <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            {role==='club_coach'&&clubFailed?<View><Text style={{color:colors.foreground}}>Could not load the club card.</Text><Pressable accessibilityRole="button" onPress={()=>reloadClub()}><Text style={{color:colors.primary}}>Retry club card</Text></Pressable></View>:null}
             {/* Card */}
             <View style={styles.card}>
               <View style={styles.cardTop}>
@@ -200,13 +146,14 @@ export function ShareRoleCardDialog({ role, visible, onClose, children }: ShareR
               )}
             </View>
 
+            {!card.link&&<Text accessibilityRole="alert" style={{color:colors.mutedForeground}}>Complete your profile before sharing a personal link.</Text>}
             {/* Actions */}
             <View style={styles.actions}>
-              <Pressable style={styles.actionBtn} onPress={onShare}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Share profile card" accessibilityState={{disabled:!card.link}} disabled={!card.link} style={styles.actionBtn} onPress={onShare}>
                 <Share2 size={18} color={colors.primaryForeground} />
                 <Text style={styles.actionBtnText}>Share</Text>
               </Pressable>
-              <Pressable style={[styles.actionBtn, styles.outlineBtn]} onPress={onCopy}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Copy profile link" accessibilityState={{disabled:!card.link}} disabled={!card.link} style={[styles.actionBtn, styles.outlineBtn]} onPress={onCopy}>
                 <Copy size={18} color={colors.foreground} />
                 <Text style={[styles.actionBtnText, { color: colors.foreground }]}>Copy Link</Text>
               </Pressable>

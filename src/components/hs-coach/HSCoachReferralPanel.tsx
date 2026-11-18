@@ -1,24 +1,6 @@
-// HSCoachReferralPanel — RN port of Lovable src/components/hs-coach/HSCoachReferralPanel.tsx
-// Verbatim port, web→RN mappings:
-//   - Card / CardContent / CardHeader / CardTitle / CardDescription → RN Card primitives
-//   - Button / Badge → RN primitives
-//   - Avatar/AvatarImage/AvatarFallback (shadcn composed) → single RN <Avatar source fallback />
-//   - lucide-react → lucide-react-native
-//   - react-router-dom useNavigate → @react-navigation/native useNavigation
-//     ("/hs-coach/letters" and "/athletes" and "/p/:custom_url" are Lovable web routes;
-//     mapped to RN screens via NAV_MAP in navigateToLink().)
-//   - className + tailwind → StyleSheet + inline dynamic styles
-//   - URLSearchParams → plain object passed as RN navigation params
-//   - grid sm:grid-cols-2 lg:grid-cols-3 → RN does not have CSS grid; we use a flex-wrap row
-//     with each card sized to roughly 1/2 width on phones (parity with sm: breakpoint).
-//
-// GAPS_IN_LOVABLE captured during port:
-//   * Routes "/hs-coach/letters", "/athletes", "/p/:custom_url" have no direct RN screens yet.
-//     Calls go through navigateToLink() which currently routes to HSCoachTabs (home) and logs
-//     a TODO. A follow-up nav-mapping session should create the dedicated screens and update
-//     NAV_MAP. This preserves verbatim panel parity while leaving the nav as a known gap.
-//   * Lovable supabase query embeds teams!inner and player_profiles relation; the same RPC
-//     call shape works against the shared supabase client (types.ts). Behaviour is parity.
+import {acceptedRoster} from '@/lib/teamMembership';
+import {referralParams} from '@/lib/athleteReferral';
+import {toast} from '@/components/ui/toast';
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
@@ -63,32 +45,33 @@ export function HSCoachReferralPanel() {
   const { user } = useAuth();
 
   const navigateToLink = (target: LovableRoute) => {
-    // GAP_IN_LOVABLE: dedicated RN screens for these routes don't exist yet.
-    // Fall back to HSCoachTabs and log so the next session can wire them up.
-    // eslint-disable-next-line no-console
-    console.log('[HSCoachReferralPanel] TODO nav target', target);
-    navigation.navigate('HSCoachTabs' as never);
+    const nav=navigation as any;
+    if(target.kind==='letters')nav.navigate('HSCoachTabs',{screen:'LettersTab',params:{}});
+    else if(target.kind==='athletes')nav.navigate('AthleteSearch');
+    else nav.navigate('PublicProfileStack',{screen:'PublicProfile',params:{customUrl:target.custom_url}});
   };
 
-  const { data: rosterAthletes, isLoading } = useQuery({
+  const { data: rosterAthletes, isLoading, isError, refetch } = useQuery({
     queryKey: ['hs-coach-referral-roster', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('team_rosters')
         .select(
-          'id, athlete_profile_id, athlete_name, position, jersey_number, graduation_year, status, teams!inner(coach_user_id, name), player_profiles:athlete_profile_id(id, full_name, profile_image_url, position, school, graduation_year, custom_url)'
+          'id, athlete_profile_id, athlete_name, position, jersey_number, graduation_year, status, removed_at, athlete_accepted_at, teams!inner(coach_user_id, name), player_profiles:athlete_profile_id(id, full_name, profile_image_url, position, positions, school, graduation_year, custom_url)'
         )
         .eq('teams.coach_user_id', user.id)
-        .neq('status', 'removed')
+        .is('removed_at',null).not('status','in','(removed,transferred,declined)')
         .order('athlete_name');
+      if(error)throw error;
       return data || [];
     },
     enabled: !!user,
   });
 
-  const handleRefer = (athleteName: string, athleteProfileId?: string) => {
-    navigateToLink({ kind: 'letters', athlete: athleteName, athlete_id: athleteProfileId });
+  const handleRefer = (row:any) => {
+    try{(navigation as any).navigate('HSCoachTabs',{screen:'LettersTab',params:referralParams(row)});}
+    catch(error:any){toast.error(error.message);}
   };
 
   return (
@@ -105,7 +88,7 @@ export function HSCoachReferralPanel() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {isError ? <Button onPress={()=>void refetch()}>Retry loading referral roster</Button> : isLoading ? (
             <View style={s.loadingWrap}>
               <ActivityIndicator size="small" color={colors.primary} />
             </View>
@@ -131,7 +114,7 @@ export function HSCoachReferralPanel() {
               {rosterAthletes.map((r: any) => {
                 const name = r.player_profiles?.full_name || r.athlete_name;
                 const img = r.player_profiles?.profile_image_url;
-                const position = r.player_profiles?.position || r.position;
+                const position = (r.player_profiles?.positions?.length?r.player_profiles.positions.join(', '):r.player_profiles?.position) || r.position;
                 const gradYear = r.player_profiles?.graduation_year || r.graduation_year;
                 return (
                   <View key={r.id} style={s.athleteCard}>
@@ -156,15 +139,17 @@ export function HSCoachReferralPanel() {
                         ) : null}
                       </View>
                     </View>
+                    {(!r.athlete_profile_id||!acceptedRoster(r))&&<Text style={s.position}>{!r.athlete_profile_id?"Available once this athlete's OfferHound profile is linked.":'Available once this athlete accepts their roster spot.'}</Text>}
                     <View style={s.actionRow}>
                       <View style={{ flex: 1 }}>
                         <Button
                           size="sm"
-                          onPress={() => handleRefer(name, r.athlete_profile_id)}
+                          disabled={!r.athlete_profile_id||!acceptedRoster(r)}
+                          onPress={() => handleRefer(r)}
                         >
                           <View style={s.btnRow}>
                             <Send size={12} color={colors.primaryForeground} />
-                            <Text style={s.btnTextPrimary}>Refer</Text>
+                            <Text style={s.btnTextPrimary}>Refer to College Coach</Text>
                           </View>
                         </Button>
                       </View>

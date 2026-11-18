@@ -53,6 +53,7 @@ export default function AthleteMatchesScreen() {
             }}
             variant="full"
             viewerRole="athlete"
+            onOpenProfile={(item.coach as any)?.id ? () => nav.navigate('CoachProfile', { id: (item.coach as any).id }) : undefined}
             onDismiss={() => dismiss.mutate(item.id)}
           />
         )}

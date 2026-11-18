@@ -1,3 +1,4 @@
+import {normalizeAthleteImageAsset,athleteImagePath,athleteMediaAllowed,validateMediaBytes,saveAthleteMedia} from '@/lib/athleteMedia';
 // Ported verbatim (logic & UX) from Lovable:
 //   offerhound-repo/src/components/BannerImageUpload.tsx
 //
@@ -69,6 +70,7 @@ export function BannerImageUpload({
   const { toast } = useToast();
 
   const pickImage = async () => {
+    if(!await athleteMediaAllowed(supabase,athleteId,message=>toast({title:'Upload unavailable',description:message,variant:'destructive'})))return;
     // Request permission (no-op on web; safe on native).
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
@@ -88,7 +90,7 @@ export function BannerImageUpload({
     });
 
     if (result.canceled || !result.assets || result.assets.length === 0) return;
-    const asset = result.assets[0];
+    const asset = await normalizeAthleteImageAsset(result.assets[0]);
 
     // Validate file size (max 10MB) — verbatim from Lovable.
     if (asset.fileSize && asset.fileSize > 10 * 1024 * 1024) {
@@ -125,30 +127,19 @@ export function BannerImageUpload({
         (originalName?.split('.').pop() ||
           uri.split('.').pop()?.split('?')[0] ||
           'jpg').toLowerCase();
-      const fileName = `athletes/${athleteId}/banner-${Date.now()}.${fileExt}`;
+      const fileName = athleteImagePath(athleteId,'banner',fileExt);
 
       // Delete old image if exists — same path parsing as Lovable.
-      if (currentImageUrl) {
-        const oldPath = currentImageUrl.split('/profile-images/')[1];
-        if (oldPath) {
-          await supabase.storage.from('profile-images').remove([oldPath]);
-        }
-      }
 
-      // In RN, supabase-js accepts FormData for binary uploads.
-      // See: https://supabase.com/docs/reference/javascript/storage-from-upload
-      const formData = new FormData();
-      formData.append('file', {
-        uri,
-        name: fileName.split('/').pop() || `banner-${Date.now()}.${fileExt}`,
-        type: mimeType,
-      } as any);
+      const response=await fetch(uri);
+      const arrayBuffer=await response.arrayBuffer();
+      validateMediaBytes(arrayBuffer,10*1024*1024);
 
       const { error: uploadError } = await supabase.storage
         .from('profile-images')
-        .upload(fileName, formData as any, {
+        .upload(fileName, arrayBuffer, {
           cacheControl: '3600',
-          upsert: true,
+          upsert: false,
           contentType: mimeType,
         });
 
@@ -160,12 +151,7 @@ export function BannerImageUpload({
         .getPublicUrl(fileName);
 
       // Update player profile with new image URL.
-      const { error: updateError } = await supabase
-        .from('player_profiles')
-        .update({ banner_image_url: urlData.publicUrl })
-        .eq('id', athleteId);
-
-      if (updateError) throw updateError;
+      await saveAthleteMedia(supabase,athleteId,{banner_image_url: urlData.publicUrl },{banner_image_url:currentImageUrl||null},value=>onImageUpdated?.(value));
 
       onImageUpdated(urlData.publicUrl);
 
@@ -192,18 +178,7 @@ export function BannerImageUpload({
 
     try {
       // Extract path from URL — same parsing as Lovable.
-      const oldPath = currentImageUrl.split('/profile-images/')[1];
-      if (oldPath) {
-        await supabase.storage.from('profile-images').remove([oldPath]);
-      }
-
-      // Update player profile to remove image URL.
-      const { error: updateError } = await supabase
-        .from('player_profiles')
-        .update({ banner_image_url: null })
-        .eq('id', athleteId);
-
-      if (updateError) throw updateError;
+      await saveAthleteMedia(supabase,athleteId,{banner_image_url:null},{banner_image_url:currentImageUrl},value=>onImageUpdated?.(value));
 
       onImageUpdated(null);
 

@@ -1,4 +1,8 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import {useQueryClient} from '@tanstack/react-query';
+import {createSessionBoundary} from '@/lib/sessionBoundary';
+import * as Linking from 'expo-linking';
+import { openNativeOAuth, completeNativeOAuth, isNativeOAuthCallback } from '@/lib/nativeOAuth';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { AppRole } from '@/integrations/supabase/types';
 import type { User, Session, Provider } from '@supabase/supabase-js';
@@ -7,7 +11,9 @@ import Toast from 'react-native-toast-message';
 import { signInWithApple as nativeAppleSignIn, isAppleSignInAvailable } from '@/lib/appleSignIn';
 import { registerForPushNotifications } from '@/lib/push';
 
-const REDIRECT_SCHEME = 'offerhoundv2://';
+const REDIRECT_SCHEME = process.env.EXPO_PUBLIC_APP_ENV === 'staging'
+  ? 'offerhound-staging://'
+  : 'offerhoundv2://';
 
 const toast = {
   success: (text1: string) => Toast.show({ type: 'success', text1 }),
@@ -23,6 +29,8 @@ interface AuthContextType {
   isLoading: boolean;
   loading: boolean;
   userRole: AppRole | null;
+  roleError:boolean;
+  retryRoleLookup:()=>Promise<void>;
   isAuthenticated: boolean;
   signOut: () => Promise<{ error: Error | null }>;
   signInWithEmail: (email: string, password: string) => Promise<AuthResult>;
@@ -41,13 +49,29 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const queryClient=useQueryClient();
+  const boundary=useRef(createSessionBoundary(queryClient));
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<AppRole | null>(null);
+  const [roleError,setRoleError]=useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    let live = true;
+    let authEventSeen=false;
+    const restore = async () => {
+      const initial = await Linking.getInitialURL();
+      if (initial && isNativeOAuthCallback(initial)) {
+        const result = await completeNativeOAuth(initial);
+        if (result.error && live) toast.error(result.error.message);
+      }
+      return await supabase.auth.getSession();
+    };
+    restore().then(({ data: { session } }) => {
+      if (!live) return;
+      if(authEventSeen){setIsLoading(false);return;}
+      if(boundary.current.change(session?.user?.id||null)){setUserRole(null);setRoleError(false);}
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -55,9 +79,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         registerForPushNotifications(session.user.id).catch(e => console.warn('[push] register failed', e));
       }
       setIsLoading(false);
-    });
+    }).catch(() => { if (live) { setIsLoading(false); toast.error('Session restoration failed. Please sign in again.'); } });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if(!live)return;
+      authEventSeen=true;
+      if(boundary.current.change(session?.user?.id||null)){setUserRole(null);setRoleError(false);}
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -66,23 +93,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else setUserRole(null);
     });
 
-    return () => subscription.unsubscribe();
+    const callback = Linking.addEventListener('url', ({ url }) => {
+      if (isNativeOAuthCallback(url)) void completeNativeOAuth(url).then(result => { if (result.error && live) toast.error(result.error.message); });
+    });
+    return () => { live = false; callback.remove(); subscription.unsubscribe(); };
   }, []);
 
   const fetchUserRole = async (userId: string) => {
-    // Canonical role resolution mirrors Lovable's Navbar.tsx logic.
-    // Hierarchy (highest priority wins):
-    //   admin (admin_profiles row)
-    //   high_school_coach (user_roles.role = 'high_school_coach')
-    //   club_coach (coach_profiles.is_club_coach = true)
-    //   coach (coach_profiles row)
-    //   scout (scout_profiles row) — agency variant resolved downstream by useScoutOrganization
-    //   influencer (influencer_profiles row OR user_roles has 'influencer')
-    //   athlete (default; parents with linked athletes also get 'athlete' so the parent
-    //            overlay can render on top of AthleteTabs — matches Lovable behavior
-    //            where parent-only is the rare case and parent-with-athlete is treated
-    //            as athlete + parent overlay).
-    //   parent (parent-only: parent_athlete_relationships accepted AND no other role)
+    const ticket=boundary.current.begin(userId);
+    setRoleError(false);
+    // Use server role/profile signals. Declared public roles work before profile
+    // completion; a parent with no child link still reaches the parent area.
+    // Network failures never become an invented athlete role.
     try {
       const [
         rolesRes,
@@ -105,13 +127,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .limit(1),
       ]);
 
+      if(!boundary.current.current(ticket))return;
+      if([rolesRes,adminRes,coachRes,scoutRes,influencerRes,parentRes].some(result=>result.error))throw Error('Account role could not be loaded.');
       const roleSet = new Set(((rolesRes.data ?? []) as Array<{ role: string }>).map(r => r.role));
       const isAdmin = !!(adminRes.data as any) || roleSet.has('admin') || roleSet.has('moderator');
       const isHSCoach = roleSet.has('high_school_coach');
       const coachData = coachRes.data as any;
-      const isClubCoach = !!coachData?.is_club_coach;
-      const isCoach = !!coachData;
-      const isScout = !!(scoutRes.data as any);
+      const isClubCoach = !!coachData?.is_club_coach || roleSet.has('club_coach');
+      const isCoach = !!coachData || roleSet.has('coach');
+      const isScout = !!(scoutRes.data as any) || roleSet.has('scout');
       const isInfluencer = !!(influencerRes.data as any) || roleSet.has('influencer');
       const hasParentLink = Array.isArray(parentRes.data) && parentRes.data.length > 0;
       const isAthleteRow = roleSet.has('athlete');
@@ -124,18 +148,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       else if (isScout) resolved = 'scout' as AppRole;
       else if (isInfluencer) resolved = 'influencer' as AppRole;
       else if (isAthleteRow) resolved = 'athlete' as AppRole;
-      else if (hasParentLink) resolved = 'parent' as AppRole;
+      else if (roleSet.has('parent') || hasParentLink) resolved = 'parent' as AppRole;
       else resolved = 'athlete' as AppRole; // safest fallback (Lovable default)
 
       setUserRole(resolved);
     } catch (e) {
-      console.warn('[auth] fetchUserRole failed; defaulting to athlete', e);
-      setUserRole('athlete' as AppRole);
+      if(!boundary.current.current(ticket))return;
+      setUserRole(null);setRoleError(true);
     }
   };
 
+  const retryRoleLookup=async()=>{if(user)await fetchUserRole(user.id);};
+
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
+    if(error)throw error;
+    boundary.current.change(null);setRoleError(false);
     setUser(null);
     setSession(null);
     setUserRole(null);
@@ -155,10 +183,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google', options: { redirectTo: REDIRECT_SCHEME },
-    });
-    return { error: error as Error | null };
+    const result = await openNativeOAuth('google');
+    if (result.error) toast.error(result.error.message);
+    return result;
   };
 
   const signInWithApple = async () => {
@@ -167,10 +194,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await nativeAppleSignIn();
         return { error: null };
       }
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple', options: { redirectTo: REDIRECT_SCHEME },
-      });
-      return { error: error as Error | null };
+      return await openNativeOAuth('apple');
     } catch (e) {
       return { error: e as Error };
     }
@@ -200,9 +224,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithProvider = async (provider: Provider) => {
-    const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: REDIRECT_SCHEME } });
-    if (error) toast.error(error.message);
-    return { error: error as Error | null };
+    const result = await openNativeOAuth(provider);
+    if (result.error) toast.error(result.error.message);
+    return result;
   };
 
   const resetPassword = async (email: string) => {
@@ -228,7 +252,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, session, isLoading, loading: isLoading, userRole, isAuthenticated: !!session,
+      user, session, isLoading, loading: isLoading, userRole,roleError,retryRoleLookup, isAuthenticated: !!session,
       signOut, signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithApple,
       signIn, signUp, signInWithProvider, resetPassword, updatePassword, updateEmail,
     }}>

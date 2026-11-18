@@ -6,7 +6,7 @@
 // - shadcn Select → simple inline Pressable that cycles "none → daily → weekly".
 // - useNavigate("/auth?redirect=...") guard handled by AuthGate at navigator level; here we
 //   only render a "sign in required" empty state if `user` is missing.
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, SafeAreaView, ActivityIndicator, Switch, Pressable, Alert } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { BellOff, UserMinus, CheckCircle } from 'lucide-react-native';
@@ -43,16 +43,21 @@ const FREQ_LABEL: Record<string, string> = { none: 'No Limit', daily: 'Daily', w
 export default function FollowingSettingsScreen() {
   const nav = useNavigation<NavigationProp<any>>();
   const { user, isLoading: authLoading } = useAuth();
+  const [loadedOwner,setLoadedOwner]=useState<string|null>(null);
   const [following, setFollowing] = useState<FollowedInfluencer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const currentOwner=useRef(user?.id);currentOwner.current=user?.id;
+  const [loadError,setLoadError]=useState(false),[reload,setReload]=useState(0);
   const [savingId, setSavingId] = useState<string | null>(null);
 
   useEffect(() => {
+    setFollowing([]);setLoadedOwner(null);
     if (!user) {
       setIsLoading(false);
       return;
     }
     let cancelled = false;
+    setFollowing([]);setLoadError(false);
     (async () => {
       setIsLoading(true);
       try {
@@ -64,9 +69,9 @@ export default function FollowingSettingsScreen() {
           .eq('follower_user_id', user.id)
           .eq('is_following', true);
         if (error) throw error;
-        if (!cancelled) setFollowing(data as unknown as FollowedInfluencer[]);
+        if (!cancelled){setFollowing(data as unknown as FollowedInfluencer[]);setLoadedOwner(user.id);}
       } catch (err) {
-        console.error('[FollowingSettings] load failed', err);
+        if(!cancelled)setLoadError(true);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -74,17 +79,19 @@ export default function FollowingSettingsScreen() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user?.id,reload]);
 
   const updatePref = async (id: string, field: string, value: boolean | string) => {
-    setSavingId(id);
+    if(!user||savingId)return;
+    const owner=user.id;setSavingId(id);
     try {
-      await supabase.from('influencer_follows').update({ [field]: value }).eq('id', id);
+      const {error}=await supabase.from('influencer_follows').update({[field]:value}).eq('id',id).eq('follower_user_id',owner).select('id').single();
+      if(error)throw error;if(currentOwner.current!==owner)return;
       setFollowing((prev) => prev.map((f) => (f.id === id ? ({ ...f, [field]: value } as FollowedInfluencer) : f)));
     } catch (err) {
-      console.error('[FollowingSettings] update failed', err);
+      if(currentOwner.current===owner)Alert.alert("Couldn't save preference",'Your previous setting is still in place. Try again.');
     } finally {
-      setSavingId(null);
+      if(currentOwner.current===owner)setSavingId(null);
     }
   };
 
@@ -97,22 +104,21 @@ export default function FollowingSettingsScreen() {
   const confirmUnfollow = (target: FollowedInfluencer) => {
     Alert.alert(
       `Unfollow ${target.influencer.display_name}?`,
-      'You will no longer receive updates.',
+      'This removes the creator from your follows.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Unfollow',
           style: 'destructive',
           onPress: async () => {
-            await supabase.from('influencer_follows').update({ is_following: false }).eq('id', target.id);
-            setFollowing((prev) => prev.filter((f) => f.id !== target.id));
+            if(!user)return;const owner=user.id;try{const {error}=await supabase.from('influencer_follows').update({is_following:false}).eq('id',target.id).eq('follower_user_id',owner).select('id').single();if(error)throw error;if(currentOwner.current===owner)setFollowing(prev=>prev.filter(f=>f.id!==target.id));}catch{if(currentOwner.current===owner)Alert.alert("Couldn't unfollow",'Your follow is still in place. Try again.');}
           },
         },
       ],
     );
   };
 
-  if (authLoading || isLoading) {
+  if (authLoading || isLoading || (user && loadedOwner!==user.id && !loadError)) {
     return (
       <SafeAreaView style={[s.container, s.center]}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -126,15 +132,15 @@ export default function FollowingSettingsScreen() {
         <BackButton label="Back" />
         <View style={s.headingBlock}>
           <Text style={s.h1}>Following</Text>
-          <Text style={s.subtitle}>Manage your followed influencers and notification preferences.</Text>
+          <Text style={s.subtitle}>Manage your followed influencers. Alert preferences are saved for when creator alerts launch; creator alerts are not sent yet.</Text>
         </View>
 
-        {following.length === 0 ? (
+        {loadError?<View><Text style={s.subtitle}>Couldn't load your follows.</Text><Pressable onPress={()=>setReload(n=>n+1)}><Text style={s.primaryBtnText}>Try again</Text></Pressable></View>:following.length === 0 ? (
           <Card>
             <CardContent style={s.emptyContent}>
               <BellOff size={48} color={colors.mutedForeground} />
               <Text style={s.emptyTitle}>No Influencers Followed</Text>
-              <Text style={s.emptyBody}>Start following influencers to get updates.</Text>
+              <Text style={s.emptyBody}>Browse and follow creators. Creator alerts are not available yet.</Text>
               <Pressable style={s.primaryBtn} onPress={() => nav.navigate('InfluencerBoard' as any)}>
                 <Text style={s.primaryBtnText}>Browse Influencers</Text>
               </Pressable>

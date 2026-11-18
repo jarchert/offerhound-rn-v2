@@ -15,7 +15,7 @@
  *  - date-fns format/isPast preserved (works in RN)
  */
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { Alert, View, Text, StyleSheet } from 'react-native';
 import { format, isPast } from 'date-fns';
 import { Calendar, Clock, Trash2, FileText } from 'lucide-react-native';
 import {
@@ -31,20 +31,29 @@ import { toast } from '@/components/ui/toast';
 import { useScheduledPosts, useDeleteScheduledPost } from '@/hooks/useInfluencerHootsuite';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
-export function InfluencerScheduleQueue({ influencerId }: { influencerId: string }) {
-  const { data: posts = [] } = useScheduledPosts(influencerId);
+export function InfluencerScheduleQueue({ influencerId, onEdit }: { influencerId: string; onEdit?:(post:any)=>void }) {
+  const { data: posts = [], isLoading: contentLoading, isError: contentFailed, refetch: retryContent } = useScheduledPosts(influencerId);
   const remove = useDeleteScheduledPost();
 
   const scheduled = (posts as any[]).filter((p: any) => p.post_status === 'scheduled');
+  const failed = (posts as any[]).filter((p:any)=>p.post_status === 'failed');
   const drafts = (posts as any[]).filter((p: any) => p.post_status === 'draft');
 
-  const handleRemove = async (id: string) => {
-    await remove.mutateAsync({ id, influencerId });
-    toast.success('Removed');
+  const confirmedRemove = async (id: string) => {
+    try {
+      await remove.mutateAsync({ id, influencerId });
+      toast.success('Removed');
+    } catch (error:any) {toast.error(error.message || 'Removal was not confirmed.');}
   };
+
+  const handleRemove = (id:string) => Alert.alert('Remove this queued post?','This removes the saved post from your queue.',[{text:'Cancel',style:'cancel'},{text:'Remove',style:'destructive',onPress:()=>void confirmedRemove(id)}]);
+
+  if (contentFailed) return <Button onPress={() => void retryContent()}>Could not load creator content. Retry</Button>;
+  if (contentLoading) return <Text>Loading creator content…</Text>;
 
   return (
     <View style={s.stack}>
+      {failed.length ? <Card><CardHeader><CardTitle>Didn't publish ({failed.length})</CardTitle></CardHeader><CardContent>{failed.map((p:any)=><View key={p.id}><Text>{p.title}</Text><Text>Publication was not confirmed.</Text>{onEdit?<Button onPress={()=>onEdit(p)}>Edit failed post</Button>:null}<Button variant="outline" disabled={remove.isPending} onPress={()=>handleRemove(p.id)}>Remove failed post</Button></View>)}</CardContent></Card> : null}
       <Card>
         <CardHeader>
           <CardTitle>
@@ -90,11 +99,12 @@ export function InfluencerScheduleQueue({ influencerId }: { influencerId: string
                       </View>
                       {overdue && (
                         <Text style={s.overdueText}>
-                          Past schedule time — auto-publish runs hourly.
+                          Past schedule time — publication has not been confirmed.
                         </Text>
                       )}
                     </View>
-                    <Button size="icon" variant="ghost" onPress={() => handleRemove(p.id)}>
+                    {onEdit ? <Button size="sm" variant="outline" onPress={()=>onEdit(p)}>Edit</Button> : null}
+                    <Button size="icon" variant="ghost" disabled={remove.isPending} onPress={() => void handleRemove(p.id)}>
                       <Trash2 size={16} color={colors.foreground} />
                     </Button>
                   </View>
@@ -130,7 +140,8 @@ export function InfluencerScheduleQueue({ influencerId }: { influencerId: string
                       {p.description}
                     </Text>
                   </View>
-                  <Button size="icon" variant="ghost" onPress={() => handleRemove(p.id)}>
+                  {onEdit ? <Button size="sm" variant="outline" onPress={()=>onEdit(p)}>Edit</Button> : null}
+                    <Button size="icon" variant="ghost" disabled={remove.isPending} onPress={() => void handleRemove(p.id)}>
                     <Trash2 size={16} color={colors.foreground} />
                   </Button>
                 </View>

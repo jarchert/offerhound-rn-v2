@@ -1,3 +1,5 @@
+import {randomUUID} from 'expo-crypto';
+import {getCanonicalOrigin} from '@/lib/canonicalDomain';
 // CoachReferencesManager — RN port of offerhound-repo/src/components/CoachReferencesManager.tsx
 //
 // Lets athletes request references from coaches. Each request:
@@ -44,7 +46,7 @@ import { colors, typography, spacing } from '@/lib/theme';
 
 type CoachType = 'highschool' | 'club' | 'college';
 
-const APP_PUBLIC_URL = 'https://offerhound.com';
+const APP_PUBLIC_URL = getCanonicalOrigin();
 
 const buildOnboardingUrl = (token: string, type: CoachType) => {
   const onboardingPath = `/coach/onboarding?ref_token=${token}&coach_type=${type}`;
@@ -53,21 +55,7 @@ const buildOnboardingUrl = (token: string, type: CoachType) => {
 
 // RN-safe UUID helper. expo-crypto may not always be installed; fall back to a
 // time + random scheme that's "good enough" for invitation tokens.
-const randomToken = (): string => {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const ec = require('expo-crypto');
-    if (ec?.randomUUID) return ec.randomUUID();
-  } catch {
-    /* fallthrough */
-  }
-  return (
-    Date.now().toString(36) +
-    '-' +
-    Math.random().toString(36).slice(2) +
-    Math.random().toString(36).slice(2)
-  );
-};
+const randomToken = randomUUID;
 
 interface Props {
   profileId?: string;

@@ -1,0 +1,21 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+---
+- runFlow:
+    when:
+      true: ${QA_ROLE_KEY == 'parent'}
+    commands:
+      - extendedWaitUntil:
+          visible: (?i).*QA.*Parent.*Guardian.*
+          timeout: 60000
+      - scrollUntilVisible:
+          element: (?s).*${QA_ROLE_MARKER}.*
+          direction: DOWN
+          centerElement: true
+          timeout: 30000
+- runFlow:
+    when:
+      true: ${QA_ROLE_KEY != 'parent'}
+    commands:
+      - extendedWaitUntil:
+          visible: (?s).*${QA_ROLE_MARKER}.*
+          timeout: 60000

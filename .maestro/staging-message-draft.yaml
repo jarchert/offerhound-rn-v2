@@ -1,0 +1,48 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Identified synthetic conversation local draft survives app restart
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.college-coach@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_COLLEGE_COACH_PASSWORD}
+- extendedWaitUntil:
+    visible: QA College Coach
+    timeout: 60000
+- runFlow:
+    file: common/open-qa-link.yaml
+    env:
+      QA_LINK: offerhound-staging://messages
+- extendedWaitUntil:
+    visible: .*QA Adult Athlete.*
+    timeout: 60000
+# Open only the identified synthetic counterpart. Never press Send.
+- tapOn: .*QA Adult Athlete.*
+- tapOn: Type a message.*
+- inputText: QA local draft recovery 20261117
+- assertVisible:
+    id: message-composer
+- takeScreenshot: launch-message-keyboard
+- hideKeyboard
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: QA College Coach
+    timeout: 60000
+- runFlow:
+    file: common/open-qa-link.yaml
+    env:
+      QA_LINK: offerhound-staging://messages
+- extendedWaitUntil:
+    visible: .*QA Adult Athlete.*
+    timeout: 60000
+- tapOn: .*QA Adult Athlete.*
+- assertVisible: QA local draft recovery 20261117
+- takeScreenshot: launch-message-draft-restored
+- tapOn: QA local draft recovery 20261117
+- eraseText: 200
+- hideKeyboard
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.college-coach@offerhound.test

@@ -1,0 +1,23 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Recipient-specific draft refuses unknown identity without sending
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.adult-athlete@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_ADULT_PASSWORD}
+- runFlow:
+    file: common/open-qa-link.yaml
+    env:
+      QA_LINK: offerhound-staging://messages/new?athleteProfileId=11111111-1111-4111-8111-111111111111
+- extendedWaitUntil:
+    visible: Recipient unavailable. No message has been sent.
+    timeout: 30000
+- assertVisible:
+    id: direct-message-send
+    enabled: false
+- takeScreenshot: direct-message-unknown-recipient-refused
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.adult-athlete@offerhound.test

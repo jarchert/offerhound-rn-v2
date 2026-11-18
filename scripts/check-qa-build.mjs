@@ -1,0 +1,22 @@
+// Native-only QA submission gate. Run after setting the verified public QA origin in eas.json.
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const eas=JSON.parse(fs.readFileSync(new URL('../eas.json',import.meta.url))),app=JSON.parse(fs.readFileSync(new URL('../app.json',import.meta.url))).expo;
+const env={...eas.build.staging.env,...eas.build['staging-device'].env};
+assert.equal(app.slug,'offerhound-v2');
+assert.equal(env.APP_ENV,'staging');
+assert.equal(env.EXPO_PUBLIC_SUPABASE_URL,'https://wrrfwvkixlzmnsztjfgg.supabase.co');
+assert.equal(eas.build['staging-device'].extends,'staging');
+assert.equal(eas.build['staging-device'].ios.simulator,false);
+assert.equal(eas.build.staging.android.buildType,'apk');
+assert.equal(eas.build.staging.autoIncrement,true);
+const value=env.EXPO_PUBLIC_CAMP_CONSENT_WEB_URL;
+assert(value,'Set the verified public QA website origin in the staging build profile before submitting builds.');
+const origin=new URL(value);
+assert(origin.protocol==='https:'&&origin.origin===value&&!origin.username&&!origin.password,'QA website must be an HTTPS origin without path, query or credentials.');
+assert(!['offer-hound.com','www.offer-hound.com','offerhound.app','www.offerhound.app'].includes(origin.hostname),'Production website cannot be used in QA builds.');
+assert(!/localhost|127\.0\.0\.1|example\.|id-preview--/.test(origin.hostname),'A public published QA website is required.');
+const response=await fetch(new URL('/camp-consent',origin),{redirect:'follow',signal:AbortSignal.timeout(20000)});
+assert(response.ok,'Public QA consent route did not respond successfully.');
+assert(new URL(response.url).origin===origin.origin,'QA consent route redirected to another origin.');
+console.log('Native QA profile identity, isolation, build numbering and public consent route: PASS. Verify deployed web source and authenticated handoffs separately before submission.');

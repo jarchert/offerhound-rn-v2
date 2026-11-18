@@ -1,3 +1,4 @@
+import { hydrateRecruiterAthletes } from "@/lib/recruiterAthletes";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,12 +11,12 @@ export function useScoutActivity(limit = 20) {
        if (!user?.id) return [];
        const { data, error } = await supabase
          .from("scout_activity_log")
-         .select(`*, athlete:player_profiles!athlete_profile_id (id, full_name, position, school, custom_url),coach:coaches!coach_id (id, name, title, school)`)
+         .select(`*, coach:coaches!coach_id (id, name, title, school)`)
          .eq("scout_user_id", user.id)
          .order("created_at", { ascending: false })
          .limit(limit);
        if (error) throw error;
-       return data;
+       return hydrateRecruiterAthletes(supabase, data || []);
     },
     enabled: !!user?.id,
   });

@@ -1,3 +1,5 @@
+import QRCode from 'react-native-qrcode-svg';
+import { CampRegistrantProfileDisclosure } from '@/components/CampRegistrantIdentity';
 // Parity port from Lovable src/components/CampEnrollmentManager.tsx (verbatim logic).
 // Web→RN mapping:
 //   - shadcn Card/Button/Badge/Input/Label/Select/Dialog → src/components/ui/*
@@ -58,7 +60,9 @@ import { colors, typography, spacing, radius } from '@/lib/theme';
 interface Enrollment {
   id: string;
   camp_id: string;
-  user_id: string;
+  user_id: string | null;
+  guest_name?: string | null;
+  guest_email?: string | null;
   athlete_profile_id: string | null;
   status: string;
   payment_status: string;
@@ -160,7 +164,8 @@ export function CampEnrollmentManager({
         e.jersey_number?.toLowerCase().includes(term) ||
         e.position_group?.toLowerCase().includes(term) ||
         e.group_assignment?.toLowerCase().includes(term) ||
-        e.notes?.toLowerCase().includes(term)
+        e.notes?.toLowerCase().includes(term) ||
+        e.guest_name?.toLowerCase().includes(term) || e.guest_email?.toLowerCase().includes(term)
       );
     }
     return true;
@@ -256,6 +261,7 @@ export function CampEnrollmentManager({
             <View key={enrollment.id} style={s.listItem}>
               <Card>
                 <CardContent style={s.itemContent}>
+                  <CampRegistrantProfileDisclosure enrollmentId={enrollment.id} />
                   <View style={s.itemLeft}>
                     {enrollment.jersey_number ? (
                       <View style={s.jerseyBadge}>
@@ -267,7 +273,7 @@ export function CampEnrollmentManager({
                     <View style={s.itemTextWrap}>
                       <View style={s.itemTopRow}>
                         <Text style={s.athleteName}>
-                          Athlete #{enrollment.id.slice(0, 8)}
+                          {enrollment.guest_name || `Athlete #${enrollment.id.slice(0, 8)}`}
                         </Text>
                         {enrollment.position_group ? (
                           <Badge variant="outline">
@@ -358,11 +364,8 @@ export function CampEnrollmentManager({
           </DialogHeader>
           <View style={s.qrWrap}>
             {selectedEnrollment?.qr_code_token ? (
-              // GAP: react-native-qrcode-svg not installed; placeholder block
-              // (matches AdminInvitationCards convention).
-              <View style={s.qrPlaceholder}>
-                <Text style={s.qrPlaceholderText}>QR</Text>
-                <Text style={s.qrPlaceholderHint}>scan to check in</Text>
+              <View style={{backgroundColor:'#ffffff',padding:16}} accessibilityLabel="Enrollment check-in QR code">
+                <QRCode value={selectedEnrollment.qr_code_token} size={200} color="#000000" backgroundColor="#ffffff" quietZone={12}/>
               </View>
             ) : null}
           </View>

@@ -1,0 +1,7 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: android guest staff registration
+---
+- runFlow:
+    file: common/guest-staff.yaml
+    env:
+      QA_GUEST_LABEL: QA ANDROID

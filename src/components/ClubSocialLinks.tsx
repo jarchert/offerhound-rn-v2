@@ -1,3 +1,5 @@
+import QRCode from 'react-native-qrcode-svg';
+import {getCanonicalOrigin} from '@/lib/canonicalDomain';
 // RN port of Lovable src/components/ClubSocialLinks.tsx
 // - lucide-react           → lucide-react-native
 // - shadcn Card/Button/Input/Label/Badge → @/components/ui/* (PascalCase RN)
@@ -91,14 +93,16 @@ export function ClubSocialLinks() {
   });
 
   // RN equivalent of `${window.location.origin}/coach/dashboard` — use Expo deep link URL.
-  const profileUrl = Linking.createURL('/coach/dashboard');
+  const profileUrl = clubProfile?.id ? getCanonicalOrigin()+'/club-coach/'+encodeURIComponent(clubProfile.id) : null;
 
   const copyLink = async () => {
+    if(!profileUrl)return;
     await Clipboard.setStringAsync(profileUrl);
     toast({ title: 'Link Copied!' });
   };
 
   const shareProfile = async () => {
+    if(!profileUrl)return;
     try {
       await Share.share({
         title: `${clubProfile?.club_name || 'Coach'} - OfferHound`,
@@ -137,16 +141,15 @@ export function ClubSocialLinks() {
           </Button>
         </View>
 
-        {showQR && (
+        {showQR && profileUrl && (
           <View style={s.qrBox}>
-            {/* TODO: swap for react-native-qrcode-svg when added to deps */}
-            <Text style={s.qrPlaceholder}>QR code for:</Text>
+            <QRCode value={profileUrl} size={180} color="#000000" backgroundColor="#ffffff" quietZone={12}/>
             <Text style={s.qrUrl}>{profileUrl}</Text>
           </View>
         )}
 
         {/* Social Syndication Center */}
-        <SocialSyndicationCenter entityName={clubProfile?.club_name} profileUrl={profileUrl} />
+        <SocialSyndicationCenter entityName={clubProfile?.club_name} profileUrl={profileUrl||''} />
 
         {/* Social Links */}
         <Card>

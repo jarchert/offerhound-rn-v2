@@ -20,7 +20,7 @@
 //   * Progress bar shows filled_count/target_count percentage.
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Plus, Target, Trash2, Search } from 'lucide-react-native';
@@ -77,6 +77,8 @@ export const PositionNeedsBoard = ({ sport = 'football' }: { sport?: string }) =
   const navigation = useNavigation<any>();
   const queryClient = useQueryClient();
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [targetCountText, setTargetCountText] = useState('1');
+  const [targetCountError, setTargetCountError] = useState<string | null>(null);
   const [newNeed, setNewNeed] = useState<NewNeed>({
     position: '',
     class_year: '2026',
@@ -115,6 +117,8 @@ export const PositionNeedsBoard = ({ sport = 'football' }: { sport?: string }) =
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['position-needs'] });
       setShowAddDialog(false);
+      setTargetCountText('1');
+      setTargetCountError(null);
       setNewNeed({ position: '', class_year: '2026', target_count: 1, priority: 'medium' });
       toast.success('Position need added');
     },
@@ -125,8 +129,10 @@ export const PositionNeedsBoard = ({ sport = 'football' }: { sport?: string }) =
 
   const deleteNeed = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('position_needs').delete().eq('id', id);
+      if (!user) throw new Error('Not authenticated');
+      const { data, error } = await supabase.from('position_needs').delete().eq('id', id).eq('coach_user_id', user.id).select('id');
       if (error) throw error;
+      if (!data?.some(row => row.id === id)) throw new Error('Removal was not confirmed. Refresh the list and try again.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['position-needs'] });
@@ -228,7 +234,15 @@ export const PositionNeedsBoard = ({ sport = 'football' }: { sport?: string }) =
                           {need.priority}
                         </Badge>
                         <Pressable
-                          onPress={() => deleteNeed.mutate(need.id)}
+                          onPress={() => Alert.alert(
+                            'Delete team need?',
+                            `Remove ${need.position}, Class of ${need.class_year}, target ${need.target_count}? This cannot be undone.`,
+                            [
+                              { text: 'Cancel', style: 'cancel' },
+                              { text: 'Delete need', style: 'destructive', onPress: () => deleteNeed.mutate(need.id) },
+                            ],
+                            { cancelable: true },
+                          )}
                           hitSlop={8}
                           accessibilityRole="button"
                           accessibilityLabel="Delete position need"
@@ -316,14 +330,15 @@ export const PositionNeedsBoard = ({ sport = 'football' }: { sport?: string }) =
                 <Label>Target Count</Label>
                 <Input
                   keyboardType="number-pad"
-                  value={String(newNeed.target_count)}
-                  onChangeText={(v) =>
-                    setNewNeed({
-                      ...newNeed,
-                      target_count: Math.max(1, Math.min(20, parseInt(v || '0', 10) || 1)),
-                    })
-                  }
+                  accessibilityLabel="Target count, required, whole number from 1 to 20"
+                  value={targetCountText}
+                  onChangeText={(value) => {
+                    setTargetCountText(value);
+                    setTargetCountError(null);
+                  }}
                 />
+                <Text style={{ color: colors.mutedForeground }}>Required: enter a whole number from 1 to 20.</Text>
+                {targetCountError ? <Text accessibilityRole="alert" style={{ color: colors.destructive }}>{targetCountError}</Text> : null}
               </View>
             </View>
 
@@ -350,7 +365,14 @@ export const PositionNeedsBoard = ({ sport = 'football' }: { sport?: string }) =
               Cancel
             </Button>
             <Button
-              onPress={() => addNeed.mutate(newNeed)}
+              onPress={() => {
+                const text = targetCountText.trim();
+                if (!/^(?:[1-9]|1[0-9]|20)$/.test(text)) {
+                  setTargetCountError('Enter a whole number from 1 to 20.');
+                  return;
+                }
+                addNeed.mutate({ ...newNeed, target_count: Number(text) });
+              }}
               disabled={!newNeed.position || addNeed.isPending}
               loading={addNeed.isPending}
               leftIcon={

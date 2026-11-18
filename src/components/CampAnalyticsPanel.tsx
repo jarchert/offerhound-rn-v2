@@ -12,7 +12,7 @@
 //     and known host prefixes — same as the web).
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -225,13 +225,11 @@ export function CampAnalyticsPanel({ campId, campName, capacity }: CampAnalytics
             ) : (
               <View style={s.chartRow}>
                 {stats.series.map((point) => {
-                  const heightPct = Math.max(
-                    6,
-                    Math.round((point.total / stats.maxOnSeries) * 100),
-                  );
+                  const barHeight = Math.max(4, Math.round((point.total / stats.maxOnSeries) * 88));
                   return (
-                    <View key={point.day} style={s.chartCol}>
-                      <View style={[s.chartBar, { height: `${heightPct}%` as any }]} />
+                    <View key={point.day} style={s.chartCol} accessible accessibilityLabel={`${point.day}: ${point.total} registered participants`}>
+                      <Text style={s.chartLabel}>{point.total}</Text>
+                      <View style={[s.chartBar, { height: barHeight }]} />
                       <Text style={s.chartLabel}>{format(parseISO(point.day), 'M/d')}</Text>
                     </View>
                   );
@@ -308,7 +306,7 @@ const s = StyleSheet.create({
   muted: { fontSize: 13, color: colors.mutedForeground },
   chartRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 128 },
   chartCol: { flex: 1, alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' },
-  chartBar: { width: '100%', backgroundColor: colors.primary, opacity: 0.8, borderTopLeftRadius: 3, borderTopRightRadius: 3 },
+  chartBar: { width: 24, backgroundColor: colors.primary, opacity: 0.8, borderTopLeftRadius: 3, borderTopRightRadius: 3 },
   chartLabel: { fontSize: 9, color: colors.mutedForeground },
   sourceList: { gap: spacing.xs + 4 },
   sourceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, padding: spacing.xs + 4, borderRadius: radius.md, backgroundColor: colors.muted },

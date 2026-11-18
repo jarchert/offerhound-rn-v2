@@ -1,7 +1,10 @@
+import {CreatorGallery} from '@/components/influencer/CreatorGallery';
+import {CreatorBlogs} from '@/components/influencer/CreatorBlogs';
+import { UserProfileHeader } from '@/components/UserProfileHeader';
 // InfluencerDashboard — Lovable parity: tabbed studio for verified influencers.
 // Tabs: Composer | Library | Schedule | Syndication | Analytics.
 // SportsNewsFeed anchors the bottom as a sharable newsroom rail.
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,7 +16,9 @@ import {
 } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Mic, Users, Eye, Calendar, Plus } from 'lucide-react-native';
+import {useCreatorSyndication} from '@/hooks/useCreatorSyndication';
 import { useMyInfluencerProfile } from '@/hooks/useInfluencer';
+import {Button} from '@/components/ui/Button';
 import { Navbar } from '@/components/Navbar';
 import { StatTile } from '@/components/StatTile';
 import { SectionHeader } from '@/components/SectionHeader';
@@ -28,28 +33,34 @@ import { SportsNewsFeed } from '@/components/influencer/SportsNewsFeed';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 
-type TabKey = 'composer' | 'library' | 'schedule' | 'syndication' | 'analytics';
+type TabKey = 'gallery' | 'blogs' | 'composer' | 'library' | 'schedule' | 'syndication' | 'analytics';
 
 export default function InfluencerDashboard() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
-  const { data: profile, isLoading, refetch } = useMyInfluencerProfile() as any;
+  const { data: profile, isLoading, refetch, isError: profileFailed } = useMyInfluencerProfile() as any;
   const [tab, setTab] = useState<TabKey>('composer');
+  const [editingPost,setEditingPost]=useState<any>(null);
+  const [newsSeed,setNewsSeed]=useState<any>(null);
+  const body=useRef<ScrollView>(null);
 
   const influencerId: string | null = profile?.id ?? null;
-  const syndicationEnabled: boolean = !!profile?.syndication_enabled;
-  const syndicationUrl: string | null = profile?.syndication_webhook_url ?? null;
+  const {data: privateSharing}=useCreatorSyndication(influencerId);
+  const syndicationEnabled = privateSharing?.enabled === true;
 
   const needsProfile = !isLoading && !profile;
+
+  if (profileFailed) return <SafeAreaView style={s.container}><Navbar/><Text accessibilityRole="alert">Your creator profile could not be loaded.</Text><Button onPress={() => void refetch()}>Retry creator profile</Button></SafeAreaView>;
 
   return (
     <SafeAreaView style={s.container}>
       <Navbar />
-      <ScrollView
+      <ScrollView ref={body}
         contentContainerStyle={s.content}
         refreshControl={
           <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />
         }
       >
+        <UserProfileHeader profile={profile} />
         <View style={s.header}>
           <View style={{ flex: 1 }}>
             <Text style={s.title}>{profile?.display_name || 'Influencer'}</Text>
@@ -60,7 +71,7 @@ export default function InfluencerDashboard() {
             onPress={() => nav.navigate('InfluencerBlogComposer', undefined as any)}
           >
             <Plus size={16} color={colors.primaryForeground} />
-            <Text style={s.newPostText}>New Post</Text>
+            <Text style={s.newPostText}>New Blog</Text>
           </Pressable>
         </View>
 
@@ -107,19 +118,30 @@ export default function InfluencerDashboard() {
                 contentContainerStyle={s.tabsScroll}
               >
                 <TabsList style={s.tabsList}>
-                  <TabsTrigger value="composer">Composer</TabsTrigger>
-                  <TabsTrigger value="library">Library</TabsTrigger>
-                  <TabsTrigger value="schedule">Schedule</TabsTrigger>
-                  <TabsTrigger value="syndication">Syndication</TabsTrigger>
-                  <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                  <TabsTrigger value="composer" testID="creator-tab-composer">Composer</TabsTrigger>
+                  <TabsTrigger value="gallery" testID="creator-tab-gallery">Gallery</TabsTrigger>
+                  <TabsTrigger value="blogs" testID="creator-tab-blogs">Blogs</TabsTrigger>
+                  <TabsTrigger value="library" testID="creator-tab-library">Library</TabsTrigger>
+                  <TabsTrigger value="schedule" testID="creator-tab-schedule">Schedule</TabsTrigger>
+                  <TabsTrigger value="syndication" testID="creator-tab-syndication">Syndication</TabsTrigger>
+                  <TabsTrigger value="analytics" testID="creator-tab-analytics">Analytics</TabsTrigger>
                 </TabsList>
               </ScrollView>
 
               <TabsContent value="composer" style={s.tabPanel}>
-                <InfluencerComposer
+                <InfluencerComposer key={editingPost?.id || "new"}
+                  editingPost={editingPost}
                   influencerId={influencerId}
+                  seed={newsSeed}
+                  onCleared={()=>{setNewsSeed(null);setEditingPost(null);}}
                   syndicationEnabled={syndicationEnabled}
                 />
+              </TabsContent>
+
+              <TabsContent value="gallery" style={s.tabPanel}><CreatorGallery influencerId={influencerId}/></TabsContent>
+
+              <TabsContent value="blogs" style={s.tabPanel}>
+                <CreatorBlogs influencerId={influencerId} onNew={()=>nav.navigate('InfluencerBlogComposer',undefined)} onEdit={postId=>nav.navigate('InfluencerBlogComposer',{postId})}/>
               </TabsContent>
 
               <TabsContent value="library" style={s.tabPanel}>
@@ -127,14 +149,12 @@ export default function InfluencerDashboard() {
               </TabsContent>
 
               <TabsContent value="schedule" style={s.tabPanel}>
-                <InfluencerScheduleQueue influencerId={influencerId} />
+                <InfluencerScheduleQueue influencerId={influencerId} onEdit={post=>{setEditingPost(post);setNewsSeed(null);setTab("composer");body.current?.scrollTo({y:0,animated:true});}} />
               </TabsContent>
 
               <TabsContent value="syndication" style={s.tabPanel}>
                 <InfluencerSyndicationSettings
                   influencerId={influencerId}
-                  initialUrl={syndicationUrl}
-                  initialEnabled={syndicationEnabled}
                 />
               </TabsContent>
 
@@ -148,7 +168,7 @@ export default function InfluencerDashboard() {
         {/* Sports news rail — sharable seeds for the composer */}
         <View style={s.newsWrap}>
           <SectionHeader title="Sports news" />
-          <SportsNewsFeed compact />
+          <SportsNewsFeed compact onShareToCompose={item=>{setEditingPost(null);setNewsSeed(item);setTab('composer');body.current?.scrollTo({y:0,animated:true});}} />
         </View>
       </ScrollView>
     </SafeAreaView>

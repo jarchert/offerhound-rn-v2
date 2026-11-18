@@ -24,11 +24,11 @@ export default function AthleteTabs() {
         // has a parent role linked — shows dropdown to switch child view.
         headerLeft: () => <ParentAthleteSwitcher />,
       }}>
-      <Tab.Screen name="HomeTab" component={DashboardScreen} options={{ title: 'Home', tabBarIcon: ({ color, size }) => <Home size={size} color={color} /> }} />
+      <Tab.Screen name="HomeTab" component={DashboardScreen} listeners={({navigation})=>({tabPress:()=>navigation.navigate('HomeTab',{tab:'activity',homeReset:Date.now()})})} options={{ title: 'Home',tabBarButtonTestID:'athlete-tab-home', tabBarIcon: ({ color, size }) => <Home size={size} color={color} /> }} />
       <Tab.Screen name="MatchesTab" component={AthleteMatchesScreen} options={{ title: 'Matches', tabBarIcon: ({ color, size }) => <Trophy size={size} color={color} /> }} />
       <Tab.Screen name="MessagesTab" component={MessagesScreen} options={{ title: 'Messages', tabBarIcon: ({ color, size }) => <MessageCircle size={size} color={color} /> }} />
       <Tab.Screen name="LettersTab" component={LettersScreen} options={{ title: 'Letters', tabBarIcon: ({ color, size }) => <Mail size={size} color={color} /> }} />
-      <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ title: 'Profile', tabBarIcon: ({ color, size }) => <User size={size} color={color} /> }} />
+      <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ title: 'Profile',tabBarButtonTestID:'athlete-tab-profile', tabBarIcon: ({ color, size }) => <User size={size} color={color} /> }} />
     </Tab.Navigator>
   );
 }

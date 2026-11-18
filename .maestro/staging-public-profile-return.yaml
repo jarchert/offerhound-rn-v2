@@ -1,0 +1,40 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Public profile sign-in returns to requested profile without false not-found
+---
+- runFlow: common/signed-out-entry.yaml
+- runFlow:
+    file: common/open-qa-link.yaml
+    env:
+      QA_LINK: offerhound-staging://scout/00000000-0000-4000-8000-000000000029
+- extendedWaitUntil:
+    visible: Sign in to view this profile.
+    timeout: 30000
+- tapOn: Sign in to view profile
+- assertVisible: Welcome Back
+- tapOn: Email
+- inputText:
+    text: qa.adult-athlete@offerhound.test
+    label: Enter synthetic QA email
+- tapOn: Password
+- inputText:
+    text: ${MAESTRO_QA_ADULT_PASSWORD}
+    label: Enter private QA test password
+- hideKeyboard
+- tapOn: '(?-i)^Sign In$'
+- tapOn:
+    text: Not Now
+    optional: true
+- extendedWaitUntil:
+    visible: Profile not found or unavailable to this account.
+    timeout: 60000
+- takeScreenshot: public-profile-sign-in-return
+- tapOn:
+    id: global-home
+- extendedWaitUntil:
+    visible:
+      id: athlete-tab-home
+    timeout: 30000
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.adult-athlete@offerhound.test

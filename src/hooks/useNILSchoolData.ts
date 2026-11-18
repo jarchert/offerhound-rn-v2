@@ -65,7 +65,7 @@ export function useNILSchoolData(athleteProfileId?: string) {
      enabled: !!athleteProfileId,
   });
 
-  const { data: schoolData, isLoading: schoolDataLoading } = useQuery({
+  const { data: schoolData, isLoading: schoolDataLoading, isError: schoolDataError, refetch: refetchSchoolData } = useQuery({
      queryKey: ["nil-school-data"],
      queryFn: async () => {
         const { data, error } = await supabase.from("nil_school_data").select("*").order("school_name");
@@ -105,6 +105,8 @@ export function useNILSchoolData(athleteProfileId?: string) {
      schoolData: schoolData || [],
      interestsLoading,
      schoolDataLoading,
+     schoolDataError,
+     refetchSchoolData,
      addSchoolInterest,
      removeSchoolInterest,
   };

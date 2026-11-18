@@ -1,3 +1,5 @@
+import {getCanonicalOrigin} from '@/lib/canonicalDomain';
+import {withThemeAlpha} from '@/lib/theme';
 // Ported verbatim from Lovable src/components/TermsAcceptanceGate.tsx
 // Web → RN mapping:
 //   <div>/<Card>   → <View>/<Card>
@@ -23,8 +25,8 @@ interface TermsAcceptanceGateProps {
   children: React.ReactNode;
 }
 
-const TERMS_URL = 'https://offer-hound.com/terms';
-const PRIVACY_URL = 'https://offer-hound.com/privacy';
+const TERMS_URL = getCanonicalOrigin() + '/terms';
+const PRIVACY_URL = getCanonicalOrigin() + '/privacy';
 
 export function TermsAcceptanceGate({ children }: TermsAcceptanceGateProps) {
   const { hasAccepted, isLoading } = useHasAcceptedTerms();
@@ -138,7 +140,7 @@ export function TermsAcceptanceGate({ children }: TermsAcceptanceGateProps) {
 
               {/* Acceptance Checkboxes */}
               <View style={s.checkboxesWrap}>
-                <Pressable style={s.checkboxRow} onPress={() => setTermsChecked(v => !v)}>
+                <Pressable accessible accessibilityRole="checkbox" accessibilityLabel="Agree to Terms of Use" accessibilityState={{ checked: termsChecked }} style={s.checkboxRow} onPress={() => setTermsChecked(v => !v)}>
                   <Checkbox
                     checked={termsChecked}
                     onCheckedChange={(checked) => setTermsChecked(checked === true)}
@@ -150,7 +152,7 @@ export function TermsAcceptanceGate({ children }: TermsAcceptanceGateProps) {
                   </Label>
                 </Pressable>
 
-                <Pressable style={s.checkboxRow} onPress={() => setPrivacyChecked(v => !v)}>
+                <Pressable accessible accessibilityRole="checkbox" accessibilityLabel="Agree to Privacy Policy" accessibilityState={{ checked: privacyChecked }} style={s.checkboxRow} onPress={() => setPrivacyChecked(v => !v)}>
                   <Checkbox
                     checked={privacyChecked}
                     onCheckedChange={(checked) => setPrivacyChecked(checked === true)}
@@ -196,7 +198,7 @@ const s = StyleSheet.create({
   title: { fontSize: typography.fontSize['2xl'] ?? 24, fontFamily: typography.fontFamily.heading, textAlign: 'center' },
   content: { gap: spacing.lg },
   stack: { gap: spacing.md },
-  summaryBox: { backgroundColor: colors.secondary + '4D', borderRadius: 8, padding: spacing.md, borderWidth: 1, borderColor: colors.border + '80' },
+  summaryBox: { backgroundColor: withThemeAlpha('secondary','4D'), borderRadius: 8, padding: spacing.md, borderWidth: 1, borderColor: withThemeAlpha('border','80') },
   summaryHeading: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   summaryHeadingText: { fontFamily: typography.fontFamily.bodySemiBold, fontSize: typography.fontSize.base, color: colors.foreground },
   summaryScroll: { height: 144 },

@@ -1,3 +1,4 @@
+import {HomeButton} from '@/navigation/HomeNavigation';
 import React, { createContext, useContext } from 'react';
 import { Modal, View, Text, Pressable, StyleSheet, ScrollView, ViewStyle, TextStyle } from 'react-native';
 import { X } from 'lucide-react-native';
@@ -22,13 +23,14 @@ export function DialogContent({ children, style, hideClose }: { children: React.
   const ctx = useContext(Ctx);
   return (
     <Modal visible={ctx.open} transparent animationType="fade" onRequestClose={() => ctx.onOpenChange(false)}>
-      <Pressable style={s.overlay} onPress={() => ctx.onOpenChange(false)}>
-        <Pressable style={[s.content, style]} onPress={(e) => e.stopPropagation()}>
+      <Pressable accessible={false} style={s.overlay} onPress={() => ctx.onOpenChange(false)}>
+        <Pressable accessible={false} style={[s.content, style]} onPress={(e) => e.stopPropagation()}>
+          <HomeButton confirmLeave beforeNavigate={()=>ctx.onOpenChange(false)}/>
           <ScrollView contentContainerStyle={s.scrollContent}>
             {children}
           </ScrollView>
           {!hideClose && (
-            <Pressable style={s.closeBtn} onPress={() => ctx.onOpenChange(false)} hitSlop={8}>
+            <Pressable accessible accessibilityRole="button" accessibilityLabel="Close dialog" style={s.closeBtn} onPress={() => ctx.onOpenChange(false)} hitSlop={8}>
               <X size={20} color={colors.mutedForeground} />
             </Pressable>
           )}

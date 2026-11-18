@@ -1,3 +1,4 @@
+import {randomUUID} from 'expo-crypto';
 // CoachReferencesCard — RN port of Lovable CoachReferencesManager.tsx.
 // Lists coach references and allows requesting a new one (inline form).
 import React, { useState, useEffect, useCallback } from 'react';
@@ -20,17 +21,7 @@ interface CoachRef {
   submitted_at: string | null;
 }
 
-function uuid(): string {
-  // RFC4122-ish v4 fallback when crypto.randomUUID is unavailable in RN.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const c: any = (globalThis as any).crypto;
-  if (c?.randomUUID) return c.randomUUID();
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (ch) => {
-    const r = (Math.random() * 16) | 0;
-    const v = ch === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
+const uuid=randomUUID;
 
 export function CoachReferencesCard() {
   const { profile } = usePlayerProfile();

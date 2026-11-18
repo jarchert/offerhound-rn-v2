@@ -1,3 +1,6 @@
+import {getCanonicalOrigin} from '@/lib/canonicalDomain';
+import {normalizeAthleteImageAsset,saveAthleteMedia,athleteImagePath,athleteMediaAllowed,validateMediaBytes} from '@/lib/athleteMedia';
+import {profilePositions} from '@/lib/profilePositions';
 // QuickStartAthleteProfileScreen — RN port of Lovable src/pages/QuickStart.tsx (~108 LOC).
 // Multi-step athlete profile creation wizard:
 //   1. Terms acceptance
@@ -62,11 +65,7 @@ export default function QuickStartAthleteProfileScreen() {
         sport: (profile as any).sport || 'football',
         custom_url: (profile as any).custom_url || '',
         full_name: (profile as any).full_name || '',
-        positions: Array.isArray((profile as any).positions)
-          ? ((profile as any).positions as string[])
-          : (profile as any).position
-            ? [(profile as any).position]
-            : [],
+        positions: profilePositions(profile as any),
       });
       setProfileImageUrl((profile as any).profile_image_url ?? null);
     }
@@ -139,6 +138,9 @@ export default function QuickStartAthleteProfileScreen() {
   };
 
   const pickImage = async () => {
+    if(!user)return;
+    if(!profile?.id){Toast.show({type:'error',text1:'Save your basic profile first'});return;}
+    if(profile?.id&&!await athleteMediaAllowed(supabase,profile.id,message=>Toast.show({type:'error',text1:'Upload unavailable',text2:message})))return;
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
       Toast.show({ type: 'error', text1: 'Permission denied' });
@@ -151,22 +153,23 @@ export default function QuickStartAthleteProfileScreen() {
       quality: 0.8,
     });
     if (result.canceled || !result.assets?.[0]) return;
-    const asset = result.assets[0];
+    const asset = await normalizeAthleteImageAsset(result.assets[0]);
 
     if (!user) return;
     setSubmitting(true);
     try {
-      const ext = asset.uri.split('.').pop()?.toLowerCase() || 'jpg';
-      const path = `${user.id}/profile-${Date.now()}.${ext}`;
-      const fileBlob = await (await fetch(asset.uri)).blob();
-      const { error: upErr } = await supabase.storage.from('avatars').upload(path, fileBlob, {
+      const ext = asset.fileName?.split('.').pop()?.toLowerCase() || asset.uri.split('.').pop()?.split('?')[0]?.toLowerCase() || 'jpg';
+      const path = athleteImagePath(profile?.id,'profile',ext,user.id);
+      const fileBlob = await (await fetch(asset.uri)).arrayBuffer();
+      validateMediaBytes(fileBlob,10*1024*1024);
+      const { error: upErr } = await supabase.storage.from('profile-images').upload(path, fileBlob, {
         contentType: `image/${ext}`,
-        upsert: true,
+        upsert: false,
       });
       if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path);
+      const { data: pub } = supabase.storage.from('profile-images').getPublicUrl(path);
       const url = pub.publicUrl;
-      await updateProfile({ profile_image_url: url });
+      await saveAthleteMedia(supabase,profile.id,{profile_image_url:url},{profile_image_url:profileImageUrl||null},value=>setProfileImageUrl(value));
       setProfileImageUrl(url);
       Toast.show({ type: 'success', text1: 'Photo updated' });
     } catch (e: any) {
@@ -303,7 +306,7 @@ export default function QuickStartAthleteProfileScreen() {
                   autoCapitalize="none"
                 />
                 {!!form.custom_url && (
-                  <Text style={s.muted}>offer-hound.com/p/{formatUrl(form.custom_url)}</Text>
+                  <Text style={s.muted}>{getCanonicalOrigin().replace('https://','')}/p/{formatUrl(form.custom_url)}</Text>
                 )}
                 {checkingUrl && <Text style={s.muted}>Checking availability…</Text>}
                 {!checkingUrl && urlAvailable === true && (
@@ -421,7 +424,7 @@ export default function QuickStartAthleteProfileScreen() {
                   <Link2 size={14} color={colors.primary} />
                   <Text style={s.muted}>Your URL:</Text>
                 </View>
-                <Text style={s.urlText}>offer-hound.com/p/{formatUrl(form.custom_url)}</Text>
+                <Text style={s.urlText}>{getCanonicalOrigin().replace('https://','')}/p/{formatUrl(form.custom_url)}</Text>
               </View>
               <View style={s.actionsRow}>
                 <Button variant="outline" style={{ flex: 1 }} onPress={() => setStep('photo')} leftIcon={<ArrowLeft size={14} color={colors.foreground} />}>

@@ -1,0 +1,18 @@
+import fs from 'node:fs';
+import ts from 'typescript';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+let state=[],cursor=0,alerts=[],calls=0,fail=false;
+const react={createElement:(type,props,...children)=>({type,props:props||{},children}),useState:initial=>{const i=cursor++;if(!(i in state))state[i]=initial;return[state[i],v=>state[i]=v];}};
+const auth={signInWithEmail:async()=>{calls++;if(fail)throw Error('network');return{error:null}},resetPassword:async()=>{throw Error('Recovery submission must not run in this test')}};
+const mocks={react:{__esModule:true,default:react,...react},'react-native':{View:'View',Text:'Text',TextInput:'Input',Pressable:'Button',SafeAreaView:'Safe',ScrollView:'Scroll',ActivityIndicator:'Spinner',Alert:{alert:(...x)=>alerts.push(x)},StyleSheet:{create:x=>x}},'@react-navigation/native':{useNavigation:()=>({navigate(){}})},'@/contexts/AuthContext':{useAuth:()=>auth},'@/components/PasswordInput':{PasswordInput:'Password'},'@/lib/theme':{colors:{},typography:{fontFamily:{},fontSize:{},letterSpacing:{}},spacing:{}}};
+const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/screens/auth/SignInScreen.tsx','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.React,esModuleInterop:true}}).outputText,{exports,require:n=>{assert(n in mocks,n);return mocks[n]}});
+const nodes=n=>!n||typeof n!=='object'?[]:Array.isArray(n)?n.flatMap(nodes):[n,...nodes(n.children)];
+const render=()=>{cursor=0;return nodes(exports.default())};
+const primary=tree=>tree.find(n=>n.type==='Button'&&nodes(n).some(t=>t.children?.includes('Sign In')));
+let tree=render();await primary(tree).props.onPress();assert.equal(calls,0);assert.equal(state[2],false);
+state[0]='invalid';state[1]='fictional';tree=render();await primary(tree).props.onPress();assert.equal(calls,0);assert.equal(alerts.at(-1)[0],'Invalid email');
+state[0]='qa@example.test';fail=true;tree=render();await primary(tree).props.onPress();assert.equal(calls,1);assert.equal(state[2],false);assert.equal(alerts.at(-1)[0],'Sign In Failed');
+fail=false;tree=render();await primary(tree).props.onPress();assert.equal(calls,2);assert.equal(state[2],false);
+tree=render();tree.find(n=>n.type==='Button'&&nodes(n).some(t=>t.children?.includes('Forgot password?'))).props.onPress();tree=render();assert(!tree.some(n=>n.type==='Password'));assert(!tree.some(n=>n.children?.includes('Continue with Google')));assert(tree.some(n=>n.children?.includes('Send reset link')));
+console.log('PASS: actual login rejects blank/invalid input, releases loading after thrown connection failures, permits retry, and opens recovery without password/social fields. No login/reset request sent.');

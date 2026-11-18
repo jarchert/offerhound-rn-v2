@@ -1,3 +1,5 @@
+import {pendingGuardianInvitation} from '@/lib/guardianInvitation';
+import {pendingClubInvitation} from '@/lib/clubInvitation';
 import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, SafeAreaView, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -18,28 +20,33 @@ export default function SignUpScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleSignUp = async () => {
-    if (!email || !password) return Alert.alert('Error', 'Please fill in all fields');
+    if(loading)return;
+    if (!email.trim() || !password) return Alert.alert('Error', 'Please fill in all fields');
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))return Alert.alert('Invalid email','Enter a valid email address.');
+    if(password.length<8)return Alert.alert('Password too short','Use at least 8 characters.');
     if (password !== confirmPassword) return Alert.alert('Error', 'Passwords do not match');
     setLoading(true);
-    const { error } = await signUpWithEmail(email, password);
-    setLoading(false);
-    if (error) { Alert.alert('Sign Up Failed', error.message); return; }
-    // If email confirmation is OFF, Supabase returns an active session immediately.
-    // RootNavigator will swap to authed stacks; OnboardingStack is the right landing.
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      nav.getParent()?.navigate('OnboardingStack' as any);
-    } else {
-      Alert.alert('Account Created', 'Please check your email to confirm your account.');
-      nav.navigate('SignIn' as any);
-    }
+    try{
+      const { error } = await signUpWithEmail(email.trim(), password);
+      if(error)throw error;
+      const {data,error:sessionError}=await supabase.auth.getSession();
+      if(sessionError)throw sessionError;
+      if(data.session){
+        // The root resumes a private invitation after its authenticated navigator mounts.
+        if(!pendingClubInvitation()&&!pendingGuardianInvitation())nav.getParent()?.navigate('OnboardingStack' as any);
+      }else{
+        Alert.alert('Check your email','Confirm your account using the invited email address if you are joining through an invitation.');
+        nav.navigate('SignIn' as any);
+      }
+    }catch(error:any){Alert.alert('Sign Up Failed',error.message||'Could not create your account. Please try again.');}
+    finally{setLoading(false);}
   };
 
   return (
     <SafeAreaView style={s.container}>
       <ScrollView contentContainerStyle={s.content}>
         <Text style={s.title}>Create Account</Text>
-        <Text style={s.subtitle}>Join OfferHound and get recruited</Text>
+        <Text style={s.subtitle}>Join OfferHound and build your profile</Text>
         <TextInput style={s.input} placeholder="Email" placeholderTextColor={colors.mutedForeground} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
         <TextInput style={s.input} placeholder="Password" placeholderTextColor={colors.mutedForeground} value={password} onChangeText={setPassword} secureTextEntry />
         <TextInput style={s.input} placeholder="Confirm Password" placeholderTextColor={colors.mutedForeground} value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />

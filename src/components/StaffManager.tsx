@@ -1,3 +1,5 @@
+import {requestStaffInvitation} from '@/lib/staffInvitation';
+import {revokeAgencyStaff} from '@/lib/agencyStaff';
 // Ported from Lovable web: src/components/StaffManager.tsx
 // Translations:
 //   <div>/<p>/<h*>/<span>/<label> -> <View>/<Text>/<Pressable>
@@ -8,9 +10,11 @@
 //   useToast -> @/hooks/use-toast (RN compat shim)
 //   Data layer (supabase, useQuery, useMutation, useAuth) preserved verbatim
 //   send-staff-invitation edge function call preserved verbatim
-import React, { useState } from 'react';
+import {saveOwnedStaffRecord,staffMessageTarget} from '@/lib/staffRecords';
+import React, { useState,useRef } from 'react';
 import {
   View,
+  Alert,
   Text,
   StyleSheet,
   Pressable,
@@ -155,6 +159,7 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const savedInviteStaff=useRef<{userId:string;id:string|null}|null>(null);
   const [editingStaff, setEditingStaff] = useState<any>(null);
   const [form, setForm] = useState({
     name: '',
@@ -170,7 +175,7 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [menuMemberId, setMenuMemberId] = useState<string | null>(null);
 
-  const { data: staff = [], isLoading } = useQuery({
+  const { data: staff = [], isLoading,isError:staffFailed,refetch:retryStaff } = useQuery({
     queryKey: ['coaching-staff', user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -193,86 +198,43 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
       if (sendEmail && form.email) channels.push('email');
       if (sendSms && form.phone) channels.push('sms');
 
-      const { data: inserted, error } = await supabase
-        .from('coaching_staff')
-        .insert({
-          owner_user_id: user.id,
-          name: form.name,
-          email: form.email || null,
-          phone: form.phone || null,
-          role: form.role,
-          title: form.title || null,
-          notes: form.notes || null,
-          status: channels.length > 0 ? 'invited' : 'active',
-        })
-        .select('id')
-        .single();
-      if (error) throw error;
+      if(savedInviteStaff.current&&savedInviteStaff.current.userId!==user.id)throw Error('Reopen the staff form for this account.');
+      if(savedInviteStaff.current&&!savedInviteStaff.current.id)throw Error('The earlier staff save is uncertain. Close this form and refresh staff before retrying.');
+      const existingId=savedInviteStaff.current?.id;
+      if(!existingId)savedInviteStaff.current={userId:user.id,id:null};
+      const inserted=await saveOwnedStaffRecord(supabase,user.id,{name:form.name,email:form.email||null,
+        phone:form.phone||null,role:form.role,title:form.title||null,notes:form.notes||null,
+        ...(!existingId?{status:channels.length?'invited':'active'}:{})},existingId||undefined);
+      savedInviteStaff.current={userId:user.id,id:inserted.id};
 
       if (channels.length > 0 && inserted?.id) {
-        const { data: inviteData, error: inviteErr } = await supabase.functions.invoke(
-          'send-staff-invitation',
-          {
-            body: {
-              staffId: inserted.id,
-              channels,
-              staffName: form.name,
-              staffEmail: form.email || null,
-              staffPhone: form.phone || null,
-              role: form.role,
-              customMessage: inviteMessage || null,
-            },
-          },
-        );
-        if (inviteErr) throw inviteErr;
+        const inviteData=await requestStaffInvitation(supabase,inserted.id,channels,inviteMessage);
         return { staff: inserted, invite: inviteData };
       }
       return { staff: inserted, invite: null };
     },
     onSuccess: (result: any) => {
       queryClient.invalidateQueries({ queryKey: ['coaching-staff'] });
-      setShowAddDialog(false);
-      resetForm();
-      const inv = result?.invite;
-      if (inv?.results?.length) {
-        const ok = inv.results.filter((r: any) => r.success).map((r: any) => r.channel.toUpperCase());
-        const fail = inv.results.filter((r: any) => !r.success);
-        toast({
-          title: ok.length ? 'Invitation sent via ' + ok.join(' & ') : 'Staff added',
-          description: fail.length
-            ? 'Failed: ' + fail.map((f: any) => f.channel + ' (' + f.error + ')').join(', ')
-            : 'Staff member has been added to your team.',
-          variant: fail.length && !ok.length ? 'destructive' : 'default',
-        });
-      } else {
-        toast({ title: 'Staff Added', description: 'Staff member has been added to your team.' });
+      const inv=result?.invite;
+      if(inv?.failed?.length){
+        setSendEmail(inv.failed.includes('email'));setSendSms(inv.failed.includes('sms'));
+        toast({title:'Invitation partly accepted',description:`Accepted by provider: ${inv.sent.join(', ')}. Retry only the remaining selected channels.`,variant:'destructive'});
+        return;
       }
+      setShowAddDialog(false);resetForm();
+      toast({title:inv?'Invitation accepted by provider':'Staff added',description:inv?(inv.recorded?'Email/SMS provider accepted the invitation. Inbox delivery is not confirmed.':'Provider accepted the invitation, but its saved timestamp was not confirmed. Do not resend just to update the timestamp.'):'Staff record saved. No invitation was sent.'});
     },
     onError: (err: any) => {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      void queryClient.invalidateQueries({queryKey:['coaching-staff']});
+      toast({ title: savedInviteStaff.current?.id?'Staff saved; invitation incomplete':'Staff save not confirmed', description: err.message, variant: 'destructive' });
     },
   });
 
   const resendInvitation = async (member: any, channels: ('email' | 'sms')[]) => {
     setResendingId(member.id);
     try {
-      const { data, error } = await supabase.functions.invoke('send-staff-invitation', {
-        body: {
-          staffId: member.id,
-          channels,
-          staffName: member.name,
-          staffEmail: member.email,
-          staffPhone: member.phone,
-          role: member.role,
-        },
-      });
-      if (error) throw error;
-      const ok =
-        data?.results?.filter((r: any) => r.success).map((r: any) => r.channel.toUpperCase()) || [];
-      toast({
-        title: ok.length ? 'Invitation resent via ' + ok.join(' & ') : 'Could not send invitation',
-        variant: ok.length ? 'default' : 'destructive',
-      });
+      const outcome=await requestStaffInvitation(supabase,member.id,channels);
+      toast({title:outcome.failed.length?'Invitation partly accepted':'Invitation accepted by provider',description:`Accepted: ${outcome.sent.join(', ')}.${outcome.failed.length?` Not confirmed: ${outcome.failed.join(', ')}.`:''}${outcome.recorded?'':' Saved timestamp not confirmed; avoid resending accepted channels.'}`,variant:outcome.failed.length?'destructive':'default'});
       queryClient.invalidateQueries({ queryKey: ['coaching-staff'] });
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
@@ -283,28 +245,29 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
 
   const updateStaff = useMutation({
     mutationFn: async ({ id, ...updates }: any) => {
-      const { error } = await supabase.from('coaching_staff').update(updates).eq('id', id);
-      if (error) throw error;
+      return saveOwnedStaffRecord(supabase,user?.id||'',updates,id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['coaching-staff'] });
       setEditingStaff(null);
       toast({ title: 'Staff Updated' });
     },
+    onError:(error:any)=>toast({title:'Could not update staff',description:error.message,variant:'destructive'}),
   });
 
   const removeStaff = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('coaching_staff').update({ status: 'removed' }).eq('id', id);
-      if (error) throw error;
+      return revokeAgencyStaff(supabase,id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['coaching-staff'] });
       toast({ title: 'Staff Removed' });
     },
+    onError:(error:any)=>toast({title:'Could not remove staff',description:error.message,variant:'destructive'}),
   });
 
   const resetForm = () => {
+    savedInviteStaff.current=null;
     setForm({ name: '', email: '', phone: '', role: 'assistant_coach', title: '', notes: '' });
     setSendEmail(true);
     setSendSms(false);
@@ -326,6 +289,8 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
     };
     return variants[role] || 'outline';
   };
+
+  if(staffFailed)return <Button onPress={()=>void retryStaff()}>Could not load staff. Retry</Button>;
 
   if (isLoading) {
     return (
@@ -353,7 +318,7 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
         });
       },
     });
-    if (onMessageStaff && member.staff_user_id) {
+    if (onMessageStaff && staffMessageTarget(member)) {
       items.push({
         key: 'message',
         label: 'Message',
@@ -380,7 +345,7 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
       label: 'Remove',
       destructive: true,
       icon: <Trash2 size={16} color={colors.destructive} />,
-      onPress: () => removeStaff.mutate(member.id),
+      onPress: () => Alert.alert('Remove this staff record?',member.name,[{text:'Cancel',style:'cancel'},{text:'Remove',style:'destructive',onPress:()=>removeStaff.mutate(member.id)}]),
     });
     return items;
   };
@@ -407,6 +372,7 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
           </Text>
         </View>
         <Button
+          testID="staff-add-record"
           onPress={() => setShowAddDialog(true)}
           leftIcon={<UserPlus size={16} color={colors.primaryForeground} />}
         >
@@ -498,7 +464,7 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
                   </View>
                 </View>
                 <View style={styles.memberActions}>
-                  {onMessageStaff ? (
+                  {onMessageStaff && staffMessageTarget(member) ? (
                     <Button
                       size="sm"
                       variant="outline"
@@ -535,7 +501,7 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
       <Dialog
         open={showAddDialog || !!editingStaff}
         onOpenChange={(open) => {
-          if (!open) {
+          if (!open && !addStaff.isPending && !updateStaff.isPending) {
             setShowAddDialog(false);
             setEditingStaff(null);
             resetForm();
@@ -556,6 +522,7 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
             <View style={styles.formField}>
               <Label>Full Name *</Label>
               <Input
+                editable={!savedInviteStaff.current&&!addStaff.isPending&&!updateStaff.isPending}
                 value={form.name}
                 onChangeText={(t) => setForm({ ...form, name: t })}
                 placeholder="John Smith"
@@ -564,6 +531,7 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
             <View style={styles.formField}>
               <Label>Email</Label>
               <Input
+                editable={!savedInviteStaff.current&&!addStaff.isPending&&!updateStaff.isPending}
                 value={form.email}
                 onChangeText={(t) => setForm({ ...form, email: t })}
                 placeholder="john@school.edu"
@@ -574,6 +542,7 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
             <View style={styles.formField}>
               <Label>Phone</Label>
               <Input
+                editable={!savedInviteStaff.current&&!addStaff.isPending&&!updateStaff.isPending}
                 value={form.phone}
                 onChangeText={(t) => setForm({ ...form, phone: t })}
                 placeholder="(555) 123-4567"
@@ -582,7 +551,7 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
             </View>
             <View style={styles.formField}>
               <Label>Role</Label>
-              <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
+              <Select value={form.role} onValueChange={(v) => {if(!savedInviteStaff.current&&!addStaff.isPending&&!updateStaff.isPending)setForm({ ...form, role: v });}}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -598,6 +567,7 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
             <View style={styles.formField}>
               <Label>Title</Label>
               <Input
+                editable={!savedInviteStaff.current&&!addStaff.isPending&&!updateStaff.isPending}
                 value={form.title}
                 onChangeText={(t) => setForm({ ...form, title: t })}
                 placeholder="Offensive Coordinator"
@@ -606,6 +576,7 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
             <View style={styles.formField}>
               <Label>Notes</Label>
               <Textarea
+                editable={!savedInviteStaff.current&&!addStaff.isPending&&!updateStaff.isPending}
                 value={form.notes}
                 onChangeText={(t) => setForm({ ...form, notes: t })}
                 placeholder="Additional notes..."
@@ -663,6 +634,7 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
                       Personal message (optional)
                     </Label>
                     <Textarea
+                editable={!savedInviteStaff.current&&!addStaff.isPending&&!updateStaff.isPending}
                       value={inviteMessage}
                       onChangeText={(t) => setInviteMessage(t)}
                       placeholder="Looking forward to having you on staff..."
@@ -677,7 +649,9 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
 
           <DialogFooter>
             <Button
+              testID="staff-editor-cancel"
               variant="outline"
+              disabled={addStaff.isPending||updateStaff.isPending}
               onPress={() => {
                 setShowAddDialog(false);
                 setEditingStaff(null);
@@ -714,7 +688,7 @@ export function StaffManager({ onMessageStaff }: StaffManagerProps) {
                 }
               }}
             >
-              {editingStaff ? 'Update' : 'Add Staff'}
+              {editingStaff ? 'Update' : savedInviteStaff.current?.id?'Retry invitation':'Add Staff'}
             </Button>
           </DialogFooter>
         </DialogContent>

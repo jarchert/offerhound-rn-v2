@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {setCreatorFollow} from "@/lib/creatorFollow";
+import {toast} from "@/components/ui/toast";
 import { useAuth } from "@/hooks/useAuth";
 
 export function useInfluencerBoard(options: { filter?: string; sport?: string; affiliationType?: string; limit?: number }) {
@@ -9,7 +11,7 @@ export function useInfluencerBoard(options: { filter?: string; sport?: string; a
        let query = supabase.from("influencer_board_snapshots" as any).select("*, influencer:influencer_profiles!influencer_id(*)").order("rank", { ascending: true });
        if (options.limit) query = query.limit(options.limit);
        const { data, error } = await query;
-       if (error) return { data: [], lastUpdated: null };
+       if (error) throw error;
        return { data: data || [], lastUpdated: new Date().toISOString() };
     },
   });
@@ -21,7 +23,8 @@ export function useMyInfluencerProfile() {
     queryKey: ["my-influencer-profile", user?.id],
     queryFn: async () => {
        if (!user) return null;
-       const { data } = await supabase.from("influencer_profiles" as any).select("*").eq("user_id", user.id).maybeSingle();
+       const { data, error } = await supabase.from("influencer_profiles" as any).select("*").eq("user_id", user.id).maybeSingle();
+       if (error) throw error;
        return data;
     },
     enabled: !!user,
@@ -46,27 +49,9 @@ export function useFollowInfluencer() {
   const followMutation = useMutation({
     mutationFn: async (params: { influencerId: string; source?: string }) => {
        if (!user) throw new Error("Not authenticated");
-       // Upsert pattern: re-following an influencer flips is_following back on
-       // rather than creating a duplicate row.
-       const { data: existing } = await supabase
-         .from("influencer_follows" as any)
-         .select("id")
-         .eq("influencer_id", params.influencerId)
-         .eq("follower_user_id", user.id)
-         .maybeSingle();
-       if (existing) {
-         await supabase.from("influencer_follows" as any)
-           .update({ is_following: true, followed_at: new Date().toISOString(), unfollowed_at: null })
-           .eq("id", (existing as any).id);
-       } else {
-         await supabase.from("influencer_follows" as any).insert({
-           influencer_id: params.influencerId,
-           follower_user_id: user.id,
-           source: (params.source || "board") as any,
-           is_following: true,
-         });
-       }
+       return setCreatorFollow(supabase,user.id,params.influencerId,true,params.source);
     },
+    onError:(error:any)=>toast.error(error.message || "Follow status was not confirmed."),
     onSuccess: (_d, vars) => {
        qc.invalidateQueries({ queryKey: ["is-following", vars.influencerId] });
        qc.invalidateQueries({ queryKey: ["influencer-follower-count", vars.influencerId] });
@@ -75,11 +60,9 @@ export function useFollowInfluencer() {
   const unfollowMutation = useMutation({
     mutationFn: async (influencerId: string) => {
        if (!user) throw new Error("Not authenticated");
-       await supabase.from("influencer_follows" as any)
-         .update({ is_following: false, unfollowed_at: new Date().toISOString() })
-         .eq("influencer_id", influencerId)
-         .eq("follower_user_id", user.id);
+       return setCreatorFollow(supabase,user.id,influencerId,false);
     },
+    onError:(error:any)=>toast.error(error.message || "Follow status was not confirmed."),
     onSuccess: (_d, influencerId) => {
        qc.invalidateQueries({ queryKey: ["is-following", influencerId] });
        qc.invalidateQueries({ queryKey: ["influencer-follower-count", influencerId] });
@@ -94,11 +77,12 @@ export function useIsFollowing(influencerId?: string) {
     queryKey: ["is-following", influencerId, user?.id],
     queryFn: async () => {
        if (!user || !influencerId) return false;
-       const { data } = await supabase.from("influencer_follows" as any)
+       const { data, error } = await supabase.from("influencer_follows" as any)
          .select("id, is_following")
          .eq("influencer_id", influencerId)
          .eq("follower_user_id", user.id)
          .maybeSingle();
+       if (error) throw error;
        return !!data && (data as any).is_following === true;
     },
     enabled: !!user && !!influencerId,

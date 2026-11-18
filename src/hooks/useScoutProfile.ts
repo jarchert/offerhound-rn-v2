@@ -14,7 +14,7 @@ export function useScoutProfile() {
          .select("*")
          .eq("user_id", user.id)
          .maybeSingle();
-       if (error) return null;
+       if (error) throw error;
        return data;
     },
     enabled: !!user,

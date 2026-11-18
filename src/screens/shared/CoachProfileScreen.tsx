@@ -1,3 +1,6 @@
+import {useLetterCenter} from '@/hooks/useLetterCenter';
+import {useAuth} from '@/hooks/useAuth';
+import {ProfileUnavailable} from '@/components/ProfileUnavailable';
 // CoachProfileScreen — RN port of Lovable web CoachProfile page.
 // Source: offerhound-repo/src/pages/CoachProfile.tsx (205 LOC)
 //
@@ -42,18 +45,21 @@ export default function CoachProfileScreen() {
   const { params } = useRoute<R>();
   const id = params?.id;
   const nav = useNavigation<any>();
+  const {goToLetterForAthlete}=useLetterCenter();
+  const {user,isLoading:authRestoring}=useAuth();
 
-  const { data: coach, isLoading } = useQuery({
-    queryKey: ['coach-profile', id],
+  const { data: coach, isLoading,isError:profileFailed,refetch:retryProfile } = useQuery({
+    queryKey: ['coach-profile', user?.id, id],
     queryFn: async () => {
       if (!id) return null;
-      const { data } = await supabase.from('coaches').select('*').eq('id', id).maybeSingle();
+      const { data,error } = await supabase.from('coaches').select('*').eq('id', id).maybeSingle();
+      if(error)throw error;
       return data as any;
     },
-    enabled: !!id,
+    enabled: !!id&&!authRestoring,
   });
 
-  if (isLoading) {
+  if (isLoading||authRestoring) {
     return (
       <View style={s.loading}>
         <ActivityIndicator color={colors.primary} />
@@ -61,31 +67,13 @@ export default function CoachProfileScreen() {
     );
   }
 
-  if (!coach) {
-    return (
-      <View style={s.loading}>
-        <Text style={s.muted}>Coach not found.</Text>
-        <Button variant="outline" onPress={() => nav.goBack()} style={{ marginTop: spacing.md }}>
-          Go back
-        </Button>
-      </View>
-    );
-  }
+  if(profileFailed||!coach)return <ProfileUnavailable kind="coach" id={id} failed={profileFailed} retry={retryProfile}/>;
 
   const location = [coach.city, coach.state].filter(Boolean).join(', ');
   const initials = coach.name?.charAt(0) || 'C';
   const verified = coach.verification_status === 'verified';
 
-  const composeLetter = () => {
-    // Web: <Link to="/letters?coachName=...&coachEmail=...&coachSchool=...&coachTitle=...">
-    // RN: shared LetterComposer consumes a { seed } param.
-    nav.navigate('LetterComposer', {
-      seed: {
-        recipientName: coach.name || '',
-        schoolName: coach.school || '',
-      },
-    });
-  };
+  const composeLetter=()=>goToLetterForAthlete({full_name:coach.name,email:coach.email,school:coach.school},{recipientCategory:'college-coach',recipientType:'coach',surface:'public-coach-profile'});
 
   const twitterUrl = coach.twitter
     ? coach.twitter.startsWith('http')

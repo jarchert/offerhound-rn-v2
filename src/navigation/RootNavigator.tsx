@@ -1,9 +1,27 @@
+import {takePendingProfileJourney,clearPendingProfileJourney} from '@/lib/pendingProfileJourney';
+import GuardianInvitationScreen from '@/screens/shared/GuardianInvitationScreen';
+import {pendingGuardianInvitation} from '@/lib/guardianInvitation';
+import ClubInvitationScreen from '@/screens/shared/ClubInvitationScreen';
+import {pendingClubInvitation} from '@/lib/clubInvitation';
+import DirectMessageDraftScreen from '@/screens/shared/DirectMessageDraftScreen';
+import type {DirectMessageTarget} from '@/lib/directMessageDraft';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
+import {HomeNavigationProvider,HomeNavigationBar} from '@/navigation/HomeNavigation';
+import { clearPendingCampJourney, takePendingCampJourney } from '@/lib/pendingCampJourney';
+import LegalStack from '@/navigation/stacks/LegalStack';
+import WebCompanionScreen from '@/screens/shared/WebCompanionScreen';
+import RoleLandingScreen from '@/screens/shared/RoleLandingScreen';
+import CoachMatchesScreen from '@/screens/coach/CoachAthleteMatchesScreen';
+import ParentTrustSafetyScreen from '@/screens/parent/ParentTrustSafetyScreen';
+import NewsAndLearnScreen from '@/screens/shared/NewsAndLearnScreen';
 // RootNavigator — post-Session 2 rewrite per Part 2 §2.1
 // NO NavigationContainer here (App.tsx owns it). This is the root Stack that
 // branches on auth + role and exposes 9 role navigators + 7 shared stacks.
 import React from 'react';
+import { ActivityIndicator, Pressable, SafeAreaView, Text, View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '@/contexts/AuthContext';
+import { navigationRef } from '@/navigation/navigationRef';
 import { useScoutOrganization } from '@/hooks/useScoutOrganization';
 import { colors } from '@/lib/theme';
 import type { UserRole } from '@/lib/constants';
@@ -54,6 +72,7 @@ import FounderMessageScreen from '@/screens/shared/FounderMessageScreen';
 import PricingScreen from '@/screens/shared/PricingScreen';
 import SubscriptionSuccessScreen from '@/screens/shared/SubscriptionSuccessScreen';
 import NILIntelligenceScreen from '@/screens/shared/NILIntelligenceScreen';
+import NILAdvisorScreen from '@/screens/athlete/NILAdvisorScreen';
 import SupportScreen from '@/screens/shared/SupportScreen';
 import NotFoundScreen from '@/screens/shared/NotFoundScreen';
 import CoachCampaignsScreen from '@/screens/coach/CoachCampaignsScreen';
@@ -66,6 +85,36 @@ import FloatingAICoach from '@/components/FloatingAICoach';
 
 export type RootStackParamList = {
   PublicTabs: undefined;
+  LegalStack: undefined;
+  RoleLanding: undefined;
+  CoachMatches: undefined;
+  ParentTrustSafety: undefined;
+  NewsAndLearn: undefined;
+  WebMarketingCenter: Record<string,string> | undefined;
+  WebAdminOnboarding: Record<string,string> | undefined;
+  WebOptoutAudit: Record<string,string> | undefined;
+  WebTestPasswords: Record<string,string> | undefined;
+  WebHSCoachProfile: Record<string,string> | undefined;
+  WebAgencyProfile: Record<string,string> | undefined;
+  WebSportSample: Record<string,string> | undefined;
+  WebSportSampleGallery: Record<string,string> | undefined;
+  WebSmsTerms: Record<string,string> | undefined;
+  WebAISlides: Record<string,string> | undefined;
+  WebAthleteSlides: Record<string,string> | undefined;
+  WebAthleteProfileSlides: Record<string,string> | undefined;
+  WebCoachSlides: Record<string,string> | undefined;
+  WebAdminInfluencers: Record<string,string> | undefined;
+  WebAdminPodcasts: Record<string,string> | undefined;
+  WebAdminMedia: Record<string,string> | undefined;
+  WebChartSmoke: Record<string,string> | undefined;
+  WebChartArtifacts: Record<string,string> | undefined;
+  WebLetterAnalytics: Record<string,string> | undefined;
+  WebMarketingRender: Record<string,string> | undefined;
+  WebConsent: Record<string,string> | undefined;
+  WebMinorInvite: Record<string,string> | undefined;
+  WebRosterConsent: Record<string,string> | undefined;
+  WebFootballHub: Record<string,string> | undefined;
+
   PublicSportStack: undefined;
   AuthStack: undefined;
   OnboardingStack: undefined;
@@ -82,7 +131,10 @@ export type RootStackParamList = {
   SettingsStack: undefined;
   PublicProfileStack: undefined;
   Profile: { userId?: string };
-  Messages: undefined;
+  Messages: { conversationId?: string } | undefined;
+  DirectMessageDraft: DirectMessageTarget;
+  ClubInvitation: undefined;
+  GuardianInvitation: undefined;
   Notifications: undefined;
   Inbox: undefined;
   LetterComposer: { seed?: any } | undefined;
@@ -106,6 +158,7 @@ export type RootStackParamList = {
   Pricing: undefined;
   SubscriptionSuccess: undefined;
   NILIntelligence: undefined;
+  NILAdvisor: undefined;
   Support: undefined;
   CoachCampaigns: undefined;
   CoachCommunicationRules: undefined;
@@ -137,14 +190,57 @@ export function roleToInitialRoute(role: UserRole | null | undefined): keyof Roo
 }
 
 export default function RootNavigator() {
-  const { user, userRole, isLoading } = useAuth() as any;
+  const { user, userRole, isLoading, signOut } = useAuth() as any;
+  const previousUserId = React.useRef<string | null>(user?.id ?? null);
+  React.useEffect(() => {
+    const endedSession = previousUserId.current !== null && !user;
+    previousUserId.current = user?.id ?? null;
+    // Camp routes are available in both auth states. Explicitly discard the
+    // old shared route after the signed-out screen graph has committed.
+    if(endedSession){clearPendingCampJourney();clearPendingProfileJourney();}
+    if (endedSession && navigationRef.isReady()) {
+      navigationRef.resetRoot({ index: 0, routes: [{ name: 'PublicTabs' }] });
+    }
+  }, [user?.id]);
+
 
   // Agency detection: if user is a scout AND owns or belongs to a scout_organization,
   // route them to AgencyTabs instead of ScoutTabs. Mirrors Lovable Navbar.tsx logic.
-  const { data: scoutOrg } = useScoutOrganization();
+  const scoutOrganization = useScoutOrganization();
+  const scoutOrg = scoutOrganization.data;
   const isAgency = userRole === 'scout' && !!scoutOrg && ((scoutOrg as any).isOwner || (scoutOrg as any).isMember);
+  React.useEffect(()=>{
+    if(!user||!userRole||isLoading||(userRole==='scout'&&(scoutOrganization.isPending||scoutOrganization.isError)))return;
+    const timer=setTimeout(()=>{if(!navigationRef.isReady())return;if(pendingGuardianInvitation()){(navigationRef.navigate as any)('GuardianInvitation');return;}if(pendingClubInvitation()){(navigationRef.navigate as any)('ClubInvitation');return;}const profileDestination=takePendingProfileJourney();if(profileDestination){(navigationRef.navigate as any)(profileDestination.name,profileDestination.params);return;}const destination=takePendingCampJourney();if(destination)(navigationRef.navigate as any)('CampStack',destination);},0);
+    return()=>clearTimeout(timer);
+  },[user?.id,userRole,isLoading,scoutOrganization.isPending,scoutOrganization.isError,isAgency]);
 
-  if (isLoading) return null;
+
+  // Session restoration can complete before the asynchronous role lookup.
+  if (isLoading || (user && !userRole)) return null;
+
+  // A scout's organization determines which navigator must mount first. Changing
+  // initialRouteName after a navigator has mounted does not reliably replace the
+  // NavigationContainer state on both platforms.
+  if (user && userRole === 'scout' && (scoutOrganization.isPending || scoutOrganization.isError)) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: 16 }}>
+          {scoutOrganization.isError ? (
+            <>
+              <Text style={{ color: colors.foreground, textAlign: 'center' }}>Could not load your organization.</Text>
+              <Pressable accessibilityRole="button" onPress={() => { void scoutOrganization.refetch(); }} style={{ padding: 16 }}>
+                <Text style={{ color: colors.primary }}>Retry</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" onPress={() => { void signOut(); }} style={{ padding: 16 }}>
+                <Text style={{ color: colors.foreground }}>Sign out</Text>
+              </Pressable>
+            </>
+          ) : <ActivityIndicator accessibilityLabel="Loading organization" color={colors.primary} />}
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   // Resolve the initial route. With the new fetchUserRole resolver, userRole is
   // always set for authenticated users (defaults to 'athlete' on error). The old
@@ -158,20 +254,29 @@ export default function RootNavigator() {
     : roleToInitialRoute(effectiveRole);
 
   return (
-    <>
+    <HomeNavigationProvider route={initialRouteName}>
+    <View style={{flex:1}}>
+    <HomeNavigationBar authenticated={!!user}/>
+    <SafeAreaProvider style={{flex:1}}>
     <Stack.Navigator
+      key={`${user?.id ?? 'public'}:${initialRouteName}`}
       initialRouteName={initialRouteName}
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: colors.background },
       }}>
+      <Stack.Screen name="CoachProfile" component={CoachProfileScreen} />
+      <Stack.Screen name="PublicClubCoachProfile" component={PublicClubCoachProfileScreen} />
+      <Stack.Screen name="GuardianInvitation" component={GuardianInvitationScreen} />
+      <Stack.Screen name="ClubInvitation" component={ClubInvitationScreen} />
       {!user ? (
         <>
           <Stack.Screen name="PublicTabs" component={PublicTabs} />
           <Stack.Screen name="PublicSportStack" component={PublicSportStack} />
           <Stack.Screen name="AuthStack" component={AuthStack} />
+          <Stack.Screen name="OnboardingStack" component={OnboardingStack} />
           <Stack.Screen name="PublicProfileStack" component={PublicProfileStack} />
-          <Stack.Screen name="CampStack" component={CampStack} />
+          <Stack.Screen name="CampStack" component={CampStack} navigationKey="public-camps" />
           <Stack.Screen name="Install" component={InstallScreen} />
           <Stack.Screen name="FounderMessage" component={FounderMessageScreen} />
           <Stack.Screen name="Pricing" component={PricingScreen} />
@@ -194,7 +299,7 @@ export default function RootNavigator() {
 
           {/* Shared stacks accessible from any role */}
           <Stack.Screen name="OnboardingStack" component={OnboardingStack} />
-          <Stack.Screen name="CampStack" component={CampStack} />
+          <Stack.Screen name="CampStack" component={CampStack} navigationKey={`staff-camps:${user.id}`} />
           <Stack.Screen name="SettingsStack" component={SettingsStack} />
           <Stack.Screen name="PublicProfileStack" component={PublicProfileStack} />
           <Stack.Screen name="PublicSportStack" component={PublicSportStack} />
@@ -202,6 +307,7 @@ export default function RootNavigator() {
           {/* Cross-cutting modals / shared screens */}
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="Messages" component={MessagesScreen} />
+          <Stack.Screen name="DirectMessageDraft" component={DirectMessageDraftScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="Inbox" component={InboxScreen} />
           <Stack.Screen
@@ -221,8 +327,6 @@ export default function RootNavigator() {
           <Stack.Screen name="AthleteSearch" component={AthleteSearchScreen} />
           <Stack.Screen name="InfluencerBoard" component={InfluencerBoardScreen} />
           <Stack.Screen name="CoachDirectory" component={CoachDirectoryScreen} />
-          <Stack.Screen name="CoachProfile" component={CoachProfileScreen} />
-          <Stack.Screen name="PublicClubCoachProfile" component={PublicClubCoachProfileScreen} />
           <Stack.Screen name="SavedCoaches" component={SavedCoachesScreen} />
           <Stack.Screen name="Referrals" component={ReferralTrackingScreen} />
           <Stack.Screen name="PodcastEpisodeDetail" component={PodcastEpisodeDetailScreen} />
@@ -233,6 +337,7 @@ export default function RootNavigator() {
           <Stack.Screen name="Pricing" component={PricingScreen} options={{ presentation: 'modal' }} />
           <Stack.Screen name="SubscriptionSuccess" component={SubscriptionSuccessScreen} />
           <Stack.Screen name="NILIntelligence" component={NILIntelligenceScreen} />
+          <Stack.Screen name="NILAdvisor" component={NILAdvisorScreen} />
           <Stack.Screen name="Support" component={SupportScreen} />
           <Stack.Screen name="CoachCampaigns" component={CoachCampaignsScreen} />
           <Stack.Screen name="CoachCommunicationRules" component={CoachCommunicationRulesScreen} />
@@ -245,9 +350,40 @@ export default function RootNavigator() {
           <Stack.Screen name="NotFound" component={NotFoundScreen} />
         </>
       )}
+      <Stack.Screen name="LegalStack" component={LegalStack} />
+      <Stack.Screen name="RoleLanding" component={RoleLandingScreen} />
+      <Stack.Screen name="CoachMatches" component={CoachMatchesScreen} />
+      <Stack.Screen name="ParentTrustSafety" component={ParentTrustSafetyScreen} />
+      <Stack.Screen name="NewsAndLearn" component={NewsAndLearnScreen} />
+      <Stack.Screen name="WebMarketingCenter" component={WebCompanionScreen} />
+      <Stack.Screen name="WebAdminOnboarding" component={WebCompanionScreen} />
+      <Stack.Screen name="WebOptoutAudit" component={WebCompanionScreen} />
+      <Stack.Screen name="WebTestPasswords" component={WebCompanionScreen} />
+      <Stack.Screen name="WebHSCoachProfile" component={WebCompanionScreen} />
+      <Stack.Screen name="WebAgencyProfile" component={WebCompanionScreen} />
+      <Stack.Screen name="WebSportSample" component={WebCompanionScreen} />
+      <Stack.Screen name="WebSportSampleGallery" component={WebCompanionScreen} />
+      <Stack.Screen name="WebSmsTerms" component={WebCompanionScreen} />
+      <Stack.Screen name="WebAISlides" component={WebCompanionScreen} />
+      <Stack.Screen name="WebAthleteSlides" component={WebCompanionScreen} />
+      <Stack.Screen name="WebAthleteProfileSlides" component={WebCompanionScreen} />
+      <Stack.Screen name="WebCoachSlides" component={WebCompanionScreen} />
+      <Stack.Screen name="WebAdminInfluencers" component={WebCompanionScreen} />
+      <Stack.Screen name="WebAdminPodcasts" component={WebCompanionScreen} />
+      <Stack.Screen name="WebAdminMedia" component={WebCompanionScreen} />
+      <Stack.Screen name="WebChartSmoke" component={WebCompanionScreen} />
+      <Stack.Screen name="WebChartArtifacts" component={WebCompanionScreen} />
+      <Stack.Screen name="WebLetterAnalytics" component={WebCompanionScreen} />
+      <Stack.Screen name="WebMarketingRender" component={WebCompanionScreen} />
+      <Stack.Screen name="WebConsent" component={WebCompanionScreen} />
+      <Stack.Screen name="WebMinorInvite" component={WebCompanionScreen} />
+      <Stack.Screen name="WebRosterConsent" component={WebCompanionScreen} />
+      <Stack.Screen name="WebFootballHub" component={WebCompanionScreen} />
     </Stack.Navigator>
+    </SafeAreaProvider>
     {/* Authenticated-only floating AI coach — never rendered for signed-out users. */}
     {user ? <FloatingAICoach /> : null}
-    </>
+    </View>
+    </HomeNavigationProvider>
   );
 }

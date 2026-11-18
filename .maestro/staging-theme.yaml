@@ -1,0 +1,41 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Native theme changes and persists without resetting account
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.adult-athlete@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_ADULT_PASSWORD}
+- extendedWaitUntil:
+    visible:
+      id: header-settings
+    timeout: 60000
+- tapOn:
+    id: header-settings
+- assertVisible: qa.adult-athlete@offerhound.test
+- tapOn:
+    id: settings-dark-mode
+- takeScreenshot: launch-theme-light
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: header-settings
+    timeout: 60000
+- runFlow:
+    file: common/open-qa-link.yaml
+    env:
+      QA_LINK: offerhound-staging://settings
+- extendedWaitUntil:
+    visible:
+      id: settings-dark-mode
+    timeout: 30000
+- assertVisible: qa.adult-athlete@offerhound.test
+- takeScreenshot: launch-theme-light-restored
+- tapOn:
+    id: settings-dark-mode
+- takeScreenshot: launch-theme-dark-restored
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.adult-athlete@offerhound.test

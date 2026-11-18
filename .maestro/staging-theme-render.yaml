@@ -1,0 +1,37 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Native palette rendering and persistent theme
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.adult-athlete@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_ADULT_PASSWORD}
+- extendedWaitUntil:
+    visible:
+      id: header-settings
+    timeout: 60000
+- tapOn:
+    id: header-settings
+- assertVisible: qa.adult-athlete@offerhound.test
+- tapOn:
+    id: settings-dark-mode
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: palette-light
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: header-settings
+    timeout: 60000
+- tapOn:
+    id: header-settings
+- assertVisible: qa.adult-athlete@offerhound.test
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: palette-light-restored
+- tapOn:
+    id: settings-dark-mode
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: palette-dark-restored

@@ -1,3 +1,4 @@
+import {Button} from '@/components/ui/Button';
 // CoachLettersScreen — RN port of Lovable src/pages/CoachLetters.tsx (130 LOC).
 // Web→RN mapping: react-router-dom→@react-navigation/native; lucide-react→lucide-react-native;
 // shadcn lowercase→PascalCase; Tailwind→StyleSheet via @/lib/theme; sonner→@/hooks/use-toast.
@@ -23,7 +24,7 @@ export default function CoachLettersScreen() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { data: profile, isLoading: profileLoading, isFetched: profileFetched } = useCoachProfile();
   const { data: hsProfile, isFetched: hsFetched } = useHSCoachProfile();
-  const { history, isLoading: historyLoading, addToHistory, deleteFromHistory } = useCoachLetterHistory();
+  const { history, isLoading: historyLoading, error:historyError, refetch:retryHistory, addToHistory, deleteFromHistory } = useCoachLetterHistory();
   const { toast } = useToast();
   const [isSending, setIsSending] = useState(false);
 
@@ -68,7 +69,9 @@ export default function CoachLettersScreen() {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error || 'Failed to send email');
       }
-      await addToHistory({
+      const delivery=await response.json().catch(()=>null);
+      if(delivery?.success!==true||delivery?.delivery?.status!=='provider_accepted')throw Error(delivery?.error||'Email delivery was not confirmed. Your draft is kept.');
+      try{await addToHistory({
         athlete_name: data.recipientName,
         athlete_email: data.recipientEmail,
         athlete_school: data.athleteSchool || null,
@@ -77,7 +80,7 @@ export default function CoachLettersScreen() {
         in_response_to_type: data.letterType.startsWith('response-')
           ? data.letterType.replace('response-to-', '')
           : null,
-      } as any);
+      } as any);}catch{toast({title:'Email accepted, but history could not be saved. Do not resend.',variant:'destructive'});return;}
       toast({ title: `Letter sent to ${data.recipientEmail}!` });
     } catch (e: any) {
       toast({ title: e?.message ?? 'Failed to send email', variant: 'destructive' });
@@ -113,6 +116,7 @@ export default function CoachLettersScreen() {
     <SafeAreaView style={s.root}>
       <View style={s.header}>
         <BackButton label="Back" />
+        {historyError?<View><Text accessibilityRole="alert" style={{color:colors.destructive}}>Letter history could not be loaded.</Text><Button onPress={()=>void retryHistory()}>Retry letter history</Button></View>:null}
         <Text style={s.headerTitle}>Coach Letters</Text>
       </View>
       <ScrollView contentContainerStyle={s.content}>

@@ -1,0 +1,23 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+---
+- runFlow:
+    file: login.yaml
+    env:
+      QA_EMAIL: ${SHARE_QA_EMAIL}
+      QA_PASSWORD: ${SHARE_QA_PASSWORD}
+- runFlow:
+    file: reveal-text.yaml
+    env:
+      QA_SCROLL_TEXT: Share Card
+- tapOn: Share Card
+- extendedWaitUntil:
+    visible: ${SHARE_DIALOG_TITLE}
+    timeout: 30000
+- assertVisible: Close share card
+- takeScreenshot: ${SHARE_SCREENSHOT}
+- tapOn: Close share card
+- assertNotVisible: ${SHARE_DIALOG_TITLE}
+- runFlow:
+    file: logout.yaml
+    env:
+      QA_EMAIL: ${SHARE_QA_EMAIL}

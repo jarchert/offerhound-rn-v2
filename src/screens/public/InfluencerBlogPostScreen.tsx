@@ -1,3 +1,4 @@
+import {useAuth} from '@/hooks/useAuth';
 // Ported from Lovable web src/pages/InfluencerBlogPost.tsx (210 LOC).
 // Web → RN translation:
 //   - useParams → useRoute<RouteProp>().params
@@ -44,16 +45,18 @@ export default function InfluencerBlogPostScreen() {
   const handle = params?.handle;
   const slug = params?.slug;
   const nav = useNavigation<any>();
+  const {user}=useAuth();
 
-  const { data: influencer } = useQuery({
-    queryKey: ['influencer-by-handle-blog', handle],
+  const { data: influencer,isLoading:profileLoading,isError:profileFailed,refetch:retryProfile } = useQuery({
+    queryKey: ['influencer-by-handle-blog',user?.id,handle],
     queryFn: async () => {
       if (!handle) return null;
-      const { data } = await supabase
+      const { data,error } = await supabase
         .from('influencer_profiles' as any)
         .select('*')
         .eq('handle', handle)
         .maybeSingle();
+      if(error)throw error;
       return data as any;
     },
     enabled: !!handle,
@@ -61,27 +64,28 @@ export default function InfluencerBlogPostScreen() {
 
   const influencerId = influencer?.id;
 
-  const { data: post, isLoading } = useQuery({
-    queryKey: ['influencer-blog-single', influencerId, slug],
+  const { data: post,isLoading,isError:postFailed,refetch:retryPost } = useQuery({
+    queryKey: ['influencer-blog-single',user?.id,influencerId,slug],
     queryFn: async () => {
       if (!influencerId || !slug) return null;
-      const { data } = await supabase
+      const { data,error } = await supabase
         .from('influencer_blog_posts' as any)
         .select('*')
         .eq('influencer_id', influencerId)
         .eq('slug', slug)
         .eq('status', 'published')
         .maybeSingle();
+      if(error)throw error;
       return data as any;
     },
     enabled: !!influencerId && !!slug,
   });
 
-  const { data: related = [] } = useQuery({
-    queryKey: ['influencer-blog-related', influencerId, post?.id],
+  const { data: related = [],isError:relatedFailed,refetch:retryRelated } = useQuery({
+    queryKey: ['influencer-blog-related',user?.id,influencerId,post?.id],
     queryFn: async () => {
       if (!influencerId || !post?.id) return [];
-      const { data } = await supabase
+      const { data,error } = await supabase
         .from('influencer_blog_posts' as any)
         .select('id, title, slug, excerpt, hero_image_url, published_at')
         .eq('influencer_id', influencerId)
@@ -89,12 +93,14 @@ export default function InfluencerBlogPostScreen() {
         .neq('id', post.id)
         .order('published_at', { ascending: false })
         .limit(3);
+      if(error)throw error;
       return (data || []) as any[];
     },
     enabled: !!influencerId && !!post?.id,
   });
 
-  if (isLoading) {
+  if(profileFailed||postFailed)return <View style={s.center}><Text style={s.muted}>This post could not be loaded.</Text><Button onPress={()=>{void retryProfile();void retryPost();}}>Retry post</Button></View>;
+  if (profileLoading || (!!influencerId && isLoading)) {
     return (
       <View style={s.center}>
         <ActivityIndicator color={colors.primary} />
@@ -104,7 +110,7 @@ export default function InfluencerBlogPostScreen() {
   if (!post || !influencer) {
     return (
       <View style={s.center}>
-        <Text style={s.muted}>Post not found.</Text>
+        <Text style={s.muted}>This post is unavailable. Some posts require signing in.</Text>
         <View style={{ height: spacing.md }} />
         <Button
           variant="outline"
@@ -192,6 +198,7 @@ export default function InfluencerBlogPostScreen() {
           <InfluencerShareButtons url={shareUrl} title={post.title} />
         </View>
 
+        {relatedFailed&&<Button onPress={()=>void retryRelated()}>Could not load related posts. Retry</Button>}
         {related.length > 0 && (
           <View style={s.relatedWrap}>
             <Text style={s.relatedHeading}>More from {influencer.display_name}</Text>

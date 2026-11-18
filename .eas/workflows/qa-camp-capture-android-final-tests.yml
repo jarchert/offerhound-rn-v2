@@ -1,0 +1,23 @@
+# Tests only; runtime source is da0812830debc8c22d307a9277de549909022e79.
+name: OfferHound Android QR and saved audio acceptance
+jobs:
+  qr:
+    type: maestro
+    runs_on: linux-medium-nested-virtualization
+    environment: preview
+    params:
+      build_id: 828bca16-059a-4676-ab54-aad41ce930ff
+      flow_path: .maestro
+      include_tags: capture-qr
+      record_screen: true
+      retries: 0
+  voice:
+    type: maestro
+    runs_on: linux-medium-nested-virtualization
+    environment: preview
+    params:
+      build_id: 828bca16-059a-4676-ab54-aad41ce930ff
+      flow_path: .maestro
+      include_tags: capture-android-voice
+      record_screen: true
+      retries: 0

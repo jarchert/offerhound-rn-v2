@@ -27,14 +27,14 @@ interface Props {
   label?: string;
 }
 
-export function AddToCalendarButton({ camp, variant = 'outline', size = 'sm', label = 'Add to calendar' }: Props) {
+export function AddToCalendarButton({ camp, variant = 'outline', size = 'sm', label = 'Save camp dates' }: Props) {
   const { toast } = useToast();
   const handle = async () => {
     try {
       await downloadCampIcs(camp);
       toast({
         title: 'Calendar file ready',
-        description: 'Open it to add the event to Apple/Google/Outlook.',
+        description: 'Open the file to save camp dates. Check camp details for local event hours.',
       });
     } catch {
       toast({ title: 'Download failed', variant: 'destructive' });

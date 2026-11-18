@@ -142,6 +142,15 @@ export function AthleteMatchCard({
   letterSlot,
 }: AthleteMatchCardProps) {
   const navigation = useNavigation<any>();
+  if (!athlete.id || !athlete.full_name?.trim()) {
+    return (
+      <View style={{ padding: spacing.md, gap: spacing.sm }}>
+        <Text accessibilityRole="alert" style={{ color: colors.foreground }}>Athlete profile unavailable</Text>
+        <Text style={{ color: colors.mutedForeground }}>This match cannot be displayed or contacted until its authorized athlete profile is available. Refresh the list or try again later.</Text>
+      </View>
+    );
+  }
+
   const priorityKey = (scores?.priority as string) || '';
   const priorityCfg = PRIORITY_CONFIG[priorityKey] || null;
   const hasScore = typeof scores?.match_score === 'number';
@@ -153,7 +162,10 @@ export function AthleteMatchCard({
   const handleNavigate = () => {
     if (disableNavigate) return;
     // Web: navigate(`/p/${athlete.custom_url || athlete.id}`)
-    navigation.navigate('Profile', { handle: athlete.custom_url || athlete.id });
+    navigation.navigate('PublicProfileStack', {
+      screen: 'PublicProfile',
+      params: { customUrl: athlete.custom_url || athlete.id },
+    });
   };
 
   const showActionRow =

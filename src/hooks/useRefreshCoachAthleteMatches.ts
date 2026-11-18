@@ -22,6 +22,7 @@ export function useRefreshCoachAthleteMatches() {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (invokeError) throw invokeError;
+      if (data?.error) throw new Error(data.error);
       await queryClient.invalidateQueries({ queryKey: ['coach-athlete-matches'] });
       setLastRefresh(new Date());
       return { success: true, matchesCreated: data?.matchesCreated || 0 };

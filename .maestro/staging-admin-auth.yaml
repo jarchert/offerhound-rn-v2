@@ -1,0 +1,22 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: QA admin login restore authorized dashboard and logout
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.admin@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_ADMIN_PASSWORD}
+- extendedWaitUntil:
+    visible: Platform overview
+    timeout: 60000
+- assertNotVisible: Admins only
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: Platform overview
+    timeout: 60000
+- takeScreenshot: staging-admin-authorized
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.admin@offerhound.test

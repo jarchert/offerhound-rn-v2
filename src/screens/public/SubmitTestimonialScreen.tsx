@@ -39,9 +39,7 @@ export default function SubmitTestimonialScreen() {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     testimonial_text: '',
-    author_name: '',
-    author_role: 'coach',
-    overall_character_score: 8,
+    leadership_score: 8, work_ethic_score: 8, coachability_score: 8, teamwork_score: 8, integrity_score: 8,
   });
 
   const handleSubmit = async () => {
@@ -51,15 +49,17 @@ export default function SubmitTestimonialScreen() {
     }
     setLoading(true);
     try {
-      const { error } = await supabase.from('athlete_testimonials').insert({
-        athlete_profile_id: profileId,
-        author_user_id: user.id,
-        author_name: form.author_name,
-        author_role: form.author_role,
-        testimonial_text: form.testimonial_text,
-        overall_character_score: form.overall_character_score,
-      } as any);
-      if (error) throw error;
+      const scoreKeys=['leadership_score','work_ethic_score','coachability_score','teamwork_score','integrity_score'] as const;
+      if(form.testimonial_text.trim().length<30||scoreKeys.some(k=>!Number.isInteger(form[k])||form[k]<1||form[k]>10))
+        throw Error('Enter at least 30 characters and five whole-number scores from 1 to 10.');
+      const {data,error}=await supabase.from('athlete_testimonials').insert({
+        athlete_profile_id:profileId,author_user_id:user.id,
+        // Server derives the signed-in author's identity and authority.
+        author_name:'',author_role:'',...form,testimonial_text:form.testimonial_text.trim(),
+      }).select('id,athlete_profile_id,author_user_id,author_name,author_role').single();
+      if(error)throw error;
+      if(!data?.id||data.athlete_profile_id!==profileId||data.author_user_id!==user.id||!data.author_name||!data.author_role)
+        throw Error('Testimonial was not confirmed. Your text has been kept; refresh before retrying.');
       setSubmitted(true);
       toast.success('Testimonial submitted!');
     } catch (e: any) {
@@ -89,47 +89,27 @@ export default function SubmitTestimonialScreen() {
             <CardTitle>Submit Character Testimonial</CardTitle>
           </CardHeader>
           <CardContent>
-            <View style={s.row}>
-              <View style={s.col}>
-                <Label>Your Name *</Label>
-                <Input
-                  value={form.author_name}
-                  onChangeText={(v) => setForm((f) => ({ ...f, author_name: v }))}
-                />
-              </View>
-              <View style={s.col}>
-                <Label>Your Role</Label>
-                <Input
-                  value={form.author_role}
-                  onChangeText={(v) => setForm((f) => ({ ...f, author_role: v }))}
-                />
-              </View>
-            </View>
+            <Text style={s.thanksDesc}>Your verified coaching or recruiting identity is recorded by OfferHound. Only authorized reviewers can submit an endorsement.</Text>
             <View style={s.field}>
               <Label>Testimonial *</Label>
               <Textarea
                 value={form.testimonial_text}
                 onChangeText={(v) => setForm((f) => ({ ...f, testimonial_text: v }))}
+                editable={!loading}
                 rows={5}
                 placeholder="Share your assessment..."
               />
             </View>
-            <View style={s.field}>
-              <Label>Character Score (1-10)</Label>
-              <Input
-                keyboardType="numeric"
-                value={String(form.overall_character_score)}
-                onChangeText={(v) =>
-                  setForm((f) => ({
-                    ...f,
-                    overall_character_score: Math.min(10, Math.max(1, parseInt(v, 10) || 1)),
-                  }))
-                }
-              />
-            </View>
+            {(['leadership_score','work_ethic_score','coachability_score','teamwork_score','integrity_score'] as const).map(key=>(
+              <View style={s.field} key={key}>
+                <Label>{key.replace('_score','').replaceAll('_',' ')} (1–10)</Label>
+                <Input keyboardType="numeric" editable={!loading} value={String(form[key])}
+                  onChangeText={value=>setForm(previous=>({...previous,[key]:Number(value)}))}/>
+              </View>
+            ))}
             <Button
               onPress={handleSubmit}
-              disabled={loading || !form.testimonial_text || !form.author_name}
+              disabled={loading || !user || form.testimonial_text.trim().length<30}
               style={s.submit}>
               {loading ? 'Submitting...' : 'Submit'}
             </Button>

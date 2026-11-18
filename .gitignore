@@ -6,6 +6,10 @@ web-build/
 .DS_Store
 .env
 .env.local
+.env*.local
 
 # Runtime verification evidence (kept on disk, not in git)
 parity-audit/screenshots/
+
+# Private QA check-in fixture; provision as preview secret file, never publish.
+/.maestro/fixtures/capture-qr.png

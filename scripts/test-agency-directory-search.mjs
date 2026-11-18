@@ -1,0 +1,5 @@
+import fs from 'node:fs';import vm from 'node:vm';import ts from 'typescript';import assert from 'node:assert/strict';
+function module(path,require){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,require});return exports}
+const literal=module('src/lib/recruiterSportFilter.ts');const api=module('src/lib/agencyDirectorySearch.ts',()=>literal);
+for(const needle of ['QA Synthetic','QA",name.not.is.null,role.eq.owner','%_\\(test),']){const filter=api.agencyDirectorySearch(needle);const clauses=[...filter.matchAll(/(name|title|specialization)\.ilike\.("(?:[^"\\]|\\.)*")/g)];assert.equal(clauses.length,3);assert.equal(clauses.map(c=>c[0]).join(','),filter);for(const clause of clauses){const text=JSON.parse(clause[2]);assert.ok(text.startsWith('%')&&text.endsWith('%'));assert.equal(text.slice(1,-1).replace(/\\([\\%_])/g,'$1'),needle)}}
+console.log('PASS: actual agency directory filter keeps quotes, commas, parentheses and literal wildcard input inside exactly three quoted search values. No live query or access change.');

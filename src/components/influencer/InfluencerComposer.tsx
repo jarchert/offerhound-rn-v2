@@ -12,9 +12,13 @@
 //   - <img>/<video> thumbnail grid → Image/Video placeholder tiles
 //   - Wrapped in KeyboardAvoidingView (padding on iOS) — many multi-line
 //     Text fields; the keyboard would otherwise obscure them.
+import {useAuth} from '@/hooks/useAuth';
+import {useLocalDraft} from '@/hooks/useLocalDraft';
+import {creatorScheduleTime,creatorContentUrl} from '@/lib/creatorSchedule';
 import React, { useState, useEffect } from 'react';
 import {
   View,
+  Alert,
   Text,
   Image,
   Pressable,
@@ -57,42 +61,42 @@ export function InfluencerComposer({
   seed,
   onCleared,
   syndicationEnabled,
+  editingPost,
 }: {
   influencerId: string;
   seed?: ComposerSeed | null;
   onCleared?: () => void;
   syndicationEnabled?: boolean;
+  editingPost?:any;
 }) {
-  const [form, setForm] = useState({
-    title: '',
-    description: '',
-    media_url: '',
-    embed_url: '',
-    cta_label: '',
-    cta_url: '',
-    tags: '',
+  const {user}=useAuth();
+  const [form, setForm, draftStorageError, draftReady] = useLocalDraft(user?.id, `creator-post:${influencerId}:${editingPost?.id || "new"}`, {
+    title: editingPost?.title || '',
+    description: editingPost?.description || '',
+    media_url: editingPost?.media_url || '',
+    embed_url: editingPost?.embed_url || '',
+    cta_label: editingPost?.cta_label || '',
+    cta_url: editingPost?.cta_url || '',
+    tags: (editingPost?.sport_tags || []).join(', '),
   });
-  const [scheduleEnabled, setScheduleEnabled] = useState(false);
-  const [dateStr, setDateStr] = useState(''); // YYYY-MM-DD
-  const [time, setTime] = useState('09:00');  // HH:MM
+  const [scheduleEnabled, setScheduleEnabled] = useState(editingPost?.post_status === 'scheduled');
+  const [dateStr, setDateStr] = useState(editingPost?.scheduled_for ? format(new Date(editingPost.scheduled_for), 'yyyy-MM-dd') : ''); // YYYY-MM-DD
+  const [time, setTime] = useState(editingPost?.scheduled_for ? format(new Date(editingPost.scheduled_for), 'HH:mm') : '09:00');  // HH:MM
   const [syndicate, setSyndicate] = useState(syndicationEnabled || false);
   const [showLibrary, setShowLibrary] = useState(false);
 
   const schedule = useSchedulePost();
   const { data: library = [] } = useContentLibrary(influencerId);
 
-  // Hydrate from seed (e.g. "Draft from news article")
+  useEffect(()=>setSyndicate(syndicationEnabled === true),[syndicationEnabled]);
+
+  // A news seed may replace an existing device draft only after an explicit choice.
   useEffect(() => {
-    if (!seed) return;
-    setForm((f) => ({
-      ...f,
-      title: seed.title || f.title,
-      description: seed.description ? `${seed.description}\n\nMy take: ` : f.description,
-      cta_url: seed.url || f.cta_url,
-      cta_label: seed.url ? 'Read source' : f.cta_label,
-      media_url: seed.image || f.media_url,
-    }));
-  }, [seed]);
+    if (!seed || !draftReady) return;
+    const apply = () => {setForm({title:seed.title||'',description:seed.description?`${seed.description}\n\nMy take: `:'',cta_url:seed.url||'',cta_label:seed.url?'Read source':'',media_url:seed.image||'',embed_url:'',tags:''});onCleared?.();};
+    if (draftStorageError || form.title.trim() || form.description.trim()) Alert.alert('Replace this draft?','Keep your existing text or replace it with this news article.',[{text:'Keep draft',style:'cancel',onPress:()=>onCleared?.()},{text:'Replace draft',style:'destructive',onPress:apply}]);
+    else apply();
+  }, [seed,draftReady]);
 
   const reset = () => {
     setForm({ title: '', description: '', media_url: '', embed_url: '', cta_label: '', cta_url: '', tags: '' });
@@ -102,46 +106,35 @@ export function InfluencerComposer({
     onCleared?.();
   };
 
-  const buildScheduledFor = (): string | null => {
-    if (!scheduleEnabled || !dateStr) return null;
-    const [y, m, d] = dateStr.split('-').map(Number);
-    const [hh, mm] = time.split(':').map(Number);
-    if (!y || !m || !d) return null;
-    const dt = new Date(y, m - 1, d, hh || 0, mm || 0, 0, 0);
-    if (Number.isNaN(dt.getTime())) return null;
-    return dt.toISOString();
-  };
 
   const submit = async (asDraft = false) => {
     if (!form.title.trim() || !form.description.trim()) {
       toast.error('Title and content are required');
       return;
     }
-    const scheduledFor = buildScheduledFor();
-    if (scheduleEnabled && !scheduledFor) {
-      toast.error('Pick a date for the scheduled post');
-      return;
-    }
+    let scheduledFor:string|null=null;
+    try {if (!asDraft && scheduleEnabled) scheduledFor=creatorScheduleTime(dateStr,time);for(const value of [form.media_url,form.embed_url,form.cta_url]) creatorContentUrl(value||'');} catch(error:any){toast.error(error.message);return;}
     try {
-      await schedule.mutateAsync({
+      const saved = await schedule.mutateAsync({
         influencerId,
+        existingId:editingPost?.id,
         title: form.title.trim(),
         description: form.description.trim(),
         mediaUrl: form.media_url || undefined,
         embedUrl: form.embed_url || undefined,
         ctaLabel: form.cta_label || undefined,
         ctaUrl: form.cta_url || undefined,
-        tags: form.tags ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
+        tags: form.tags ? form.tags.split(',').map((t:string) => t.trim()).filter(Boolean) : [],
         scheduledFor,
         asDraft,
-        syndicationTargets: syndicate ? ['webhook'] : [],
+        syndicationTargets: syndicate && syndicationEnabled ? ['webhook'] : [],
       });
       toast.success(
         asDraft
           ? 'Draft saved'
           : scheduledFor
           ? `Scheduled for ${format(new Date(scheduledFor), 'PPp')}`
-          : 'Posted',
+          : saved?.post_status !== 'published' || saved?.moderation_status !== 'approved' ? 'Post saved; publication is awaiting confirmation.' : syndicate ? saved?.syndication?.status === 'sent' ? 'Published to OfferHound and sent to webhook' : 'Post saved to OfferHound; external sharing is not confirmed.' : 'Posted to OfferHound',
       );
       reset();
     } catch (e: any) {
@@ -173,12 +166,14 @@ export function InfluencerComposer({
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {draftStorageError ? <Text accessibilityRole="alert">This draft could not be saved on your device. Keep this screen open until you save it.</Text> : null}
           <View style={{ gap: spacing.md }}>
             <View>
               <Label>Title *</Label>
               <Input
                 value={form.title}
                 onChangeText={(t) => setForm((f) => ({ ...f, title: t }))}
+                testID="creator-post-title"
                 placeholder="Headline for the post"
               />
             </View>
@@ -188,6 +183,7 @@ export function InfluencerComposer({
                 rows={5}
                 value={form.description}
                 onChangeText={(t) => setForm((f) => ({ ...f, description: t }))}
+                testID="creator-post-content"
                 placeholder="What's the story? Add hooks, hashtags, links."
               />
               <Text style={s.charCount}>{form.description.length} characters</Text>

@@ -11,6 +11,7 @@
 // each scoped to `scout_user_id = auth.user.id`. Renders a 3-up metric row.
 
 import React from 'react';
+import { Button } from '@/components/ui/Button';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart3, Users, Eye, FileText } from 'lucide-react-native';
@@ -28,7 +29,7 @@ interface ScoutStats {
 export const ScoutAnalyticsDashboard = () => {
   const { user } = useAuth();
 
-  const { data: stats, isLoading } = useQuery<ScoutStats | null>({
+  const { data: stats, isLoading, isError, refetch } = useQuery<ScoutStats | null>({
     queryKey: ['scout-analytics', user?.id],
     queryFn: async () => {
       if (!user) return null;
@@ -46,6 +47,7 @@ export const ScoutAnalyticsDashboard = () => {
           .select('id', { count: 'exact', head: true })
           .eq('scout_user_id', user.id),
       ]);
+      for (const result of [pipelineRes, lettersRes, activityRes]) {if(result.error) throw result.error;if(typeof result.count !== 'number') throw new Error('Analytics counts were not confirmed');}
       return {
         pipeline: pipelineRes.count || 0,
         letters: lettersRes.count || 0,
@@ -54,6 +56,8 @@ export const ScoutAnalyticsDashboard = () => {
     },
     enabled: !!user,
   });
+
+  if (isError) return <Button onPress={() => void refetch()}>Could not load analytics. Retry</Button>;
 
   if (isLoading) {
     return (

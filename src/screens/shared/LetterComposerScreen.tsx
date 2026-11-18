@@ -1,6 +1,10 @@
-// LetterComposerScreen — AI-driven letter authoring with streaming response and
-// native sharing. Wires to the `generate-letter` edge function (Lovable parity).
-// Part 4 §4.x of the conversion guide describes this screen.
+import {useQuery} from '@tanstack/react-query';
+import {useLocalDraft} from '@/hooks/useLocalDraft';
+import {useSubscription} from '@/hooks/useSubscription';
+import {KeyboardSafeBody} from '@/components/KeyboardSafeBody';
+import {shortcutLetterSeed,shortcutLetterRequest,letterSenderTable,type ShortcutLetterDraft} from '@/lib/letterRequests';
+// Shared shortcut composer: role-specific authenticated generation and local unsent drafts.
+// Generation, sharing and sending remain separate actions.
 import React, { useState, useCallback } from 'react';
 import {
   View,
@@ -23,55 +27,20 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
-type LetterType = 'recruiting' | 'endorsement' | 'intro' | 'thank_you' | 'update';
-
-interface LetterDraft {
-  recipientName: string;
-  recipientRole: string;
-  schoolName: string;
-  letterType: LetterType;
-  keyPoints: string;
-  tone: 'professional' | 'warm' | 'direct';
-}
-
-const DEFAULT_DRAFT: LetterDraft = {
-  recipientName: '',
-  recipientRole: '',
-  schoolName: '',
-  letterType: 'recruiting',
-  keyPoints: '',
-  tone: 'professional',
-};
-
 export default function LetterComposerScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { user } = useAuth();
-
-  const [draft, setDraft] = useState<LetterDraft>(() => {
-    const seed = (route.params?.seed ?? {}) as Partial<LetterDraft> & {
-      prefillAthleteId?: string;
-      prefillAthleteName?: string;
-    };
-    const { prefillAthleteId: _pid, prefillAthleteName, ...seedRest } = seed;
-    // When navigated from AthleteSearch (or any recruiter surface) with an
-    // athlete seed, prefill the recipient. Explicit recipientName in the seed
-    // still wins (direct overrides take priority).
-    const recipientFromAthlete = prefillAthleteName ?? '';
-    return {
-      ...DEFAULT_DRAFT,
-      ...(recipientFromAthlete ? { recipientName: recipientFromAthlete } : {}),
-      ...seedRest,
-    };
-  });
-  // Keep the athlete id around for future wiring (e.g. attaching the letter to
-  // a specific athlete record on save). Read-only for now.
-  const prefillAthleteId: string | undefined = route.params?.seed?.prefillAthleteId;
-  const [generated, setGenerated] = useState<string>('');
+  const { user,userRole } = useAuth();
+  const {isSubscribed}=useSubscription();
+  const initial=shortcutLetterSeed(route.params,userRole);
+  const [draft,setDraft,draftError]=useLocalDraft<ShortcutLetterDraft>(user?.id,`shortcut-letter:${initial.recipientCategory}:${initial.recipientName}`,initial);
+  const [generated,setGenerated,generatedError]=useLocalDraft(user?.id,`shortcut-letter-output:${initial.recipientCategory}:${initial.recipientName}`,'');
+  const {data:senderProfile,isLoading:profileLoading,error:profileError}=useQuery({queryKey:['letter-sender',user?.id,userRole],enabled:!!user&&!!letterSenderTable(userRole),queryFn:async()=>{
+    const {data,error}=await supabase.from(letterSenderTable(userRole)!).select('*').eq('user_id',user!.id).maybeSingle();if(error)throw error;return data;
+  }});
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
 
-  const setField = <K extends keyof LetterDraft>(key: K, value: LetterDraft[K]) =>
+  const setField = <K extends keyof ShortcutLetterDraft>(key: K, value: ShortcutLetterDraft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
 
   const handleGenerate = useCallback(async () => {
@@ -79,63 +48,21 @@ export default function LetterComposerScreen() {
       Alert.alert('Missing details', 'Recipient name and school are required.');
       return;
     }
+    if(!user){Alert.alert('Sign in required','Sign in before generating a letter.');return;}
+    if(userRole==='athlete'&&!isSubscribed){navigation.navigate('Pricing');return;}
+    if(profileLoading||profileError||!senderProfile){Alert.alert('Sender profile unavailable','Your details could not be loaded. Please try again.');return;}
     setIsGenerating(true);
-    setGenerated('');
     try {
-      // Invoke streaming edge function via fetch (Supabase client wraps non-streaming).
-      const { data: { session } } = await supabase.auth.getSession();
-      const url = `${(supabase as any).supabaseUrl}/functions/v1/generate-letter`;
-      const resp = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(draft),
-      });
-      if (!resp.ok) throw new Error(`Edge function returned ${resp.status}`);
-
-      const reader = (resp.body as any)?.getReader?.();
-      if (!reader) {
-        const text = await resp.text();
-        setGenerated(text);
-        return;
-      }
-      const decoder = new TextDecoder();
-      let buffered = '';
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffered += decoder.decode(value, { stream: true });
-        setGenerated(buffered);
-      }
-    } catch (e: any) {
-      Alert.alert('Generation failed', e?.message ?? 'Unable to generate letter.');
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [draft]);
-
-  const handleSave = useCallback(async () => {
-    if (!generated.trim() || !user) return;
-    setIsSaving(true);
-    try {
-      await supabase.from('letters' as any).insert({
-        user_id: user.id,
-        coach_name: draft.recipientName,
-        school_name: draft.schoolName,
-        letter_type: draft.letterType,
-        content: generated,
-        subject: `${draft.letterType} letter`,
-      });
-      Alert.alert('Saved', 'Letter saved to your history.');
-      navigation.goBack();
-    } catch (e: any) {
-      Alert.alert('Save failed', e?.message ?? 'Unable to save letter.');
-    } finally {
-      setIsSaving(false);
-    }
-  }, [generated, user, draft, navigation]);
+      const request=shortcutLetterRequest(userRole,senderProfile,draft);
+      const {data,error}=await supabase.functions.invoke(request.functionName,{body:request.body});
+      if(error)throw error;
+      if(data?.error)throw Error(data.error);
+      if(typeof data?.letter!=='string'||!data.letter.trim())throw Error('No letter returned.');
+      setGenerated(data.letter);
+    } catch (e:any) {
+      Alert.alert('Generation failed',e?.message||'Unable to generate letter. Your draft is kept.');
+    } finally {setIsGenerating(false);}
+  },[draft,user,userRole,isSubscribed,senderProfile,profileLoading,profileError,navigation]);
 
   const handleShare = useCallback(async () => {
     if (!generated.trim()) return;
@@ -155,6 +82,8 @@ export default function LetterComposerScreen() {
         </View>
       </View>
 
+      {(draftError||generatedError)&&<Text accessibilityRole="alert" style={{color:colors.destructive,padding:12}}>Draft could not be saved on this device. Copy it before leaving.</Text>}
+      <KeyboardSafeBody>
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
         <Card style={s.card}>
           <Text style={s.label}>Recipient</Text>
@@ -162,10 +91,12 @@ export default function LetterComposerScreen() {
             style={s.input}
             value={draft.recipientName}
             onChangeText={(v) => setField('recipientName', v)}
-            placeholder="Head coach name"
+            placeholder="Recipient name"
             placeholderTextColor={colors.foregroundSubtle}
           />
 
+          <Text style={s.label}>Recipient type</Text>
+          <View style={s.chipRow}>{['athlete','parent','college-coach','club-coach','hs-coach','scout','influencer'].map(category=><Pressable key={category} accessibilityRole="button" accessibilityState={{selected:draft.recipientCategory===category}} onPress={()=>setField('recipientCategory',category)}><Badge variant={draft.recipientCategory===category?'secondary':'outline'}>{category}</Badge></Pressable>)}</View>
           <Text style={s.label}>Role</Text>
           <TextInput
             style={s.input}
@@ -233,15 +164,15 @@ export default function LetterComposerScreen() {
                 <Text style={s.secondaryBtnText}>Share</Text>
               </Pressable>
               <Pressable
-                onPress={handleSave}
-                style={[s.primaryBtn, isSaving && s.btnDisabled]}
-                disabled={isSaving}>
-                <Text style={s.primaryBtnText}>{isSaving ? 'Saving…' : 'Save letter'}</Text>
+                onPress={() => Alert.alert(draftError||generatedError?'Draft could not be saved':'Draft kept on this device',draftError||generatedError?'Copy your letter before leaving.':'Your unsent letter is saved automatically on this device. It has not been sent.')}
+                style={s.primaryBtn}>
+                <Text style={s.primaryBtnText}>Keep local draft</Text>
               </Pressable>
             </View>
           </Card>
         )}
       </ScrollView>
+      </KeyboardSafeBody>
     </SafeAreaView>
   );
 }

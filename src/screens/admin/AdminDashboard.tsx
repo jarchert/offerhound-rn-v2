@@ -1,3 +1,5 @@
+import { UserProfileHeader } from '@/components/UserProfileHeader';
+import { useAuth } from '@/contexts/AuthContext';
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, SafeAreaView } from 'react-native';
 import { Users, Trophy, FileText, Settings as SettingsIcon } from 'lucide-react-native';
@@ -10,6 +12,7 @@ import { AdminBadge } from '@/components/AdminBadge';
 import { colors, typography, spacing } from '@/lib/theme';
 
 export default function AdminDashboard() {
+  const { user } = useAuth();
   const { data: stats } = useQuery({
     queryKey: ['admin-stats'],
     queryFn: async () => {
@@ -32,6 +35,7 @@ export default function AdminDashboard() {
     <SafeAreaView style={s.container}>
       <Navbar />
       <ScrollView contentContainerStyle={s.content}>
+        <UserProfileHeader profile={user?.user_metadata} label="Administrator" />
         <View style={s.header}>
           <View style={s.titleRow}>
             <Text style={s.title}>Admin</Text>

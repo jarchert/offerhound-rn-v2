@@ -1,3 +1,4 @@
+import {getCanonicalOrigin} from '@/lib/canonicalDomain';
 // QuickStartCoachScreen — RN port of Lovable src/pages/QuickStartCoach.tsx (155 LOC).
 // 2-step quick start (Terms → Info) that creates a coach_profiles row.
 // Web→RN mappings: react-router-dom→@react-navigation/native; useToast at @/hooks/use-toast;
@@ -136,9 +137,9 @@ export default function QuickStartCoachScreen() {
                 <Checkbox checked={termsAgreed} onCheckedChange={v => setTermsAgreed(!!v)} />
                 <Text style={s.termsText}>
                   I agree to the{' '}
-                  <Text style={s.link} onPress={() => Linking.openURL('https://offerhound.com/terms')}>Terms of Use</Text>
+                  <Text style={s.link} onPress={() => Linking.openURL(getCanonicalOrigin() + '/terms')}>Terms of Use</Text>
                   {' '}and{' '}
-                  <Text style={s.link} onPress={() => Linking.openURL('https://offerhound.com/privacy')}>Privacy Policy</Text>
+                  <Text style={s.link} onPress={() => Linking.openURL(getCanonicalOrigin() + '/privacy')}>Privacy Policy</Text>
                 </Text>
               </Pressable>
               <Button onPress={handleAcceptTerms} disabled={isSubmitting || !termsAgreed} loading={isSubmitting} rightIcon={<ArrowRight size={18} color={colors.primaryForeground} />} style={{ marginTop: spacing.md }}>

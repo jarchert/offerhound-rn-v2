@@ -1,10 +1,11 @@
+import {getCanonicalOrigin} from '@/lib/canonicalDomain';
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, Linking } from 'react-native';
 import { colors, typography, spacing } from '@/lib/theme';
 
 const LINKS = [
-  { label: 'Terms', url: 'https://offer-hound.com/terms' },
-  { label: 'Privacy', url: 'https://offer-hound.com/privacy' },
+  { label: 'Terms', url: getCanonicalOrigin() + '/terms' },
+  { label: 'Privacy', url: getCanonicalOrigin() + '/privacy' },
   { label: 'Support', url: 'mailto:support@offer-hound.com' },
 ];
 

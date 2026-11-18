@@ -1,3 +1,4 @@
+import {getCanonicalOrigin} from '@/lib/canonicalDomain';
 // QuickStartScoutScreen — RN port of Lovable src/pages/QuickStartScout.tsx (156 LOC).
 // 2-step quick start (Terms → Info) that creates a scout_profiles row.
 // Web→RN mappings same as QuickStartCoachScreen.
@@ -135,9 +136,9 @@ export default function QuickStartScoutScreen() {
                 <Checkbox checked={termsAgreed} onCheckedChange={v => setTermsAgreed(!!v)} />
                 <Text style={s.termsText}>
                   I agree to the{' '}
-                  <Text style={s.link} onPress={() => Linking.openURL('https://offerhound.com/terms')}>Terms of Use</Text>
+                  <Text style={s.link} onPress={() => Linking.openURL(getCanonicalOrigin() + '/terms')}>Terms of Use</Text>
                   {' '}and{' '}
-                  <Text style={s.link} onPress={() => Linking.openURL('https://offerhound.com/privacy')}>Privacy Policy</Text>
+                  <Text style={s.link} onPress={() => Linking.openURL(getCanonicalOrigin() + '/privacy')}>Privacy Policy</Text>
                 </Text>
               </Pressable>
               <Button onPress={handleAcceptTerms} disabled={isSubmitting || !termsAgreed} loading={isSubmitting} rightIcon={<ArrowRight size={18} color={colors.primaryForeground} />} style={{ marginTop: spacing.md }}>

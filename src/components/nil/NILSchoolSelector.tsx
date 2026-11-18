@@ -46,7 +46,7 @@ function formatAvgNIL(amount: number | null): string {
 }
 
 export function NILSchoolSelector({ selectedSchools, onToggleSchool, maxSelections = 4 }: NILSchoolSelectorProps) {
-  const { schoolData } = useNILSchoolData();
+  const { schoolData, schoolDataLoading, schoolDataError, refetchSchoolData } = useNILSchoolData();
   const [search, setSearch] = useState('');
   const [conferenceFilter, setConferenceFilter] = useState('All');
   const [divisionFilter, setDivisionFilter] = useState('All');
@@ -115,7 +115,7 @@ export function NILSchoolSelector({ selectedSchools, onToggleSchool, maxSelectio
           <CardTitle>Select Schools to Compare</CardTitle>
         </View>
         <CardDescription>
-          Choose up to {maxSelections} schools — tax & NIL data auto-populated from 301 schools
+          Choose up to {maxSelections} schools — {schoolData.length} schools available in this dataset
         </CardDescription>
       </CardHeader>
       <CardContent style={{ gap: spacing.md }}>
@@ -212,8 +212,8 @@ export function NILSchoolSelector({ selectedSchools, onToggleSchool, maxSelectio
 
         {/* List */}
         <ScrollView style={styles.listScroll} nestedScrollEnabled>
-          {filteredSchools.length === 0 ? (
-            <Text style={styles.emptyText}>No schools match your filters</Text>
+          {schoolDataLoading ? <Text style={styles.emptyText}>Loading school data…</Text> : schoolDataError ? <View><Text accessibilityRole="alert" style={styles.emptyText}>School data could not load.</Text><Button onPress={()=>void refetchSchoolData()}>Retry school data</Button></View> : filteredSchools.length === 0 ? (
+            <Text style={styles.emptyText}>{schoolData.length ? 'No schools match your filters' : 'No school comparison data is available yet.'}</Text>
           ) : (
             filteredSchools.map((school: any) => {
               const isSelected = selectedSchools.includes(school.school_name);

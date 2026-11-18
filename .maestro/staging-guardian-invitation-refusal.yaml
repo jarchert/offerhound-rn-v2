@@ -1,0 +1,30 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Guardian invitation refuses unknown private proof and loads management
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.adult-athlete@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_ADULT_PASSWORD}
+- runFlow:
+    file: common/reveal-text.yaml
+    env:
+      QA_SCROLL_TEXT: Parents and guardians
+- assertVisible: Parents and guardians
+- assertVisible: Email new guardian invitation
+- runFlow:
+    file: common/open-qa-link.yaml
+    env:
+      QA_LINK: offerhound-staging://guardian-invite#token=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+- extendedWaitUntil:
+    visible: This invitation is unavailable.
+    timeout: 30000
+- assertVisible:
+    id: guardian-invitation-claim
+    enabled: false
+- takeScreenshot: guardian-invitation-unknown-refused
+- tapOn: Close invitation
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.adult-athlete@offerhound.test

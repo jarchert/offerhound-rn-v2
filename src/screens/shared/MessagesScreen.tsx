@@ -1,3 +1,7 @@
+import {KeyboardSafeBody} from '@/components/KeyboardSafeBody';
+import {conversationContext,conversationSummaries} from '@/lib/conversationContext';
+import {resolveConversationIdentity} from '@/lib/conversationIdentity';
+import {useLocalDraft} from '@/hooks/useLocalDraft';
 // MessagesScreen — inbox list + active thread view.
 //
 // Schema notes (build22 fix):
@@ -7,7 +11,7 @@
 //   `player_profiles` (athlete side) and `coach_profiles` (coach side) —
 //   mirroring InboxScreen.tsx. All queries are guarded with try/catch so a
 //   transient schema drift cannot crash the screen.
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -17,10 +21,10 @@ import {
   SafeAreaView,
   RefreshControl,
   TextInput,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { useRoute } from '@react-navigation/native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Search, Check, CheckCheck, Send } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
@@ -36,10 +40,11 @@ interface Conversation {
   id: string;
   other_user_id: string;
   other_user_name: string;
+  other_user_identified: boolean;
   other_user_image: string | null;
   last_message: string | null;
   last_message_at: string | null;
-  last_message_sender_id: string | null;
+  last_message_sender_user_id: string | null;
   last_message_read: boolean;
   unread_count: number;
 }
@@ -47,20 +52,25 @@ interface Conversation {
 interface ThreadMessage {
   id: string;
   conversation_id: string;
-  sender_id: string;
+  sender_user_id: string;
   content: string;
   created_at: string;
   read_at: string | null;
+  is_read?: boolean;
   pending?: boolean;
   failed?: boolean;
 }
 
 export default function MessagesScreen() {
   const { user } = useAuth();
+  const route = useRoute<any>();
+  useEffect(() => {
+    setActiveId(route.params?.conversationId ?? null);
+  }, [route.params?.conversationId]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
-  const { data: conversations = [], isLoading, refetch } = useQuery({
+  const { data: conversations = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['messages-conversations', user?.id],
     queryFn: async (): Promise<Conversation[]> => {
       if (!user) return [];
@@ -79,79 +89,31 @@ export default function MessagesScreen() {
         const list = (rows as any[]) || [];
         if (list.length === 0) return [];
 
-        // For each conversation, fetch the OTHER party's profile + last message.
+        const summaries=await conversationSummaries(supabase,list.map(c=>c.id),user.id);
+        // Resolve identities without interpreting participant-slot names as roles.
         const enriched = await Promise.all(
           list.map(async (c: any): Promise<Conversation> => {
-            const isCoach = c.coach_user_id === user.id;
-            const otherId = isCoach ? c.athlete_user_id : c.coach_user_id;
+            const {otherId,otherRole}=conversationContext(c,user.id);
 
-            let otherName = 'Conversation';
-            let otherImage: string | null = null;
-            try {
-              if (isCoach) {
-                // Current user is the coach → other party is the athlete.
-                const { data: p } = await supabase
-                  .from('player_profiles')
-                  .select('full_name,profile_image_url')
-                  .eq('user_id', otherId)
-                  .maybeSingle();
-                if ((p as any)?.full_name) otherName = (p as any).full_name;
-                otherImage = (p as any)?.profile_image_url ?? null;
-              } else {
-                // Current user is the athlete → other party is the coach.
-                const { data: p } = await supabase
-                  .from('coach_profiles')
-                  .select('name,profile_image_url')
-                  .eq('user_id', otherId)
-                  .maybeSingle();
-                if ((p as any)?.name) otherName = (p as any).name;
-                otherImage = (p as any)?.profile_image_url ?? null;
-              }
-            } catch {
-              // Profile lookup is best-effort — keep the conversation visible.
-            }
+            // These column names identify participants, not their roles. Resolve
+            // the actual counterpart without inferring athlete/coach from order.
+            const identity = await resolveConversationIdentity(supabase, otherId, otherRole);
+            const otherName = identity.name;
+            const otherImage = identity.image;
 
-            let lastMessage: string | null = null;
-            let lastMessageSenderId: string | null = null;
-            let lastMessageRead = false;
-            try {
-              const { data: lastMsg } = await supabase
-                .from('messages')
-                .select('content,sender_id,read_at')
-                .eq('conversation_id', c.id)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-              lastMessage = (lastMsg as any)?.content ?? null;
-              lastMessageSenderId = (lastMsg as any)?.sender_id ?? null;
-              lastMessageRead = !!(lastMsg as any)?.read_at;
-            } catch {
-              /* ignore */
-            }
-
-            let unreadCount = 0;
-            try {
-              const { count } = await supabase
-                .from('messages')
-                .select('id', { count: 'exact', head: true })
-                .eq('conversation_id', c.id)
-                .is('read_at', null)
-                .neq('sender_id', user.id);
-              unreadCount = count || 0;
-            } catch {
-              /* ignore */
-            }
+            const summary=summaries.get(c.id);
 
             return {
               id: c.id,
               other_user_id: otherId,
               other_user_name: otherName,
+              other_user_identified: identity.identified,
               other_user_image: otherImage,
-              last_message: lastMessage,
+              last_message: summary?.content ?? null,
               last_message_at: c.last_message_at ?? null,
-              last_message_sender_id: lastMessageSenderId,
-              last_message_read: lastMessageRead,
-              unread_count: unreadCount,
+              last_message_sender_user_id: summary?.senderId ?? null,
+              last_message_read: summary?.read ?? false,
+              unread_count: summary?.unread ?? 0,
             };
           }),
         );
@@ -163,7 +125,7 @@ export default function MessagesScreen() {
           text1: 'Could not load conversations',
           text2: err?.message ? String(err.message).slice(0, 120) : undefined,
         });
-        return [];
+        throw err;
       }
     },
     enabled: !!user,
@@ -178,7 +140,7 @@ export default function MessagesScreen() {
     );
   }, [conversations, search]);
 
-  if (activeId) {
+  if (activeId && !isLoading) {
     const conv = conversations.find((c) => c.id === activeId);
     if (!conv) {
       // Race: conversation no longer in list. Reset rather than render empty.
@@ -215,6 +177,7 @@ export default function MessagesScreen() {
           autoCapitalize="none"
         />
       </View>
+      {isError && <View><Text accessibilityRole="alert" style={{color:colors.destructive}}>Conversations could not load.</Text><Pressable accessibilityRole="button" accessibilityLabel="Retry conversations" onPress={()=>void refetch()}><Text style={{color:colors.primary}}>Retry</Text></Pressable></View>}
       <FlatList
         data={filtered}
         keyExtractor={(c) => c.id}
@@ -235,7 +198,7 @@ export default function MessagesScreen() {
         }
         ItemSeparatorComponent={() => <View style={s.sep} />}
         renderItem={({ item }) => {
-          const isMyLast = item.last_message_sender_id === user?.id;
+          const isMyLast = item.last_message_sender_user_id === user?.id;
           return (
             <Pressable style={s.row} onPress={() => setActiveId(item.id)}>
               <Avatar
@@ -294,7 +257,7 @@ function ActiveThread({
   const { user } = useAuth();
   const qc = useQueryClient();
   const listRef = useRef<FlatList<ThreadMessage>>(null);
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft, draftStorageError] = useLocalDraft(user?.id, `message:${conversation.id}`, '');
 
   const { data: messages = [], refetch } = useQuery({
     queryKey: ['messages', conversation.id],
@@ -302,7 +265,7 @@ function ActiveThread({
       try {
         const { data, error } = await supabase
           .from('messages')
-          .select('id,conversation_id,sender_id,content,created_at,read_at')
+          .select('id,conversation_id,sender_user_id,content,created_at,is_read,read_at')
           .eq('conversation_id', conversation.id)
           .order('created_at', { ascending: true });
         if (error) throw error;
@@ -322,17 +285,12 @@ function ActiveThread({
   const sendMessage = useMutation({
     mutationFn: async (content: string) => {
       if (!user) throw new Error('Not signed in');
-      const { data, error } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversation.id,
-          sender_id: user.id,
-          content,
-        } as any)
-        .select()
-        .maybeSingle();
-      if (error) throw error;
-      return data as any as ThreadMessage;
+      const { data, error } = await supabase.functions.invoke('send-direct-message', {
+        body: { conversationId: conversation.id, message: content },
+      });
+      if (error || data?.error || data?.success!==true || !data?.messageId) throw error || new Error(data?.error||'Delivery could not be confirmed.');
+      return data;
+
     },
     onMutate: async (content: string) => {
       if (!user) return;
@@ -341,7 +299,7 @@ function ActiveThread({
       const optimistic: ThreadMessage = {
         id: `optimistic-${Date.now()}`,
         conversation_id: conversation.id,
-        sender_id: user.id,
+        sender_user_id: user.id,
         content,
         created_at: new Date().toISOString(),
         read_at: null,
@@ -354,12 +312,13 @@ function ActiveThread({
       return { prev, optimisticId: optimistic.id };
     },
     onError: (err: any, _vars, ctx) => {
+      setDraft(current => current || _vars);
       if (ctx?.prev) {
         qc.setQueryData(['messages', conversation.id], ctx.prev);
       }
       Toast.show({
         type: 'error',
-        text1: 'Message failed to send',
+        text1: 'Delivery not confirmed',
         text2: err?.message ? String(err.message).slice(0, 120) : undefined,
       });
     },
@@ -371,7 +330,7 @@ function ActiveThread({
 
   const handleSend = () => {
     const content = draft.trim();
-    if (!content) return;
+    if (!content || !conversation.other_user_identified || sendMessage.isPending) return;
     setDraft('');
     sendMessage.mutate(content);
   };
@@ -380,12 +339,12 @@ function ActiveThread({
   React.useEffect(() => {
     if (!user || messages.length === 0) return;
     const unreadIds = messages
-      .filter((m) => m.sender_id !== user.id && !m.read_at && !m.pending)
+      .filter((m) => m.sender_user_id !== user.id && !m.read_at && !m.is_read && !m.pending)
       .map((m) => m.id);
     if (unreadIds.length === 0) return;
     void supabase
       .from('messages')
-      .update({ read_at: new Date().toISOString() } as any)
+      .update({ is_read: true, read_at: new Date().toISOString() } as any)
       .in('id', unreadIds);
   }, [messages, user]);
 
@@ -404,9 +363,8 @@ function ActiveThread({
         </Text>
       </View>
 
-      <KeyboardAvoidingView
-        style={s.threadBody}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {draftStorageError && <Text accessibilityRole="alert" style={{color:colors.destructive}}>Draft could not be saved on this device. Copy it before leaving.</Text>}
+      <KeyboardSafeBody>
         <FlatList
           ref={listRef}
           data={messages}
@@ -421,7 +379,7 @@ function ActiveThread({
             }
           }}
           renderItem={({ item }) => {
-            const isMine = item.sender_id === user?.id;
+            const isMine = item.sender_user_id === user?.id;
             return (
               <View style={[s.msgRow, isMine && s.msgRowMine]}>
                 <View
@@ -437,7 +395,7 @@ function ActiveThread({
                     <View style={s.msgStatusRow}>
                       {item.pending ? (
                         <ActivityIndicator size={10} color={colors.primaryForeground} />
-                      ) : item.read_at ? (
+                      ) : item.read_at || item.is_read ? (
                         <CheckCheck size={12} color={colors.primaryForeground} />
                       ) : (
                         <Check size={12} color={colors.primaryForeground} />
@@ -455,8 +413,10 @@ function ActiveThread({
           }
         />
 
+        {!conversation.other_user_identified && <Text accessibilityRole="alert" style={{color:colors.mutedForeground,padding:12}}>Recipient identity is unavailable. Sending is disabled until it can be verified.</Text>}
         <View style={s.composer}>
           <TextInput
+            testID="message-composer"
             style={s.composerInput}
             placeholder="Type a message..."
             placeholderTextColor={colors.mutedForeground}
@@ -468,10 +428,11 @@ function ActiveThread({
           <Pressable
             style={[
               s.sendBtn,
-              (!draft.trim() || sendMessage.isPending) && s.sendBtnDisabled,
+              (!draft.trim() || !conversation.other_user_identified || sendMessage.isPending) && s.sendBtnDisabled,
             ]}
             onPress={handleSend}
-            disabled={!draft.trim() || sendMessage.isPending}>
+            accessibilityRole="button" accessibilityLabel="Send message"
+            disabled={!draft.trim() || !conversation.other_user_identified || sendMessage.isPending}>
             {sendMessage.isPending ? (
               <ActivityIndicator color={colors.primaryForeground} size="small" />
             ) : (
@@ -479,7 +440,7 @@ function ActiveThread({
             )}
           </Pressable>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardSafeBody>
     </SafeAreaView>
   );
 }

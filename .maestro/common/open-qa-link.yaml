@@ -1,0 +1,8 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+---
+- openLink: ${QA_LINK}
+- runFlow:
+    when:
+      visible: "Open in.*OfferHound QA.*"
+    commands:
+      - tapOn: Open

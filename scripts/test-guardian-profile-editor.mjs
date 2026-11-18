@@ -1,0 +1,18 @@
+import fs from 'node:fs';import vm from 'node:vm';import ts from 'typescript';import assert from 'node:assert/strict';
+const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/guardianProfileEditor.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports});
+const original={id:'synthetic-profile',updated_at:'version1',is_minor_safe:false,school:'Original',positions:['QB'],position:'QB',gpa:3};
+assert.equal(Object.keys(exports.guardianProfilePatch(original,{school:'Original',positions:'QB',gpa:'3'})).length,0);
+assert.equal(exports.guardianProfilePatch(original,{positions:'QB, WR'}).position,'QB');
+assert.throws(()=>exports.guardianProfilePatch(original,{user_id:'forbidden'}));assert.throws(()=>exports.guardianProfilePatch(original,{gpa:'6'}));assert.throws(()=>exports.guardianProfilePatch(original,{weight:'49'}));assert.throws(()=>exports.guardianProfilePatch(original,{jersey_number:'a'}));
+assert.equal(Object.keys(exports.guardianProfilePatch({...original,is_minor_safe:null},{bio:'hidden',height:'6'})).length,0);
+let result={data:[{...original,school:'Updated'}]},latest={data:null},writes=0,filters=[];
+const client={from(){return{update(patch){writes++;assert.equal(Object.keys(patch).join(),'school');return{eq(k,v){filters.push([k,v]);return this;},select:async()=>result};},select(){return{eq(){return this;},maybeSingle:async()=>latest};}}}};
+await exports.saveGuardianProfile(client,original,{});assert.equal(writes,0);
+await exports.saveGuardianProfile(client,original,{school:'Updated'});assert.deepEqual(filters,[['id',original.id],['updated_at','version1']]);
+result={data:[]};latest={data:{...original,updated_at:'version2',school:'Updated'}};await exports.saveGuardianProfile(client,original,{school:'Updated'});
+latest={data:{...original,updated_at:'version2'}};await assert.rejects(()=>exports.saveGuardianProfile(client,original,{school:'Updated'}),/changed elsewhere/);
+latest={data:original};await assert.rejects(()=>exports.saveGuardianProfile(client,original,{school:'Updated'}),/permission/);
+latest={data:null};await assert.rejects(()=>exports.saveGuardianProfile(client,original,{school:'Updated'}),/permission/);
+result={data:[original]};await assert.rejects(()=>exports.saveGuardianProfile(client,original,{school:'Updated'}),/not saved/);
+result={error:{code:'42501'}};await assert.rejects(()=>exports.saveGuardianProfile(client,original,{school:'Updated'}),/permission/);
+console.log('PASS: restricted guardian patch validation, no-op, version filter, stored-field confirmation, lost-response replay, conflict and permission refusal. No live writes.');

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, FlatList, StyleSheet, SafeAreaView, RefreshControl, Pressable } from 'react-native';
+import { View, Text, FlatList, StyleSheet, SafeAreaView, RefreshControl, Pressable, Alert } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, CheckCheck } from 'lucide-react-native';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,9 +12,9 @@ interface Notification {
   id: string;
   user_id: string;
   title: string;
-  body: string | null;
+  message: string;
   created_at: string;
-  read: boolean;
+  is_read: boolean;
   type: string;
 }
 
@@ -22,32 +22,31 @@ export default function NotificationsScreen() {
   const { user } = useAuth();
   const qc = useQueryClient();
 
-  const { data: notifications = [], isLoading, refetch } = useQuery({
+  const { data: notifications = [], isLoading, error:loadError, refetch } = useQuery({
     queryKey: ['notifications', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('notifications')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(100);
+      if(error)throw error;
       return (data || []) as any as Notification[];
     },
     enabled: !!user,
   });
 
-  const unread = notifications.filter(n => !n.read).length;
+  const unread = notifications.filter(n => !n.is_read).length;
 
   const markAllRead = async () => {
     if (!user) return;
-    await supabase.from('notifications').update({ read: true }).eq('user_id', user.id).eq('read', false);
-    qc.invalidateQueries({ queryKey: ['notifications'] });
+    try{const {error}=await supabase.from('notifications').update({is_read:true}).eq('user_id',user.id).eq('is_read',false);if(error)throw error;await qc.invalidateQueries({queryKey:['notifications']});await qc.invalidateQueries({queryKey:['notif-unread-count']});}catch{Alert.alert("Couldn't mark notifications read",'Please try again.');}
   };
 
   const markRead = async (id: string) => {
-    await supabase.from('notifications').update({ read: true }).eq('id', id);
-    qc.invalidateQueries({ queryKey: ['notifications'] });
+    if(!user)return;try{const {data,error}=await supabase.from('notifications').update({is_read:true}).eq('id',id).eq('user_id',user.id).select('id').single();if(error||!data)throw error||Error('Not saved');await qc.invalidateQueries({queryKey:['notifications']});await qc.invalidateQueries({queryKey:['notif-unread-count']});}catch{Alert.alert("Couldn't mark notification read",'Please try again.');}
   };
 
   return (
@@ -73,18 +72,18 @@ export default function NotificationsScreen() {
         contentContainerStyle={s.list}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />}
         ItemSeparatorComponent={() => <View style={s.sep} />}
-        ListEmptyComponent={<Text style={s.empty}>No notifications yet</Text>}
+        ListEmptyComponent={<Pressable accessibilityRole="button" onPress={()=>void refetch()}><Text style={s.empty}>{isLoading?'Loading notifications…':loadError?"Couldn't load notifications. Tap to retry.":'No notifications yet'}</Text></Pressable>}
         renderItem={({ item }) => (
-          <Pressable style={[s.row, !item.read && s.rowUnread]} onPress={() => !item.read && markRead(item.id)}>
+          <Pressable style={[s.row, !item.is_read && s.rowUnread]} onPress={() => !item.is_read && markRead(item.id)}>
             <View style={s.rowText}>
               <View style={s.rowTop}>
                 <Text style={s.rowTitle} numberOfLines={1}>{item.title}</Text>
-                {!item.read && <View style={s.dot} />}
+                {!item.is_read && <View style={s.dot} />}
               </View>
-              {item.body && <Text style={s.rowBody}>{item.body}</Text>}
+              {item.message && <Text style={s.rowBody}>{item.message}</Text>}
               <Text style={s.rowDate}>{new Date(item.created_at).toLocaleString()}</Text>
             </View>
-            {item.read && <Check size={14} color={colors.mutedForeground} />}
+            {item.is_read && <Check size={14} color={colors.mutedForeground} />}
           </Pressable>
         )}
       />

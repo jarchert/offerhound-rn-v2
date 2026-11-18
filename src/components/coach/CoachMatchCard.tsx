@@ -26,7 +26,6 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Progress } from '@/components/ui/Progress';
-import { useRecordContactEvent } from '@/hooks/useRecordContactEvent';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
 export interface CoachCardData {
@@ -58,6 +57,7 @@ export interface CoachMatchCardProps {
   onToggleSave?: (coachId: string) => void;
   onDismiss?: () => void;
   onContact?: () => void;
+  showContact?: boolean;
   /**
    * When provided, tapping the card header (avatar/name block) opens the coach
    * profile. Mirrors Lovable web CoachSearch, where the whole card navigates to
@@ -118,13 +118,13 @@ export function CoachMatchCard({
   onToggleSave,
   onDismiss,
   onContact,
+  showContact = true,
   onOpenProfile,
   proximityLabel,
   viewerRole = 'athlete',
   coachAudience = 'college-coach',
 }: CoachMatchCardProps) {
   const navigation = useNavigation<any>();
-  const recordContact = useRecordContactEvent();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 640;
 
@@ -133,14 +133,6 @@ export function CoachMatchCard({
   const hasScore = typeof scores?.match_score === 'number';
 
   const handleContact = () => {
-    recordContact.mutate({
-      coach_id: coach.id,
-      coach_name: coach.name || 'Coach',
-      school: coach.school || '',
-      contact_type: 'message',
-      status: 'sent',
-    });
-
     if (onContact) {
       onContact();
       return;
@@ -279,14 +271,14 @@ export function CoachMatchCard({
         <FullScores />
 
         <View style={s.actionsRow}>
-          <Button
+          {showContact && <Button
             size="sm"
             variant="outline"
             onPress={handleContact}
             style={{ flex: 1 }}
           >
             Contact
-          </Button>
+          </Button>}
           {onToggleSave && hasScore ? (
             <Pressable onPress={() => onToggleSave(coach.id)} style={s.iconBtn} hitSlop={8}>
               {isSaved ? (
@@ -334,14 +326,14 @@ export function CoachMatchCard({
             </View>
           ) : null}
           <View style={s.desktopActions}>
-            <Button
+            {showContact && <Button
               size="sm"
               variant="ghost"
               onPress={handleContact}
               leftIcon={<Mail size={12} color={colors.foreground} />}
             >
               Contact
-            </Button>
+            </Button>}
             {onToggleSave ? (
               <Pressable onPress={() => onToggleSave(coach.id)} style={s.iconBtnSm} hitSlop={8}>
                 {isSaved ? (

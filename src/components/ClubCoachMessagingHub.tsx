@@ -1,3 +1,4 @@
+import {sendClubTeamMessages} from '@/lib/clubTeamMessages';
 // Ported from Lovable web → RN. Source:
 //   /home/ubuntu/.openclaw/workspace/offerhound-repo/src/components/ClubCoachMessagingHub.tsx
 // Translations:
@@ -81,20 +82,21 @@ export function ClubCoachMessagingHub() {
   });
 
   // Roster athletes (with linked profiles)
-  const { data: rosterAthletes = [], isLoading: rosterLoading } = useQuery({
+  const { data: rosterAthletes = [], isLoading: rosterLoading,isError:rosterError,refetch:refetchRoster } = useQuery({
     queryKey: ["club-msg-roster", user?.id, selectedTeam],
     queryFn: async () => {
       if (!user) return [];
       let query = supabase
         .from("team_rosters")
         .select(
-          "id, athlete_name, position, jersey_number, status, athlete_profile_id, team_id, teams!inner(coach_user_id, name)"
+          "id, athlete_name, position, jersey_number, status, removed_at, athlete_accepted_at, athlete_profile_id, team_id, teams!inner(coach_user_id, name)"
         )
-        .eq("teams.coach_user_id", user.id);
+        .eq("teams.coach_user_id", user.id).eq("teams.status","active").is("removed_at",null).not("status","in","(removed,transferred,declined)").not("athlete_accepted_at","is",null);
       if (selectedTeam !== "all") {
         query = query.eq("team_id", selectedTeam);
       }
-      const { data } = await query;
+      const { data,error } = await query;
+      if(error)throw error;
       return data || [];
     },
     enabled: !!user,
@@ -132,31 +134,12 @@ export function ClubCoachMessagingHub() {
     if (!messageContent.trim() || selectedAthletes.length === 0) return;
     setIsSending(true);
     try {
-      // Log as internal message via staff_messages or direct logging
-      if (user) {
-        for (const athleteRosterId of selectedAthletes) {
-          const athlete = rosterAthletes.find(
-            (a: any) => a.id === athleteRosterId
-          );
-          if (athlete?.athlete_profile_id) {
-            await supabase.from("coach_activity_log").insert({
-              coach_user_id: user.id,
-              activity_type: "athlete_contacted",
-              athlete_profile_id: athlete.athlete_profile_id,
-              details: {
-                message: messageContent.slice(0, 200),
-                channel: "in_app",
-              },
-            });
-          }
-        }
-      }
-      toast({
-        title: "Messages Sent",
-        description: `Sent to ${selectedAthletes.length} athlete(s)`,
-      });
-      setMessageContent("");
-      setSelectedAthletes([]);
+      if(!user)throw Error('Sign in to send messages.');
+      const selected=selectedAthletes.map(id=>rosterAthletes.find((athlete:any)=>athlete.id===id)||{id});
+      const result=await sendClubTeamMessages(supabase,selected,messageContent);
+      toast({title:result.unconfirmed.length?'Some deliveries were not confirmed':'Messages delivered',description:`${result.sent.length} delivered; ${result.unconfirmed.length} unconfirmed.${result.unconfirmed[0]?' '+result.unconfirmed[0].reason:''}`,variant:result.unconfirmed.length?'destructive':'default'});
+      setSelectedAthletes(result.unconfirmed.map(item=>item.id));
+      if(!result.unconfirmed.length)setMessageContent('');
     } catch (err: any) {
       toast({
         title: "Error",
@@ -212,6 +195,7 @@ export function ClubCoachMessagingHub() {
     } as never);
   };
 
+  if(rosterError)return <Button onPress={()=>void refetchRoster()}>Retry loading team members</Button>;
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}

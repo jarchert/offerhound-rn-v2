@@ -1,0 +1,22 @@
+name: OfferHound voice recording preserves existing notes
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        type: string
+        required: true
+      platform:
+        type: choice
+        required: true
+        default: ios
+        options: [ios, android]
+jobs:
+  voice:
+    type: maestro
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      flow_path: "${{ inputs.platform == 'android' ? '.maestro/staging-capture-android-voice.yaml' : '.maestro/staging-capture-ios-voice.yaml' }}"
+      record_screen: true
+      retries: 0

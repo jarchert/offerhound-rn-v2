@@ -1,3 +1,4 @@
+import {staffMessageTarget} from '@/lib/staffRecords';
 // Parity port from Lovable src/components/ForwardToStaffDialog.tsx (verbatim logic).
 // Web→RN mapping: shadcn Dialog/Button/Badge/Textarea/Label/Avatar/ScrollArea →
 // src/components/ui/*; lucide-react → lucide-react-native; Tailwind → StyleSheet @/lib/theme.
@@ -44,7 +45,7 @@ export function ForwardToStaffDialog({
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
   const [note, setNote] = useState('');
 
-  const { data: staff = [], isLoading } = useQuery({
+  const { data: staff = [], isLoading, isError: staffFailed, refetch: retryStaff } = useQuery({
     queryKey: ['coaching-staff-for-forward', user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -62,11 +63,17 @@ export function ForwardToStaffDialog({
   const forwardMutation = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error('Not authenticated');
+      if (!selectedStaffIds.length) throw new Error('Choose a linked staff member.');
+      if (staffFailed) throw new Error('Reload staff before forwarding.');
+      for (const id of selectedStaffIds) {
+        const member = (staff as any[]).find(s => s.id === id);
+        if (!staffMessageTarget(member)) throw new Error('A selected staff member has no linked OfferHound account.');
+      }
       const messageType = `${entityType}_forward`;
       const inserts = selectedStaffIds
         .map((staffId) => {
           const member = (staff as any[]).find((s: any) => s.id === staffId);
-          const recipientUserId = member?.staff_user_id || member?.id;
+          const recipientUserId = staffMessageTarget(member)!.recipientUserId;
           return [
             // Create forward record
             supabase.from('staff_forwards').insert({
@@ -76,7 +83,7 @@ export function ForwardToStaffDialog({
               entity_id: entityId,
               entity_name: entityName,
               note: note || null,
-            }),
+            }).select('id').single(),
             // Send message notification
             supabase.from('staff_messages').insert({
               sender_user_id: user.id,
@@ -85,14 +92,14 @@ export function ForwardToStaffDialog({
               message_type: messageType,
               forwarded_entity_id: entityId,
               forwarded_entity_type: entityType,
-            }),
+            }).select('id').single(),
           ];
         })
         .flat();
 
       const results = await Promise.all(inserts);
-      const errors = results.filter((r: any) => r.error);
-      if (errors.length > 0) throw new Error((errors[0] as any).error!.message);
+      const errors = results.filter((r: any) => r.error||!r.data?.id);
+      if (errors.length > 0) throw new Error('Some forwarding records could not be confirmed. Check staff messages before retrying; part of the request may have succeeded.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff-messages'] });
@@ -152,6 +159,7 @@ export function ForwardToStaffDialog({
         {/* Staff Selection */}
         <View style={s.field}>
           <Label>Select Staff Members</Label>
+          {staffFailed ? <Button onPress={() => void retryStaff()}>Could not load staff. Retry</Button> : null}
           <ScrollArea style={s.staffBox}>
             {isLoading ? (
               <View style={s.loadingRow}>
@@ -172,6 +180,7 @@ export function ForwardToStaffDialog({
                   return (
                     <Pressable
                       key={member.id}
+                      disabled={!staffMessageTarget(member)||forwardMutation.isPending}
                       onPress={() => toggleStaff(member.id)}
                       style={[
                         s.staffRow,
@@ -185,7 +194,7 @@ export function ForwardToStaffDialog({
                           {member.name}
                         </Text>
                         <Text style={s.staffRole} numberOfLines={1}>
-                          {member.role?.replace('_', ' ')}
+                          {staffMessageTarget(member)?member.role?.replace('_', ' '):'No unambiguous OfferHound account'}
                         </Text>
                       </View>
                       {isSelected && (

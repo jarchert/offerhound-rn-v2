@@ -1,3 +1,4 @@
+import {removeDocument} from '@/lib/removeDocument';
 // Ported from Lovable web (src/components/CampInsuranceManager.tsx) — RN-adapted.
 // Translations:
 //   - shadcn Card/Button/Input/Label/Badge → src/components/ui (RN)
@@ -32,6 +33,7 @@ export const CampInsuranceManager = ({ campId }: Props) => {
   const { toast } = useToast();
   const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError,setLoadError]=useState(false);
   const [uploading, setUploading] = useState(false);
   const [insurer, setInsurer] = useState('');
   const [policy, setPolicy] = useState('');
@@ -42,11 +44,12 @@ export const CampInsuranceManager = ({ campId }: Props) => {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('camp_insurance_certificates' as any)
       .select('*').eq('camp_id', campId)
       .order('expiration_date', { ascending: false });
-    setList((data as any[]) ?? []);
+    setLoadError(!!error);
+    setList(error?[]:(data as any[]) ?? []);
     setLoading(false);
   };
   useEffect(() => { load(); }, [campId]);
@@ -74,7 +77,8 @@ export const CampInsuranceManager = ({ campId }: Props) => {
     let body: Blob | ArrayBuffer;
     try {
       const resp = await fetch(file.uri);
-      body = await resp.blob();
+      body = await resp.arrayBuffer();
+      if(body.byteLength>10*1024*1024)throw Error('File must be 10 MB or smaller.');
     } catch (e: any) {
       toast({ title: 'Read file failed', description: e.message, variant: 'destructive' });
       setUploading(false);
@@ -116,9 +120,9 @@ export const CampInsuranceManager = ({ campId }: Props) => {
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete', style: 'destructive', onPress: async () => {
-          await supabase.storage.from('camp-insurance').remove([path]);
-          await supabase.from('camp_insurance_certificates' as any).delete().eq('id', id);
-          load();
+          try{const result=await removeDocument(supabase,{table:'camp_insurance_certificates',bucket:'camp-insurance',id,path,scope:{camp_id:campId}});
+          toast({title:result.cleanupPending?'Certificate removed; private file cleanup pending':'Certificate deleted'});await load();}
+          catch(error:any){toast({title:'Deletion not confirmed',description:error.message,variant:'destructive'});}
         },
       },
     ]);
@@ -133,6 +137,7 @@ export const CampInsuranceManager = ({ campId }: Props) => {
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {loadError&&<View accessibilityRole="alert"><Text style={{color:colors.destructive}}>Certificates could not be loaded.</Text><Button onPress={()=>void load()}>Retry loading certificates</Button></View>}
         <View style={styles.grid}>
           <View style={styles.cellFull}>
             <Label style={styles.smallLabel}>Insurer name</Label>

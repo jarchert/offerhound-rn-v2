@@ -1,0 +1,123 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Launch repairs read-only native regression
+---
+- runFlow: common/signed-out-entry.yaml
+- tapOn:
+    id: header-sign-in
+- assertVisible: Welcome Back
+- tapOn: Forgot password?
+- assertVisible: Reset Password
+- assertVisible: Send reset link
+- assertNotVisible: Continue with Google
+- takeScreenshot: launch-recovery-entry
+- tapOn: Back to sign in
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.adult-athlete@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_ADULT_PASSWORD}
+- extendedWaitUntil:
+    visible:
+      id: athlete-tab-profile
+    timeout: 60000
+- tapOn:
+    id: athlete-tab-profile
+- scrollUntilVisible:
+    element:
+      id: profile-edit-button
+    direction: DOWN
+- tapOn:
+    id: profile-edit-button
+- assertVisible: Upload Photo
+- tapOn: Sports
+- scrollUntilVisible:
+    element: .*Quarterback.*QB.*
+    direction: DOWN
+    timeout: 30000
+- takeScreenshot: launch-position-prefill
+- tapOn:
+    id: global-home
+- runFlow:
+    file: common/reveal-text.yaml
+    env:
+      QA_SCROLL_TEXT: ^Camps$
+- tapOn: Camps
+- runFlow:
+    file: common/reveal-control.yaml
+    env:
+      QA_SCROLL_ID: camps-saved-tab
+- scrollUntilVisible:
+    element:
+      id: camps-saved-tab
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- takeScreenshot: launch-my-camps-target
+- tapOn:
+    id: camps-saved-tab
+- runFlow:
+    file: common/reveal-text.yaml
+    env:
+      QA_SCROLL_TEXT: No saved camps yet.*
+- tapOn:
+    id: global-home
+- runFlow:
+    file: common/reveal-text.yaml
+    env:
+      QA_SCROLL_TEXT: Complete Profile to Contact Coaches
+- assertVisible: Complete Profile to Contact Coaches
+- takeScreenshot: launch-header-home-reset
+- runFlow:
+    file: common/reveal-text-up.yaml
+    env:
+      QA_SCROLL_TEXT: ^Camps$
+- tapOn: Camps
+- runFlow:
+    file: common/reveal-control.yaml
+    env:
+      QA_SCROLL_ID: camps-saved-tab
+- scrollUntilVisible:
+    element:
+      id: camps-saved-tab
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- takeScreenshot: launch-my-camps-target
+- tapOn:
+    id: camps-saved-tab
+- tapOn:
+    id: athlete-tab-home
+- runFlow:
+    file: common/reveal-text.yaml
+    env:
+      QA_SCROLL_TEXT: Complete Profile to Contact Coaches
+- assertVisible: Complete Profile to Contact Coaches
+- takeScreenshot: launch-bottom-home-reset
+- tapOn:
+    id: header-settings
+- tapOn: Change Password
+- assertVisible:
+    id: settings-password-cancel
+- tapOn:
+    id: settings-password-cancel
+- tapOn:
+    id: settings-account-information
+- assertVisible: Account Settings
+- takeScreenshot: launch-account-information
+- runFlow:
+    file: common/reveal-text.yaml
+    env:
+      QA_SCROLL_TEXT: Notification Settings
+- tapOn: Notification Settings
+- extendedWaitUntil:
+    visible: .*Messages.*in app.*
+    timeout: 30000
+- runFlow:
+    file: common/reveal-control.yaml
+    env:
+      QA_SCROLL_ID: notification-camps_email
+- takeScreenshot: launch-notification-preferences
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.adult-athlete@offerhound.test

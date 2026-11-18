@@ -21,6 +21,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import type { RootStackParamList } from "@/navigation/RootNavigator";
+import { useAuth } from "@/hooks/useAuth";
+import { useScoutOrganization } from "@/hooks/useScoutOrganization";
 import { useCoachProfile } from "@/hooks/useCoachProfile";
 import { useScoutProfile } from "@/hooks/useScoutProfile";
 import { useHSCoachProfile } from "@/hooks/useHSCoachProfile";
@@ -251,6 +253,8 @@ function letterRouteForPath(path: string): LetterRoute {
       return { parent: "ClubCoachTabs", screen: "LettersTab" };
     case "/coach/letters":
       return { parent: "CoachTabs", screen: "LettersTab" };
+    case "/agency/letters":
+      return { parent: "AgencyTabs", screen: "LettersTab" };
     case "/scout/letters":
       return { parent: "ScoutTabs", screen: "LettersTab" };
     case "/letters":
@@ -261,32 +265,37 @@ function letterRouteForPath(path: string): LetterRoute {
 
 export function useLetterCenter() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const { userRole } = useAuth();
+  const { data: organization } = useScoutOrganization();
   const { data: coachProfile } = useCoachProfile();
   const { data: scoutProfile } = useScoutProfile();
   const { data: hsCoachProfile } = useHSCoachProfile();
 
   const [isNavigating, setIsNavigating] = useState(false);
 
-  const isHSCoach = !!hsCoachProfile;
-  const isClubCoach = !!(coachProfile as any)?.is_club_coach;
-  const isCollegeCoach = !!coachProfile && !isClubCoach;
-  const isScout = !!scoutProfile;
+  const isHSCoach = userRole === "high_school_coach" || !!hsCoachProfile;
+  const isClubCoach = userRole === "club_coach" || !!(coachProfile as any)?.is_club_coach;
+  const isCollegeCoach = userRole === "coach" || (!!coachProfile && !isClubCoach);
+  const isScout = userRole === "scout" || !!scoutProfile;
+  const isAgency = isScout && !!(organization?.isOwner || organization?.isMember);
 
   const viewerRole = useMemo(() => {
     if (isHSCoach) return "hs-coach";
     if (isClubCoach) return "club-coach";
     if (isCollegeCoach) return "college-coach";
+    if (isAgency) return "agency";
     if (isScout) return "scout";
     return "athlete";
-  }, [isHSCoach, isClubCoach, isCollegeCoach, isScout]);
+  }, [isHSCoach, isClubCoach, isCollegeCoach, isScout, isAgency]);
 
   const letterCenter = useMemo(() => {
     if (isHSCoach) return "/hs-coach/letters";
     if (isClubCoach) return "/club/letters";
     if (isCollegeCoach) return "/coach/letters";
+    if (isAgency) return "/agency/letters";
     if (isScout) return "/scout/letters";
     return "/letters";
-  }, [isHSCoach, isClubCoach, isCollegeCoach, isScout]);
+  }, [isHSCoach, isClubCoach, isCollegeCoach, isScout, isAgency]);
 
   const buildAthleteLetterPrefill = useCallback(
     (

@@ -1,0 +1,30 @@
+# Physical-device acceptance: simulator camera permission behavior is not a sensor certificate.
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Revoked camera permission preserves manual entry
+tags: [capture-camera-denial]
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.college-coach@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_COLLEGE_COACH_PASSWORD}
+- extendedWaitUntil:
+    visible: ".*Pipeline.*"
+    timeout: 60000
+- setPermissions:
+    permissions:
+      camera: deny
+- runFlow:
+    file: common/open-qa-link.yaml
+    env:
+      QA_LINK: offerhound-staging://camps/${MAESTRO_CAPTURE_CAMP_ID}/mobile-checkin
+- tapOn:
+    id: camp-qr-start
+- extendedWaitUntil:
+    visible: ".*Camera access is denied.*"
+    timeout: 30000
+- assertVisible: Open manual entry
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.college-coach@offerhound.test

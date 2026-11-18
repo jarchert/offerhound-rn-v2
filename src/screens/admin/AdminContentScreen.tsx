@@ -3,6 +3,7 @@
 // piece of the admin Content surface today is the podcast tile uploader. The remaining
 // pieces (media center, influencer roster admin, letter analytics) are tracked as
 // PORT-PENDING in the AdminContent stack and will replace this wrapper as they land.
+import {AdminCreatorReview} from '@/components/admin/AdminCreatorReview';
 import React from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, View, Text } from 'react-native';
 import { PodcastTileUpload } from '@/components/admin/PodcastTileUpload';
@@ -15,9 +16,10 @@ export default function AdminContentScreen() {
         <View style={s.header}>
           <Text style={s.title}>Content</Text>
           <Text style={s.subtitle}>
-            Podcast tile uploads. Media center, influencers, and letter analytics arrive in a follow-up.
+            Manage podcast artwork and review creator profiles.
           </Text>
         </View>
+        <AdminCreatorReview />
         <PodcastTileUpload />
       </ScrollView>
     </SafeAreaView>

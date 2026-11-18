@@ -66,9 +66,9 @@ export default function PublicFooter({
                 <Pressable style={styles.installBtn} onPress={onInstall}>
                   <Text style={styles.installBtnText}>Install App</Text>
                 </Pressable>
-                <Pressable style={styles.appStoreBtn} onPress={() => {}}>
-                  <Text style={styles.appStoreBtnText}>App Store</Text>
-                </Pressable>
+                <View style={styles.appStoreBtn}>
+                  <Text style={styles.appStoreBtnText}>App Store release pending</Text>
+                </View>
               </View>
             </View>
 
