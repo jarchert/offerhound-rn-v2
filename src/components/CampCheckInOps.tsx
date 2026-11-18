@@ -9,10 +9,8 @@ import { checkInNativeToken, decodeCampToken } from '@/lib/nativeCampCheckin';
 //   - <Input ref> + onKeyDown Enter → TextInput ref + onSubmitEditing
 //   - autoFocus retained via TextInput autoFocus
 //   - input onChange(e.target.value) → onChangeText(text)
-//   - GAP: QR camera scanning UI not implemented — expo-barcode-scanner /
-//     expo-camera are NOT installed. Manual token entry path is fully ported;
-//     a future enhancement can wire a Pressable that opens a Camera scanner
-//     and writes its result into scanInput.
+//   - This manager panel supports complete-token entry; camera and image scans
+//     are provided by CampMobileCheckinScreen and the shared CampQrScanner.
 //   - Hover/transition/responsive utility classes are no-ops in RN
 import React, { useState, useRef } from 'react';
 import {
@@ -110,6 +108,7 @@ export function CampCheckInOps({ campId, campName, drillStations = [], positions
 
   const bulkUpdate = useMutation({
     mutationFn: async (updates: { id: string; group_assignment?: string; position_group?: string }[]) => {
+      if (!updates.length) throw Error('No eligible checked-in participants to assign.');
       for (const { id, ...rest } of updates) {
         const { data, error } = await supabase
           .from('camp_enrollments')
@@ -361,10 +360,10 @@ export function CampCheckInOps({ campId, campName, drillStations = [], positions
         {/* GROUPS & ROTATION TAB */}
         <TabsContent value="groups" style={{ gap: spacing.md }}>
           <View style={s.actionRow}>
-            <Button size="sm" variant="outline" onPress={handleAutoAssignGroups} disabled={bulkUpdate.isPending}>
+            <Button size="sm" variant="outline" onPress={handleAutoAssignGroups} disabled={bulkUpdate.isPending || checkedInCount === 0}>
               Auto-Assign Groups
             </Button>
-            <Button size="sm" variant="outline" onPress={handleAutoAssignPositions} disabled={bulkUpdate.isPending}>
+            <Button size="sm" variant="outline" onPress={handleAutoAssignPositions} disabled={bulkUpdate.isPending || !enrollments.some(e => e.status === 'checked_in' && !e.position_group)}>
               Auto-Assign Positions
             </Button>
             {bulkUpdate.isPending ? <ActivityIndicator size="small" color={colors.primary} /> : null}
