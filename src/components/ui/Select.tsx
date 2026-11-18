@@ -9,31 +9,22 @@ interface SelectCtx {
   open: boolean;
   setOpen: (v: boolean) => void;
   label: string;
-  setLabel: (v: string) => void;
-  items: { value: string; label: string }[];
-  registerItem: (v: string, l: string) => void;
 }
 const Ctx = createContext<SelectCtx>({} as SelectCtx);
 
 export function Select({ value, onValueChange, children }: { value?: string; onValueChange?: (v: string) => void; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
-  const [label, setLabel] = useState('');
-  const [items, setItems] = useState<{ value: string; label: string }[]>([]);
-  const registerItem = (v: string, l: string) => {
-    setItems(prev => {
-      if (prev.find(i => i.value === v)) return prev;
-      return [...prev, { value: v, label: l }];
-    });
-  };
-
-  React.useEffect(() => {
-    const it = items.find(i => i.value === value);
-    if (it) setLabel(it.label);
-  }, [value, items]);
+  // Modal content is not mounted while closed. Derive the selected label from
+  // declared options so prefilled values are readable before opening the picker.
+  const options: {value:string;label:string}[]=[];
+  const text=(node:React.ReactNode):string=>React.Children.toArray(node).map(child=>typeof child==='string'||typeof child==='number'?String(child):React.isValidElement<{children?:React.ReactNode}>(child)?text(child.props.children):'').join('');
+  const visit=(nodes:React.ReactNode)=>React.Children.forEach(nodes,child=>{if(!React.isValidElement<{value?:string;children?:React.ReactNode}>(child))return;if(child.type===SelectItem)options.push({value:child.props.value!,label:text(child.props.children)});else visit(child.props.children);});
+  visit(children);
+  const label=options.find(item=>item.value===value)?.label||'';
 
   return (
     <Ctx.Provider value={{
-      value, open, setOpen, label, setLabel, items, registerItem,
+      value, open, setOpen, label,
       onValueChange: (v: string) => { onValueChange?.(v); setOpen(false); },
     }}>
       {children}
@@ -44,7 +35,7 @@ export function Select({ value, onValueChange, children }: { value?: string; onV
 export function SelectTrigger({ children, style }: { children?: React.ReactNode; style?: ViewStyle }) {
   const ctx = useContext(Ctx);
   return (
-    <Pressable onPress={() => ctx.setOpen(true)} style={[s.trigger, style]}>
+    <Pressable accessibilityRole="button" accessibilityState={{expanded:ctx.open}} onPress={() => ctx.setOpen(true)} style={[s.trigger, style]}>
       <View style={{ flex: 1 }}>{children ?? <SelectValue />}</View>
       <ChevronDown size={16} color={colors.mutedForeground} />
     </Pressable>
@@ -62,8 +53,8 @@ export function SelectContent({ children }: { children: React.ReactNode }) {
   const itemChildren = React.Children.toArray(children);
   return (
     <Modal visible={ctx.open} transparent animationType="fade" onRequestClose={() => ctx.setOpen(false)}>
-      <Pressable style={s.overlay} onPress={() => ctx.setOpen(false)}>
-        <Pressable style={s.dropdown} onPress={(e) => e.stopPropagation()}>
+      <Pressable accessible={false} style={s.overlay} onPress={() => ctx.setOpen(false)}>
+        <Pressable accessible={false} style={s.dropdown} onPress={(e) => e.stopPropagation()}>
           <FlatList
             data={itemChildren}
             keyExtractor={(_item, i) => String(i)}
@@ -77,15 +68,10 @@ export function SelectContent({ children }: { children: React.ReactNode }) {
 
 export function SelectItem({ value, children }: { value: string; children: React.ReactNode }) {
   const ctx = useContext(Ctx);
-  const label = typeof children === 'string' ? children : String(children);
-
-  React.useEffect(() => {
-    ctx.registerItem(value, label);
-  }, [value, label]);
 
   const selected = ctx.value === value;
   return (
-    <Pressable style={[s.item, selected && s.itemSelected]} onPress={() => ctx.onValueChange(value)}>
+    <Pressable accessibilityRole="radio" accessibilityState={{checked:selected}} style={[s.item, selected && s.itemSelected]} onPress={() => ctx.onValueChange(value)}>
       <Text style={s.itemText}>{children}</Text>
       {selected && <Check size={16} color={colors.primary} />}
     </Pressable>

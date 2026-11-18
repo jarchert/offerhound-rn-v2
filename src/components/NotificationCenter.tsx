@@ -1,8 +1,8 @@
 // Notification center — bell with unread indicator, shows recent notifications in a Sheet.
 import React, { useState } from 'react';
-import { View, Text, Pressable, FlatList, StyleSheet } from 'react-native';
+import { View, Text, Pressable, FlatList, StyleSheet, Alert } from 'react-native';
 import { Bell, Check } from 'lucide-react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/Sheet';
 import { Badge } from '@/components/ui/Badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,37 +12,38 @@ import { colors, typography, spacing } from '@/lib/theme';
 interface Notification {
   id: string;
   title: string;
-  body: string | null;
+  message: string;
   created_at: string;
-  read: boolean;
+  is_read: boolean;
   type: string;
 }
 
 export function NotificationCenter() {
   const { user } = useAuth();
+  const qc=useQueryClient();
   const [open, setOpen] = useState(false);
 
-  const { data: notifications = [], refetch } = useQuery({
+  const { data: notifications = [], error:loadError, isLoading, refetch } = useQuery({
     queryKey: ['notifications', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('notifications')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(50);
+      if(error)throw error;
       return (data || []) as any as Notification[];
     },
     enabled: !!user,
   });
 
-  const unread = notifications.filter(n => !n.read).length;
+  const unread = notifications.filter(n => !n.is_read).length;
 
   const markAllRead = async () => {
     if (!user) return;
-    await supabase.from('notifications').update({ read: true }).eq('user_id', user.id).eq('read', false);
-    refetch();
+    try{const {error}=await supabase.from('notifications').update({is_read:true}).eq('user_id',user.id).eq('is_read',false);if(error)throw error;await refetch();await qc.invalidateQueries({queryKey:['notif-unread-count']});}catch{Alert.alert("Couldn't mark notifications read",'Please try again.');}
   };
 
   return (
@@ -71,14 +72,14 @@ export function NotificationCenter() {
             data={notifications}
             keyExtractor={n => n.id}
             ItemSeparatorComponent={() => <View style={s.sep} />}
-            ListEmptyComponent={<Text style={s.empty}>No notifications yet</Text>}
+            ListEmptyComponent={<Pressable accessibilityRole="button" onPress={()=>void refetch()}><Text style={s.empty}>{isLoading?'Loading notifications…':loadError?"Couldn't load notifications. Tap to retry.":'No notifications yet'}</Text></Pressable>}
             renderItem={({ item }) => (
-              <View style={[s.item, !item.read && s.itemUnread]}>
+              <View style={[s.item, !item.is_read && s.itemUnread]}>
                 <View style={s.itemHeader}>
                   <Text style={s.itemTitle} numberOfLines={1}>{item.title}</Text>
-                  {!item.read && <View style={s.unreadDot} />}
+                  {!item.is_read && <View style={s.unreadDot} />}
                 </View>
-                {item.body && <Text style={s.itemBody}>{item.body}</Text>}
+                {item.message && <Text style={s.itemBody}>{item.message}</Text>}
                 <Text style={s.itemDate}>{new Date(item.created_at).toLocaleString()}</Text>
               </View>
             )}

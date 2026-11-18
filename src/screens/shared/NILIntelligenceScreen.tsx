@@ -98,9 +98,11 @@ export default function NILIntelligenceScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [athleteProfile?.id]);
 
+  const validInputs = /^\d+$/.test(followerCount.trim()) && Number.isSafeInteger(Number(followerCount)) && Number(followerCount)>0 && Number(followerCount)<=1000000000 && engagementRate.trim()!=='' && Number.isFinite(Number(engagementRate)) && Number(engagementRate)>=0 && Number(engagementRate)<=100 && SPORT_NIL_DATA.some(sp=>sp.sport===selectedSport);
   const calculateNILValue = () => {
-    const followers = parseInt(followerCount, 10) || 0;
-    const engagement = parseFloat(engagementRate) || 3;
+    if(!validInputs)return null;
+    const followers = Number(followerCount);
+    const engagement = Number(engagementRate);
     const sportData = SPORT_NIL_DATA.find((sp) => sp.sport === selectedSport);
     const sportMultiplier = sportData?.multiplier ?? 1.0;
     const engagementMultiplier = engagement > 5 ? 1.5 : engagement > 3 ? 1.2 : 1.0;
@@ -127,6 +129,7 @@ export default function NILIntelligenceScreen() {
   };
 
   const valuation = calculateNILValue();
+  const multiplier = SPORT_NIL_DATA.find(sp=>sp.sport===selectedSport)?.multiplier;
 
   return (
     <SafeAreaView style={s.root}>
@@ -186,6 +189,7 @@ export default function NILIntelligenceScreen() {
           ) : null}
 
           <TabsContent value="dashboard">
+            <Text style={s.subtitle}>Historical illustrative figures (2025); not a verified current market-data feed.</Text>
             <View style={s.statRow}>
               <Card style={flat(s.card, s.statCard)}>
                 <CardContent style={s.statContent}>
@@ -308,26 +312,29 @@ export default function NILIntelligenceScreen() {
                       placeholder="3"
                     />
                   </View>
+                  <Text style={s.subtitle}>Illustrative model assumptions: under 1,000 followers uses a fixed $0–$500 band. Higher bands use per-follower rates with a {multiplier ?? 'selected sport'} sport multiplier and engagement adjustment (above 3%: ×1.2; above 5%: ×1.5). Estimates are not offers or verified market valuations.</Text>
 
+                  <Text accessibilityRole="text" style={s.subtitle}>Illustrative model only, not a verified market valuation or earnings promise. Enter a positive whole follower count and engagement from 0 to 100%. Sport and engagement bands adjust the example.</Text>
+                  {!validInputs && <Text accessibilityRole="alert" style={s.subtitle}>Complete the valid inputs above to see an illustrative estimate.</Text>}
                   <View style={s.valuationRow}>
                     <Card style={flat(s.valuationCard, s.emeraldCardSubtle)}>
                       <CardContent style={s.valuationContent}>
                         <Text style={s.valuationLabel}>Conservative</Text>
-                        <Text style={s.valuationLow}>${valuation.low.toLocaleString()}</Text>
+                        <Text style={s.valuationLow}>{valuation ? `$${valuation.low.toLocaleString()}` : '—'}</Text>
                         <Text style={s.valuationSub}>per year</Text>
                       </CardContent>
                     </Card>
                     <Card style={flat(s.valuationCard, { backgroundColor: EMERALD_BG_STRONG, borderColor: EMERALD })}>
                       <CardContent style={s.valuationContent}>
                         <Text style={[s.valuationLabel, { color: EMERALD }]}>Estimated</Text>
-                        <Text style={[s.valuationMid, { color: EMERALD }]}>${valuation.mid.toLocaleString()}</Text>
+                        <Text style={[s.valuationMid, { color: EMERALD }]}>{valuation ? `$${valuation.mid.toLocaleString()}` : '—'}</Text>
                         <Text style={s.valuationSub}>per year</Text>
                       </CardContent>
                     </Card>
                     <Card style={flat(s.valuationCard, s.emeraldCardSubtle)}>
                       <CardContent style={s.valuationContent}>
                         <Text style={s.valuationLabel}>Optimistic</Text>
-                        <Text style={s.valuationLow}>${valuation.high.toLocaleString()}</Text>
+                        <Text style={s.valuationLow}>{valuation ? `$${valuation.high.toLocaleString()}` : '—'}</Text>
                         <Text style={s.valuationSub}>per year</Text>
                       </CardContent>
                     </Card>
@@ -350,6 +357,7 @@ export default function NILIntelligenceScreen() {
           </TabsContent>
 
           <TabsContent value="trends">
+            <Text style={s.subtitle}>Illustrative trends; current source verification is pending.</Text>
             <Card style={flat(s.card, s.emeraldCard)}>
               <CardHeader>
                 <CardTitle style={{ color: EMERALD }}>Rising Trends</CardTitle>

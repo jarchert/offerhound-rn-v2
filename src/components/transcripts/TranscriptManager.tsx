@@ -1,3 +1,4 @@
+import {withThemeAlpha} from '@/lib/theme';
 // Ported from Lovable src/components/transcripts/TranscriptManager.tsx
 // Web → RN mapping:
 //   - lucide-react → lucide-react-native
@@ -6,8 +7,7 @@
 //   - <input type="file"> + ref.click() → expo-document-picker
 //     (DocumentPicker.getDocumentAsync), already used elsewhere in this app
 //   - File built from picker asset as { uri, name, type, size } and cast to
-//     File for the existing `useTranscripts().upload` hook (which is shared
-//     with web; supabase-js storage upload accepts the RN file shape).
+//     File for the independently maintained native upload hook, which reads URI bytes.
 //   - window.open(url) → Linking.openURL(url)
 //   - confirm() → Alert.alert with destructive action
 //   - Tailwind utility classes → StyleSheet using @/lib/theme tokens
@@ -39,7 +39,7 @@ interface Props {
 }
 
 export function TranscriptManager({ compact = false }: Props) {
-  const { data: transcripts = [], isLoading, upload, remove, getDownloadUrl } = useTranscripts();
+  const { data: transcripts = [], isLoading, isError, refetch, upload, remove, getDownloadUrl } = useTranscripts();
   const { toast } = useToast();
   const [gpa, setGpa] = useState('');
   const [semester, setSemester] = useState('');
@@ -48,6 +48,7 @@ export function TranscriptManager({ compact = false }: Props) {
   const [shareTarget, setShareTarget] = useState<AcademicTranscript | null>(null);
 
   const handlePickFile = async () => {
+    try {
     const result = await DocumentPicker.getDocumentAsync({
       type: 'application/pdf',
       copyToCacheDirectory: true,
@@ -68,15 +69,14 @@ export function TranscriptManager({ compact = false }: Props) {
       type: 'application/pdf',
       size: asset.size ?? 0,
     });
+    } catch(error:any){toast({title:'Could not choose PDF',description:error.message||'Try again',variant:'destructive'});}
   };
 
   const handleUpload = async () => {
     if (!pendingFile) return;
     try {
       await upload.mutateAsync({
-        // The existing useTranscripts hook is shared with the web app and types
-        // the file as `File`. The RN `{uri,name,type,size}` shape is accepted
-        // by supabase-js storage upload; cast through unknown to satisfy TS.
+        // The native hook reads the selected URI into bytes before storage upload.
         file: pendingFile as unknown as File,
         gpa: gpa || undefined,
         semester: semester || undefined,
@@ -167,6 +167,7 @@ export function TranscriptManager({ compact = false }: Props) {
               variant="outline"
               size="sm"
               style={s.fullBtn}
+              testID="transcript-choose-pdf"
               onPress={handlePickFile}
               leftIcon={<Upload size={16} color={colors.foreground} style={{ marginRight: 4 }} />}
             >
@@ -180,7 +181,7 @@ export function TranscriptManager({ compact = false }: Props) {
               <Button size="sm" onPress={handleUpload} disabled={upload.isPending}>
                 {upload.isPending ? '...' : 'Upload'}
               </Button>
-              <Button size="sm" variant="ghost" onPress={() => setPendingFile(null)}>
+              <Button size="sm" variant="ghost" disabled={upload.isPending} onPress={() => setPendingFile(null)}>
                 Cancel
               </Button>
             </View>
@@ -188,7 +189,7 @@ export function TranscriptManager({ compact = false }: Props) {
         </View>
 
         {/* Existing transcripts */}
-        {isLoading ? (
+        {isError?<Button variant="outline" onPress={()=>void refetch()}>Could not load transcripts. Retry</Button>:isLoading ? (
           <View style={s.centerSm}>
             <ActivityIndicator size="small" color={colors.primary} />
           </View>
@@ -274,7 +275,7 @@ const s = StyleSheet.create({
   listRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     padding: spacing.sm, borderRadius: 8,
-    backgroundColor: colors.secondary + '66', borderWidth: 1, borderColor: colors.border,
+    backgroundColor: withThemeAlpha('secondary','66'), borderWidth: 1, borderColor: colors.border,
   },
   listMain: { flex: 1, minWidth: 0 },
   listName: { fontSize: typography.fontSize.xs, fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground },

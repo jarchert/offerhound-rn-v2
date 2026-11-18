@@ -1,0 +1,148 @@
+name: OfferHound independent launch candidate verification
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        type: string
+        required: true
+      platform:
+        type: choice
+        required: true
+        default: ios
+        options: [ios, android]
+jobs:
+  candidate:
+    type: repack
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      profile: staging
+      message: Independently verify non-paid launch repairs on compatible build20 native runtime
+  athletes_guardians:
+    type: maestro
+    needs: [candidate]
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ needs.candidate.outputs.build_id }}
+      flow_path:
+        - .maestro/staging-athlete-auth.yaml
+        - .maestro/staging-role-u13-athlete.yaml
+        - .maestro/staging-role-parent.yaml
+      record_screen: true
+      retries: 0
+  coaching:
+    type: maestro
+    needs: [candidate]
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ needs.candidate.outputs.build_id }}
+      flow_path:
+        - .maestro/staging-role-college-coach.yaml
+        - .maestro/staging-role-club-coach.yaml
+        - .maestro/staging-role-hs-coach.yaml
+      record_screen: true
+      retries: 0
+  administration_discovery:
+    type: maestro
+    needs: [candidate]
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ needs.candidate.outputs.build_id }}
+      flow_path:
+        - .maestro/staging-admin-auth.yaml
+        - .maestro/staging-role-scout.yaml
+        - .maestro/staging-role-agency-owner.yaml
+        - .maestro/staging-role-influencer.yaml
+      record_screen: true
+      retries: 0
+  home_settings:
+    type: maestro
+    needs: [candidate]
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ needs.candidate.outputs.build_id }}
+      flow_path:
+        - .maestro/staging-launch-parity.yaml
+      record_screen: true
+      retries: 0
+  message_keyboard:
+    type: maestro
+    needs: [candidate]
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ needs.candidate.outputs.build_id }}
+      flow_path:
+        - .maestro/staging-message-draft.yaml
+      record_screen: true
+      retries: 0
+  camp_picker:
+    type: maestro
+    needs: [candidate]
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ needs.candidate.outputs.build_id }}
+      flow_path:
+        - .maestro/staging-camp-flyer.yaml
+      record_screen: true
+      retries: 0
+  theme:
+    type: maestro
+    needs: [candidate]
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ needs.candidate.outputs.build_id }}
+      flow_path:
+        - .maestro/staging-theme.yaml
+      record_screen: true
+      retries: 0
+  referral_permissions:
+    type: maestro
+    needs: [candidate]
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ needs.candidate.outputs.build_id }}
+      flow_path: .maestro/staging-referral-permissions.yaml
+      record_screen: true
+      retries: 0
+
+  club_invitation_refusal:
+    type: maestro
+    needs: [candidate]
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ needs.candidate.outputs.build_id }}
+      flow_path: .maestro/staging-club-invitation-refusal.yaml
+      record_screen: true
+      retries: 0
+
+  direct_message_refusal:
+    type: maestro
+    needs: [candidate]
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ needs.candidate.outputs.build_id }}
+      flow_path: .maestro/staging-direct-message-refusal.yaml
+      record_screen: true
+      retries: 0
+
+  guardian_invitation_refusal:
+    type: maestro
+    needs: [candidate]
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ needs.candidate.outputs.build_id }}
+      flow_path: .maestro/staging-guardian-invitation-refusal.yaml
+      record_screen: true
+      retries: 0

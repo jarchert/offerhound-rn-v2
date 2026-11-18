@@ -1,0 +1,118 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Native club private photo picker upload
+---
+- addMedia:
+    - fixtures/qa-gallery.png
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.club-coach@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_CLUB_COACH_PASSWORD}
+- extendedWaitUntil:
+    visible: (?s).*Club Dashboard.*
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      id: club-tab-overview
+    direction: DOWN
+    centerElement: true
+- repeat:
+    times: 8
+    commands:
+      - runFlow:
+          when:
+            notVisible:
+              id: club-tab-media
+          commands:
+            - swipe:
+                from:
+                  id: club-dashboard-tab-strip
+                  point: 90%, 50%
+                direction: LEFT
+                duration: 400
+- assertVisible:
+    id: club-tab-media
+- tapOn:
+    id: club-tab-media
+- runFlow:
+    file: common/reveal-text.yaml
+    env:
+      QA_SCROLL_TEXT: Media Gallery
+- tapOn:
+    id: club-media-add
+- tapOn:
+    id: club-media-pick-file
+- tapOn:
+    text: Allow Full Access
+    optional: true
+- tapOn:
+    text: Allow Access to All Photos
+    optional: true
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - runFlow:
+          when:
+            visible:
+              id: PXGGridLayout-Info
+          commands:
+            - tapOn:
+                id: PXGGridLayout-Info
+                index: 0
+      - runFlow:
+          when:
+            notVisible:
+              text: Replace file
+          commands:
+            - tapOn:
+                text: Photo, .*
+                index: 0
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      # Select below the separate preview action. Android returns immediately;
+      # never tap the gallery's Add control again after returning to the app.
+      - tapOn:
+          point: "12%,43%"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          text: ^Add$
+          optional: true
+      - tapOn:
+          text: ^Done$
+          optional: true
+- tapOn: Media caption
+- inputText: QA disposable native installed UI 20261117
+- hideKeyboard
+- repeat:
+    times: 12
+    commands:
+      - runFlow:
+          when:
+            notVisible:
+              id: club-media-save
+          commands:
+            - swipe:
+                start: 50%, 70%
+                end: 50%, 30%
+                duration: 400
+- assertVisible:
+    id: club-media-save
+- tapOn:
+    id: club-media-save
+- extendedWaitUntil:
+    notVisible:
+      id: club-media-save
+    timeout: 60000
+- runFlow:
+    file: common/reveal-text.yaml
+    env:
+      QA_SCROLL_TEXT: QA disposable native installed UI 20261117
+- assertVisible: QA disposable native installed UI 20261117
+- takeScreenshot: club-native-private-photo-saved
+- stopApp

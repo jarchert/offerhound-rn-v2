@@ -1,3 +1,4 @@
+import {withThemeAlpha} from '@/lib/theme';
 // Ported from Lovable web (src/components/CampManagerPaywall.tsx) — RN-adapted.
 // Translations:
 //   - shadcn Card/Button/Badge → src/components/ui (RN)
@@ -304,7 +305,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
     padding: spacing.md,
-    backgroundColor: colors.secondary + '4D', // ~30% alpha (bg-secondary/30)
+    backgroundColor: withThemeAlpha('secondary','4D'), // ~30% alpha (bg-secondary/30)
     borderRadius: 12,
   },
   tileLabel: {

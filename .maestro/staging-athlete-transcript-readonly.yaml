@@ -1,0 +1,41 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Athlete transcript page loads without upload share or consent changes
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.adult-athlete@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_ADULT_PASSWORD}
+- runFlow:
+    file: common/reveal-control.yaml
+    env:
+      QA_SCROLL_ID: athlete-dashboard-tab-activity
+- repeat:
+    times: 5
+    commands:
+      - runFlow:
+          when:
+            notVisible:
+              id: athlete-dashboard-tab-profile
+          commands:
+            - swipe:
+                from:
+                  id: athlete-dashboard-tab-strip
+                  point: 90%, 50%
+                direction: LEFT
+                duration: 400
+- tapOn:
+    id: athlete-dashboard-tab-profile
+- runFlow:
+    file: common/reveal-control.yaml
+    env:
+      QA_SCROLL_ID: transcript-choose-pdf
+- extendedWaitUntil:
+    visible: No transcripts uploaded yet.
+    timeout: 45000
+- assertNotVisible: Could not load transcripts. Retry
+- takeScreenshot: athlete-private-transcripts-empty
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.adult-athlete@offerhound.test

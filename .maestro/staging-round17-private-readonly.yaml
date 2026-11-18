@@ -1,0 +1,5 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Private transcript and admin creator history read checks
+---
+- runFlow: staging-athlete-transcript-readonly.yaml
+- runFlow: staging-admin-creator-history-readonly.yaml

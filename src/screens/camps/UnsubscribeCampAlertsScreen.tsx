@@ -52,14 +52,24 @@ export default function UnsubscribeCampAlertsScreen() {
 
   useEffect(() => { loadSubscriptions(); }, [loadSubscriptions]);
 
+  async function confirmUnsubscribe(id: string) {
+    if (!id || (!user?.id && !emailParam)) throw Error('Open your unsubscribe link or sign in.');
+    let query = supabase.from('camp_alert_subscriptions')
+      .update({ unsubscribed_at: new Date().toISOString() }).eq('id', id);
+    query = user?.id ? query.eq('user_id', user.id) : query.eq('email', emailParam!);
+    const { data, error } = await query.select('id, user_id, email, unsubscribed_at').single();
+    if (error) throw error;
+    if (!data || data.id !== id || !data.unsubscribed_at || !Number.isFinite(Date.parse(data.unsubscribed_at)) ||
+        (user?.id ? data.user_id !== user.id : data.email?.toLowerCase() !== emailParam?.trim().toLowerCase())) {
+      throw Error('Unsubscribe was not confirmed. Try again.');
+    }
+  }
+
   async function handleUnsubscribeAll() {
     setStatus('loading');
     try {
       for (const sub of subscriptions) {
-        await supabase
-          .from('camp_alert_subscriptions')
-          .update({ unsubscribed_at: new Date().toISOString() })
-          .eq('id', sub.id);
+        await confirmUnsubscribe(sub.id);
       }
       setStatus('done');
       toast({ title: 'Unsubscribed successfully' });
@@ -71,10 +81,7 @@ export default function UnsubscribeCampAlertsScreen() {
 
   async function handleUnsubscribeOne(id: string) {
     try {
-      await supabase
-        .from('camp_alert_subscriptions')
-        .update({ unsubscribed_at: new Date().toISOString() })
-        .eq('id', id);
+      await confirmUnsubscribe(id);
       setSubscriptions((prev) => prev.filter((s) => s.id !== id));
       toast({ title: 'Unsubscribed from alert' });
       if (subscriptions.length <= 1) setStatus('done');

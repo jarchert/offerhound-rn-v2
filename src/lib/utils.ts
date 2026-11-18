@@ -1,3 +1,5 @@
+import {buildCanonicalUrl} from '@/lib/canonicalDomain';
+import {SUPABASE_URL} from '@/integrations/supabase/client';
 // RN-ported utils — web-only APIs replaced with RN equivalents
 import * as Clipboard from 'expo-clipboard';
 import Constants from 'expo-constants';
@@ -19,14 +21,14 @@ export function cn(...inputs: ClassValue[]): string {
   return out.join(' ');
 }
 
-const SUPABASE_URL = 'https://abdzdcgsmdlnytkkhvtb.supabase.co';
+
 
 export function getProfileShareUrl(customUrl: string): string {
   return `${SUPABASE_URL}/functions/v1/profile-share?u=${encodeURIComponent(customUrl)}`;
 }
 
 export function getProfileUrl(customUrl: string): string {
-  return `https://offer-hound.com/p/${customUrl}`;
+  return buildCanonicalUrl(`/p/${encodeURIComponent(customUrl)}`);
 }
 
 export async function copyToClipboard(text: string): Promise<boolean> {

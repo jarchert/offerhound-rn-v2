@@ -1,7 +1,13 @@
+import {AthleteSearchListingCard} from '@/components/AthleteSearchListingCard';
+import {TeamMembershipCard} from '@/components/TeamMembershipCard';
+import {getProfileUrl} from '@/lib/utils';
+import { UserProfileHeader } from '@/components/UserProfileHeader';
+import { AthleteProfile } from '@/components/AthleteProfile';
+import { MyCampWaivers } from '@/components/MyCampWaivers';
 // DashboardScreen — RN port of Lovable web src/pages/Dashboard.tsx (athlete/parent landing).
 // Phase 1-2 parity port. The source page also redirected admin/coach/scout to their dashboards;
 // in RN those role splits live in role tab navigators, so this screen targets the athlete/parent role.
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState,useRef } from 'react';
 import {
   View,
   Text,
@@ -97,7 +103,6 @@ import { ProfileCompletionTracker } from '@/components/ProfileCompletionTracker'
 import { SubscriptionStatus } from '@/components/SubscriptionStatus';
 import { ReferralCard } from '@/components/ReferralCard';
 import { ViewToggle } from '@/components/ViewToggle';
-import { OwnerNav } from '@/components/OwnerNav';
 import { ScrollToTop } from '@/components/ScrollToTop';
 import { TermsAcceptanceBanner } from '@/components/TermsAcceptanceBanner';
 import { OfflineBanner } from '@/components/OfflineBanner';
@@ -138,7 +143,7 @@ const PRIORITY_ORDER: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
 
 export default function DashboardScreen() {
   const nav = useNavigation<NavigationProp<any>>();
-  const route = useRoute<RouteProp<Record<string, { tab?: string } | undefined>, string>>();
+  const route = useRoute<RouteProp<Record<string, { tab?: string; homeReset?: number } | undefined>, string>>();
 
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdminRole();
@@ -150,7 +155,7 @@ export default function DashboardScreen() {
     isLoading: parentLoading,
   } = useParentProfileAccess();
   const { data: coachProfile, isLoading: coachProfileLoading } = useCoachProfile();
-  const { data: scoutProfile, isLoading: scoutProfileLoading } = useScoutProfile();
+  const { data: scoutProfile, isLoading: scoutProfileLoading, error: scoutProfileError, refetch: retryScoutProfile } = useScoutProfile();
 
   const isParentView = linkedAthletes.length > 0 && !ownProfile;
   const profile: any = isParentView ? parentSelectedProfile : ownProfile;
@@ -161,13 +166,15 @@ export default function DashboardScreen() {
   const { toast } = useToast();
 
   const [isOwnerView, setIsOwnerView] = useState(true);
+  const scrollRef=useRef<ScrollView>(null);
   const initialTab = (route.params?.tab as string) || 'activity';
   const [activeTab, setActiveTab] = useState(initialTab);
   useEffect(() => {
     const t = (route.params?.tab as string) || 'activity';
     if (t !== activeTab) setActiveTab(t);
+    scrollRef.current?.scrollTo({y:0,animated:false});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [route.params?.tab]);
+  }, [route.params?.tab, route.params?.homeReset]);
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [editingCoachId, setEditingCoachId] = useState<string | null>(null);
@@ -243,7 +250,7 @@ export default function DashboardScreen() {
       adminLoading ||
       parentLoading ||
       coachProfileLoading ||
-      scoutProfileLoading
+      scoutProfileLoading || scoutProfileError
     )
       return;
     if (!isAuthenticated) {
@@ -268,7 +275,7 @@ export default function DashboardScreen() {
     adminLoading,
     parentLoading,
     coachProfileLoading,
-    scoutProfileLoading,
+    scoutProfileLoading, scoutProfileError,
     isAdmin,
     coachProfile,
     scoutProfile,
@@ -373,6 +380,8 @@ export default function DashboardScreen() {
     );
   }
 
+  if (scoutProfileError) return <SafeAreaView style={styles.loadingScreen}><Text accessibilityRole="alert">Profile could not be checked.</Text><Button onPress={() => void retryScoutProfile()}>Retry profile</Button></SafeAreaView>;
+
   const statCards = [
     { title: 'Coaches Contacted', value: stats?.totalCoachesContacted || 0, Icon: Users, description: "Unique coaches you've reached out to", color: '#3b82f6' },
     { title: 'Letters Sent', value: stats?.lettersSent || 0, Icon: Mail, description: 'Personalized emails sent', color: '#22c55e' },
@@ -407,6 +416,8 @@ export default function DashboardScreen() {
     <View style={{ gap: spacing.lg }}>
       <View style={{ gap: spacing.sm }}>
         <ProfileCompletionTracker />
+        {profile?.id&&<TeamMembershipCard key={profile.id} profileId={profile.id} minorSafe={!!profile.is_minor_safe} guardian={isParentView}/>}
+        {profile?.id&&<AthleteSearchListingCard key={`search:${profile.id}`} profileId={profile.id}/>}
         <SubscriptionStatus />
         <MatchSuggestionFeed variant="compact" maxItems={5} />
         <ReferralCard />
@@ -418,6 +429,9 @@ export default function DashboardScreen() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <Button onPress={() => nav.navigate('NILAdvisor' as never)}>
+              Ask NIL Advisor
+            </Button>
             <Button onPress={() => nav.navigate('NILIntelligence' as never)}>
               Explore NIL Education
             </Button>
@@ -513,6 +527,7 @@ export default function DashboardScreen() {
 
   const renderCampsTab = () => (
     <View style={{ gap: spacing.lg }}>
+      <MyCampWaivers />
       <DashboardCampsList />
       <MyCampAlertSubscriptions />
     </View>
@@ -898,7 +913,7 @@ export default function DashboardScreen() {
             role="athlete"
             profileName={profile.full_name || undefined}
             profileImageUrl={(profile as any).image_url}
-            profileUrl={profile.custom_url ? `https://offerhound.app/p/${profile.custom_url}` : undefined}
+            profileUrl={profile.custom_url ? getProfileUrl(profile.custom_url) : undefined}
             initialLinks={(profile as any).social_links || {}}
           />
         </>
@@ -911,7 +926,7 @@ export default function DashboardScreen() {
       {profile?.id ? (
         <SocialSyndicationCenter
           entityName={profile.full_name || undefined}
-          profileUrl={profile.custom_url ? `https://offerhound.app/p/${profile.custom_url}` : undefined}
+          profileUrl={profile.custom_url ? getProfileUrl(profile.custom_url) : undefined}
         />
       ) : (
         <Card>
@@ -938,14 +953,16 @@ export default function DashboardScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <ScrollView
+        ref={scrollRef}
         style={{ flex: 1 }}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
         <OfflineBanner isOfflineData={isOfflineData} />
         <TermsAcceptanceBanner />
-        <BackButton label="Back" />
+        <BackButton label="Back" fallback={{ name: 'CampStack', params: { screen: 'CampsList' } }} />
 
+        {profile && <UserProfileHeader profile={profile} />}
         {profile && !isParentView && <TranscriptRequestsCard />}
 
         {/* Family / Parent invite — matches Lovable web Dashboard
@@ -1079,9 +1096,9 @@ export default function DashboardScreen() {
           </View>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList>
+            <TabsList testID="athlete-dashboard-tab-strip">
               {TAB_DEFS.map((t) => (
-                <TabsTrigger key={t.value} value={t.value}>
+                <TabsTrigger testID={`athlete-dashboard-tab-${t.value}`} key={t.value} value={t.value}>
                   {t.label}
                 </TabsTrigger>
               ))}
@@ -1092,14 +1109,13 @@ export default function DashboardScreen() {
         {activeTab === 'activity' && renderActivityTab()}
         {activeTab === 'camps' && renderCampsTab()}
         {activeTab === 'coaches' && renderCoachesTab()}
-        {activeTab === 'profile' && renderProfileTab()}
+        {activeTab === 'profile' && <>{renderProfileTab()}{profile&&<AthleteProfile profile={profile}/>}</>}
         {activeTab === 'social' && renderSocialTab()}
 
         <Footer />
       </ScrollView>
 
       <ScrollToTop visible={false} onPress={() => {}} />
-      {isOwnerView && <OwnerNav />}
       <ViewToggle isOwnerView={isOwnerView} onToggle={setIsOwnerView} />
 
       {/* Edit coach notes dialog */}

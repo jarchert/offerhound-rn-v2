@@ -1,3 +1,9 @@
+import {permittedStaffRecipient} from '@/lib/staffContactPermission';
+import {staffMessageTarget} from '@/lib/staffRecords';
+import {saveStaffMessage} from '@/lib/staffMessage';
+import {resolveConversationIdentity} from '@/lib/conversationIdentity';
+import {useLocalDraft} from '@/hooks/useLocalDraft';
+import {Button} from '@/components/ui/Button';
 // Verbatim port of Lovable StaffMessaging.tsx — RN-adapted.
 // Source: offerhound-repo/src/components/StaffMessaging.tsx (301 LOC)
 import React, { useState, useRef, useEffect, useMemo } from 'react';
@@ -12,6 +18,7 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import {
   MessageCircle,
@@ -39,12 +46,13 @@ export function StaffMessaging({ initialRecipient }: StaffMessagingProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedStaff, setSelectedStaff] = useState<any>(initialRecipient || null);
-  const [newMessage, setNewMessage] = useState('');
+  const selectedAccount=staffMessageTarget(selectedStaff)?.recipientUserId||selectedStaff?.user_id;
+  const [newMessage,setNewMessage,,draftReady]=useLocalDraft(user?.id,`staff-message:${selectedAccount||'none'}`,'');
   const [searchQuery, setSearchQuery] = useState('');
   const messagesEndRef = useRef<FlatList<any> | null>(null);
 
   // Fetch all staff members (both owned by me and where I'm staff)
-  const { data: staffList = [] } = useQuery({
+  const { data: staffList = [],isLoading:contactsLoading,isError:contactsFailed,refetch:retryContacts } = useQuery({
     queryKey: ['staff-messaging-contacts', user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -52,28 +60,31 @@ export function StaffMessaging({ initialRecipient }: StaffMessagingProps) {
         .from('coaching_staff')
         .select('*')
         .eq('owner_user_id', user.id)
-        .neq('status', 'removed');
+        .in('status', ['active','invited']);
       if (e1) throw e1;
       const { data: memberOf, error: e2 } = await supabase
         .from('coaching_staff')
         .select('*')
-        .eq('staff_user_id', user.id)
-        .neq('status', 'removed');
+        .or(`staff_user_id.eq.${user.id},linked_user_id.eq.${user.id}`)
+        .in('status', ['active','invited']);
       if (e2) throw e2;
       const contacts: any[] = [];
-      (owned || []).forEach((s: any) => {
-        contacts.push({ id: s.id, user_id: s.staff_user_id || s.id, name: s.name, role: s.role, email: s.email });
-      });
-      (memberOf || []).forEach((s: any) => {
-        contacts.push({ id: s.id, user_id: s.owner_user_id, name: 'Team Owner', role: 'owner', email: null });
-      });
+      for(const record of owned||[]){
+        const recipient=await permittedStaffRecipient(supabase,record,user.id);
+        if(recipient&&record.name?.trim())contacts.push({id:record.id,user_id:recipient,name:record.name,role:record.role,email:record.email,identified:true});
+      }
+      for(const record of memberOf||[]){
+        const recipient=await permittedStaffRecipient(supabase,record,user.id);if(!recipient)continue;
+        const identity=await resolveConversationIdentity(supabase,recipient);
+        contacts.push({id:record.id,user_id:recipient,name:identity.name,identified:identity.identified,role:'owner',email:null});
+      }
       return contacts;
     },
     enabled: !!user,
   });
 
   // Conversation threads grouped by recipient
-  const { data: threads = [] } = useQuery({
+  const { data: threads = [],isError:threadsFailed,refetch:retryThreads } = useQuery({
     queryKey: ['staff-message-threads', user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -105,9 +116,10 @@ export function StaffMessaging({ initialRecipient }: StaffMessagingProps) {
     enabled: !!user,
   });
 
-  const recipientUserId = selectedStaff?.staff_user_id || selectedStaff?.user_id;
+  const confirmedContact=staffList.find((contact:any)=>contact.user_id===selectedAccount);
+  const recipientUserId=confirmedContact?.identified?confirmedContact.user_id:null;
 
-  const { data: messages = [], isLoading: msgLoading } = useQuery({
+  const { data: messages = [], isLoading: msgLoading,isError:messagesFailed,refetch:retryMessages } = useQuery({
     queryKey: ['staff-messages', user?.id, recipientUserId],
     queryFn: async () => {
       if (!user || !recipientUserId) return [];
@@ -121,12 +133,15 @@ export function StaffMessaging({ initialRecipient }: StaffMessagingProps) {
       if (error) throw error;
       const unread = (data || []).filter((m: any) => m.recipient_user_id === user.id && !m.is_read);
       if (unread.length > 0) {
-        await supabase
+        const readResult=await supabase
           .from('staff_messages')
-          .update({ is_read: true, read_at: new Date().toISOString() })
+          .update({ is_read: true })
           .eq('recipient_user_id', user.id)
           .eq('sender_user_id', recipientUserId)
-          .eq('is_read', false);
+          .eq('is_read', false).select('id');
+        if(readResult.error)throw readResult.error;
+        if(!Array.isArray(readResult.data)||unread.some((message:any)=>!readResult.data.some((row:any)=>row.id===message.id)))
+          throw Error('Read status could not be confirmed. Retry this conversation.');
       }
       return data || [];
     },
@@ -137,13 +152,7 @@ export function StaffMessaging({ initialRecipient }: StaffMessagingProps) {
   const sendMessage = useMutation({
     mutationFn: async (content: string) => {
       if (!user || !recipientUserId) throw new Error('Missing recipient');
-      const { error } = await supabase.from('staff_messages').insert({
-        sender_user_id: user.id,
-        recipient_user_id: recipientUserId,
-        content,
-        message_type: 'text',
-      });
-      if (error) throw error;
+      return saveStaffMessage(supabase,user.id,recipientUserId,content);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff-messages'] });
@@ -162,8 +171,9 @@ export function StaffMessaging({ initialRecipient }: StaffMessagingProps) {
 
   const handleSend = async () => {
     if (!newMessage.trim()) return;
-    await sendMessage.mutateAsync(newMessage);
-    setNewMessage('');
+    const submitted=newMessage;
+    try{await sendMessage.mutateAsync(submitted);setNewMessage(current=>current===submitted?'':current);}
+    catch(error:any){Alert.alert('Could not send staff message',error.message);}
   };
 
   const getInitials = (name: string = '') =>
@@ -227,10 +237,10 @@ export function StaffMessaging({ initialRecipient }: StaffMessagingProps) {
           />
         </View>
       </View>
-      {filteredContacts.length === 0 ? (
+      {contactsLoading?<ActivityIndicator/>:contactsFailed||threadsFailed?<Button onPress={()=>{void retryContacts();void retryThreads();}}>Could not load staff contacts. Retry</Button>:filteredContacts.length === 0 ? (
         <View style={styles.emptyState}>
           <MessageCircle size={32} color={colors.mutedForeground} style={{ marginBottom: spacing.xs }} />
-          <Text style={styles.emptyText}>No staff contacts</Text>
+          <Text style={styles.emptyText}>No eligible staff contacts</Text>
         </View>
       ) : (
         <ScrollView style={{ flex: 1 }}>
@@ -239,6 +249,7 @@ export function StaffMessaging({ initialRecipient }: StaffMessagingProps) {
             return (
               <Pressable
                 key={contact.id}
+                disabled={!contact.identified}
                 onPress={() => setSelectedStaff(contact)}
                 style={[styles.contactRow, isActive && styles.contactRowActive]}
               >
@@ -335,7 +346,7 @@ export function StaffMessaging({ initialRecipient }: StaffMessagingProps) {
               </Text>
             </View>
           </View>
-          {msgLoading ? (
+          {!recipientUserId?<Text style={styles.emptyText}>Recipient identity or messaging permission is unavailable. Refresh contacts before messaging.</Text>:messagesFailed?<Button onPress={()=>void retryMessages()}>Could not load messages. Retry</Button>:msgLoading ? (
             <View style={styles.loadingWrap}>
               <ActivityIndicator size="small" color={colors.foreground} />
             </View>
@@ -360,11 +371,13 @@ export function StaffMessaging({ initialRecipient }: StaffMessagingProps) {
               value={newMessage}
               onChangeText={setNewMessage}
               multiline
+              maxLength={4000}
+              editable={!!recipientUserId&&draftReady&&!sendMessage.isPending}
               style={styles.composerInput}
             />
             <Pressable
               onPress={handleSend}
-              disabled={!newMessage.trim() || sendMessage.isPending}
+              disabled={!newMessage.trim() || !recipientUserId || !draftReady || sendMessage.isPending}
               style={({ pressed }) => [
                 styles.sendBtn,
                 (!newMessage.trim() || sendMessage.isPending) && { opacity: 0.5 },

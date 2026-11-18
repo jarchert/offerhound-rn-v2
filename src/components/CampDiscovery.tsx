@@ -1,3 +1,4 @@
+import { useNavigation } from '@react-navigation/native';
 // Ported from Lovable web: src/components/CampDiscovery.tsx
 // Translations:
 //   <div>/<p>/<span>/<h2>/<h3>/<a> → <View>/<Text>/Linking
@@ -8,7 +9,7 @@
 //   <a target="_blank"> → Pressable + Linking.openURL
 //   Dialog `open` controlled by `!!detailCamp`
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Pressable, Linking, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Pressable, Linking } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,7 +19,6 @@ import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/Dialog';
 import {
   Search, Calendar, MapPin, Users, Bookmark, BookmarkCheck,
   ExternalLink, Eye, Tent,
@@ -39,6 +39,7 @@ interface CampDiscoveryProps {
 }
 
 export function CampDiscovery({ coachSport, coachState: _coachState }: CampDiscoveryProps) {
+  const navigation = useNavigation<any>();
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -47,7 +48,6 @@ export function CampDiscovery({ coachSport, coachState: _coachState }: CampDisco
   const [stateFilter, setStateFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [viewTab, setViewTab] = useState('browse');
-  const [detailCamp, setDetailCamp] = useState<any | null>(null);
 
   const { data: camps = [], isLoading } = useQuery({
     queryKey: ['discover-camps', sportFilter, stateFilter, typeFilter],
@@ -55,8 +55,8 @@ export function CampDiscovery({ coachSport, coachState: _coachState }: CampDisco
       let query = supabase
         .from('camps')
         .select('*')
-        .eq('status', 'published')
-        .gte('start_date', new Date().toISOString().split('T')[0])
+        .in('status', ['published', 'active'])
+        .or(`end_date.gte.${format(new Date(), 'yyyy-MM-dd')},and(end_date.is.null,start_date.gte.${format(new Date(), 'yyyy-MM-dd')})`)
         .order('start_date', { ascending: true });
 
       if (sportFilter && sportFilter !== 'all') query = query.eq('sport', sportFilter);
@@ -197,7 +197,7 @@ export function CampDiscovery({ coachSport, coachState: _coachState }: CampDisco
             <Button
               size="sm"
               variant="outline"
-              onPress={() => setDetailCamp(camp)}
+              onPress={() => navigation.navigate('CampStack', { screen: 'CampDetail', params: { campId: camp.id } })}
               leftIcon={<Eye size={12} color={colors.foreground} />}
             >
               Details
@@ -338,100 +338,7 @@ export function CampDiscovery({ coachSport, coachState: _coachState }: CampDisco
         </TabsContent>
       </Tabs>
 
-      <Dialog open={!!detailCamp} onOpenChange={(o) => { if (!o) setDetailCamp(null); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{detailCamp?.name}</DialogTitle>
-            <DialogDescription>
-              {detailCamp?.start_date ? format(new Date(detailCamp.start_date), 'MMMM d, yyyy') : ''}
-              {detailCamp?.end_date ? ` – ${format(new Date(detailCamp.end_date), 'MMMM d, yyyy')}` : ''}
-            </DialogDescription>
-          </DialogHeader>
-          {detailCamp && (
-            <ScrollView style={{ maxHeight: 360 }} contentContainerStyle={{ gap: spacing.md }}>
-              {detailCamp.description ? (
-                <Text style={s.body}>{detailCamp.description}</Text>
-              ) : null}
-              <View style={s.detailGrid}>
-                <View style={s.detailCell}>
-                  <Text style={s.muted}>Sport: </Text>
-                  <Text style={s.body}>{detailCamp.sport}</Text>
-                </View>
-                <View style={s.detailCell}>
-                  <Text style={s.muted}>Type: </Text>
-                  <Text style={s.body}>{String(detailCamp.camp_type || '').replace('_', ' ')}</Text>
-                </View>
-                {detailCamp.location ? (
-                  <View style={[s.detailCell, { width: '100%' }]}>
-                    <Text style={s.muted}>Venue: </Text>
-                    <Text style={s.body}>{detailCamp.location}</Text>
-                  </View>
-                ) : null}
-                {(detailCamp.city || detailCamp.state) ? (
-                  <View style={s.detailCell}>
-                    <Text style={s.muted}>Location: </Text>
-                    <Text style={s.body}>{[detailCamp.city, detailCamp.state].filter(Boolean).join(', ')}</Text>
-                  </View>
-                ) : null}
-                {detailCamp.capacity ? (
-                  <View style={s.detailCell}>
-                    <Text style={s.muted}>Capacity: </Text>
-                    <Text style={s.body}>{String(detailCamp.capacity)}</Text>
-                  </View>
-                ) : null}
-                {detailCamp.start_time ? (
-                  <View style={s.detailCell}>
-                    <Text style={s.muted}>Time: </Text>
-                    <Text style={s.body}>
-                      {detailCamp.start_time}
-                      {detailCamp.end_time ? ` – ${detailCamp.end_time}` : ''}
-                    </Text>
-                  </View>
-                ) : null}
-                <View style={s.detailCell}>
-                  <Text style={s.muted}>Price: </Text>
-                  <Text style={s.body}>
-                    {detailCamp.is_free ? 'Free' : `$${((detailCamp.price_cents || 0) / 100).toFixed(2)}`}
-                  </Text>
-                </View>
-              </View>
-              {detailCamp.positions?.length > 0 && (
-                <View>
-                  <Text style={[s.muted, { marginBottom: 4 }]}>Positions:</Text>
-                  <View style={s.badgeRow}>
-                    {detailCamp.positions.map((p: string) => (
-                      <Badge key={p} variant="outline">{p}</Badge>
-                    ))}
-                  </View>
-                </View>
-              )}
-            </ScrollView>
-          )}
-          <DialogFooter>
-            {detailCamp && (
-              <Button
-                variant="outline"
-                onPress={() => toggleSave.mutate(detailCamp.id)}
-                leftIcon={
-                  savedIds.includes(detailCamp?.id)
-                    ? <BookmarkCheck size={16} color={colors.foreground} />
-                    : <Bookmark size={16} color={colors.foreground} />
-                }
-              >
-                {savedIds.includes(detailCamp?.id) ? 'Saved' : 'Save Camp'}
-              </Button>
-            )}
-            {detailCamp?.registration_url && (
-              <Button
-                onPress={() => Linking.openURL(detailCamp.registration_url)}
-                leftIcon={<ExternalLink size={16} color={colors.primaryForeground} />}
-              >
-                Register
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
     </View>
   );
 }

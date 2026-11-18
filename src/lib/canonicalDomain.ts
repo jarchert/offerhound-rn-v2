@@ -1,58 +1,21 @@
-/**
- * Canonical public-facing origin for OfferHound. All shareable URLs
- * (camps, profiles, invites) MUST be built off of this so we never
- * leak preview/staging hosts (lovable.app, vercel.app, localhost) into
- * links that end up on athlete profiles, social bios, emails, or the
- * `referrer_url` analytics column.
- *
- * Resolution order:
- *   1. `EXPO_PUBLIC_SITE_URL`      — preferred, set per environment
- *   2. `EXPO_PUBLIC_CANONICAL_DOMAIN` — legacy alias, kept for back-compat
- *   3. Hard-coded production fallback — guarantees we never return ""
- *
- * Anything pointing at *.lovable.app, *.vercel.app, or localhost is
- * rejected and the production fallback is used instead.
- *
- * Parity port from Lovable web src/lib/canonicalDomain.ts. Web uses
- * Vite's `import.meta.env.VITE_*`; RN uses Expo's `process.env.EXPO_PUBLIC_*`.
- */
-
-const PRODUCTION_FALLBACK = "https://offer-hound.com";
-
-const NON_CANONICAL_HOST_RE =
-  /(^|\.)(lovable\.app|vercel\.app|localhost)(:\d+)?$/i;
-
-function normalizeOrigin(raw: string | undefined | null): string | null {
-  if (!raw) return null;
-  const trimmed = raw.trim().replace(/\/+$/, "");
-  if (!trimmed) return null;
-  try {
-    const u = new URL(trimmed);
-    if (NON_CANONICAL_HOST_RE.test(u.hostname)) return null;
-    return `${u.protocol}//${u.host}`;
-  } catch {
-    return null;
-  }
+/** Environment-specific public link origin. QA links must never silently target production. */
+const PRODUCTION_ORIGIN='https://offer-hound.com';
+const STAGING_ORIGIN='https://friday-night-recruiting.lovable.app';
+const STAGING_HOSTS=new Set(['friday-night-recruiting.lovable.app','id-preview--581d7dac-ada7-4907-bc7a-492d1c91a771.lovable.app']);
+export function resolvePublicOrigin(environment:string|undefined, configured?:string):string {
+  const staging=environment==='staging';
+  if(!configured)return staging?STAGING_ORIGIN:PRODUCTION_ORIGIN;
+  let url:URL;
+  try {url=new URL(configured);}catch {throw new Error('Public site URL must be a valid HTTPS origin.');}
+  if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash||!['','/'].includes(url.pathname))throw new Error('Public site URL must be an HTTPS origin without a path or credentials.');
+  if(staging&&!STAGING_HOSTS.has(url.hostname))throw new Error('QA public links must use the isolated staging website.');
+  if(!staging&&url.origin!==PRODUCTION_ORIGIN)throw new Error('Production public links must use the verified OfferHound domain.');
+  return url.origin;
 }
-
-/**
- * Returns the canonical origin (no trailing slash), e.g.
- * `"https://offer-hound.com"`.
- */
-export function getCanonicalOrigin(): string {
-  const fromEnv =
-    normalizeOrigin(process.env.EXPO_PUBLIC_SITE_URL) ||
-    normalizeOrigin(process.env.EXPO_PUBLIC_CANONICAL_DOMAIN);
-  return fromEnv ?? PRODUCTION_FALLBACK;
+export function getCanonicalOrigin():string {
+  return resolvePublicOrigin(process.env.EXPO_PUBLIC_APP_ENV,process.env.EXPO_PUBLIC_SITE_URL||process.env.EXPO_PUBLIC_CANONICAL_DOMAIN);
 }
-
-/**
- * Build a fully-qualified canonical URL for an in-app path. Always
- * uses the canonical origin, never `window.location.origin`, so links
- * generated from preview/staging hosts still point at production.
- */
-export function buildCanonicalUrl(path: string): string {
-  const origin = getCanonicalOrigin();
-  const normalized = path.startsWith("/") ? path : `/${path}`;
-  return `${origin}${normalized}`;
+export function buildCanonicalUrl(path:string):string {
+  if(path.startsWith('//')||/^[a-z]+:/i.test(path))throw new Error('Expected a relative public route.');
+  return `${getCanonicalOrigin()}${path.startsWith('/')?path:`/${path}`}`;
 }

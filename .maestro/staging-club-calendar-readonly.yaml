@@ -1,0 +1,48 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Club calendar loads and shows confirmed empty state without event writes
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.club-coach@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_CLUB_COACH_PASSWORD}
+- extendedWaitUntil:
+    visible: (?s).*Club Dashboard.*
+    timeout: 60000
+- runFlow:
+    file: common/reveal-control.yaml
+    env:
+      QA_SCROLL_ID: club-tab-overview
+- repeat:
+    times: 8
+    commands:
+      - runFlow:
+          when:
+            notVisible:
+              id: club-tab-calendar
+          commands:
+            - swipe:
+                from:
+                  id: club-dashboard-tab-strip
+                  point: 90%, 50%
+                direction: LEFT
+                duration: 400
+- tapOn:
+    id: club-tab-calendar
+- extendedWaitUntil:
+    visible: Event Calendar
+    timeout: 45000
+- extendedWaitUntil:
+    visible: Create an active team before adding events.
+    timeout: 45000
+- tapOn: ^List$
+- runFlow:
+    file: common/reveal-text.yaml
+    env:
+      QA_SCROLL_TEXT: No upcoming events
+- assertNotVisible: Could not load events. Retry
+- takeScreenshot: club-calendar-confirmed-empty
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.club-coach@offerhound.test

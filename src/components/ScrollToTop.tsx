@@ -26,6 +26,7 @@ export function ScrollToTop({ visible, onPress, position = 'left' }: ScrollToTop
     }).start();
   }, [visible, opacity]);
 
+  if(!visible)return null;
   return (
     <Animated.View
       style={[

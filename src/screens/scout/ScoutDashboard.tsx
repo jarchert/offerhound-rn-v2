@@ -1,3 +1,9 @@
+import {AgencyInvitationsCard} from '@/components/AgencyInvitationsCard';
+import {AddToPipelineDialog} from '@/components/AddToPipelineDialog';
+import {useRemoveSavedAthlete} from '@/hooks/useSavedAthletes';
+import {useLetterCenter} from '@/hooks/useLetterCenter';
+import {ScoutPipeline} from '@/components/ScoutPipeline';
+import { UserProfileHeader } from '@/components/UserProfileHeader';
 // ScoutDashboard — full parity port of Lovable web ScoutDashboard.tsx
 // Inlines minimal RN versions of ScoutPipeline, ScoutAnalyticsDashboard,
 // ScoutQuickStartGuide, and TransferPortalFeed (no new files).
@@ -56,6 +62,7 @@ import {
 
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useRecruiterCounts } from '@/hooks/useRecruiterCounts';
 import { useScoutProfile } from '@/hooks/useScoutProfile';
 import { useUpdateScoutProfile } from '@/hooks/useUpdateScoutProfile';
 import { useScoutSavedAthletes } from '@/hooks/useScoutSavedAthletes';
@@ -88,10 +95,13 @@ const TABS: { key: InnerTab; label: string; icon: any }[] = [
 export default function ScoutDashboard() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
   const { user } = useAuth();
-  const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = useScoutProfile();
-  const { data: savedAthletes = [], isLoading: savedLoading, refetch: refetchSaved } =
+  const {goToLetterForAthlete}=useLetterCenter();
+  const [pipelineAthlete,setPipelineAthlete]=useState<any>(null);
+  const {data: recruiterCounts, isError: countsFailed, refetch: retryCounts} = useRecruiterCounts();
+  const { data: profile, isLoading: profileLoading, refetch: refetchProfile, error: profileError } = useScoutProfile();
+  const { data: savedAthletes = [], isLoading: savedLoading, isError: savedFailed, refetch: refetchSaved } =
     useScoutSavedAthletes() as any;
-  const { data: activity = [], refetch: refetchActivity } = useScoutActivity(20);
+  const { data: activity = [], refetch: refetchActivity, isError: activityFailed } = useScoutActivity(20);
   const updateProfile = useUpdateScoutProfile();
 
   const [activeTab, setActiveTab] = useState<InnerTab>('overview');
@@ -141,11 +151,11 @@ export default function ScoutDashboard() {
     const list = activity as any[];
     return {
       saved: savedAthletes.length,
-      profilesViewed: list.filter(a => a.activity_type === 'profile_view').length,
-      lettersSent: list.filter(a => a.activity_type === 'letter_sent').length,
-      searches: list.filter(a => a.activity_type === 'search_performed').length,
+      profilesViewed: recruiterCounts?.profilesViewed ?? "—",
+      lettersSent: recruiterCounts?.lettersSent ?? "—",
+      searches: recruiterCounts?.searches ?? "—",
     };
-  }, [activity, savedAthletes]);
+  }, [recruiterCounts, savedAthletes]);
 
   const handleSave = async () => {
     try {
@@ -179,16 +189,16 @@ export default function ScoutDashboard() {
   const goAthlete = (athlete: any) => {
     if (!athlete) return;
     const slug = athlete.custom_url || athlete.id;
-    (nav as any).navigate('PublicProfileStack', { screen: 'PublicProfile', params: { slug } });
+    (nav as any).navigate('PublicProfileStack', { screen: 'PublicProfile', params: { customUrl:slug } });
   };
   const goLetter = (athlete: any) => {
-    (nav as any).navigate('LetterComposer', { seed: { athlete } });
+    goToLetterForAthlete(athlete);
   };
-  const goMessages = (recipientName?: string) => {
-    (nav as any).navigate('Messages', recipientName ? { recipientName } : undefined);
+  const goMessages = (athlete:any) => {
+    if(athlete?.id)(nav as any).navigate('DirectMessageDraft',{athleteProfileId:athlete.id});
   };
   const goSearchAthletes = () => {
-    (nav as any).navigate('PublicTabs', { screen: 'PublicAthletes' });
+    (nav as any).navigate('AthleteSearch');
   };
   const goLetters = () => {
     (nav as any).navigate('ScoutTabs', { screen: 'LettersTab' });
@@ -204,6 +214,8 @@ export default function ScoutDashboard() {
       </SafeAreaView>
     );
   }
+
+  if (profileError) return <View style={s.container}><Text accessibilityRole="alert">Recruiter profile could not be loaded.</Text><Button onPress={() => void refetchProfile()}>Retry profile</Button></View>;
 
   const initials = (scoutName || 'S').slice(0, 2);
   const orgLabel = (profile as any)?.organization;
@@ -225,6 +237,8 @@ export default function ScoutDashboard() {
           />
         }
       >
+        <AgencyInvitationsCard />
+        <UserProfileHeader profile={profile} />
         {/* Profile Header */}
         <Card>
           <CardContent style={{ paddingTop: spacing.md }}>
@@ -288,12 +302,12 @@ export default function ScoutDashboard() {
 
         {/* Stat Tiles */}
         <View style={s.statsRow}>
-          <StatTile label="Saved Athletes" value={stats.saved} icon={Users} />
-          <StatTile label="Profiles Viewed" value={stats.profilesViewed} icon={Eye} />
+          <StatTile label="Saved Athletes" value={savedFailed ? "Unavailable" : stats.saved} icon={Users} />
+          <StatTile label="Profiles Viewed" value={countsFailed ? "Unavailable" : stats.profilesViewed} icon={Eye} />
         </View>
         <View style={s.statsRow}>
-          <StatTile label="Letters Sent" value={stats.lettersSent} icon={FileText} />
-          <StatTile label="Searches" value={stats.searches} icon={Star} />
+          <StatTile label="Letters Sent" value={countsFailed ? "Unavailable" : stats.lettersSent} icon={FileText} />
+          <StatTile label="Searches" value={countsFailed ? "Unavailable" : stats.searches} icon={Star} />
         </View>
 
         {/* Inner Tab Strip */}
@@ -308,6 +322,7 @@ export default function ScoutDashboard() {
             return (
               <Pressable
                 key={t.key}
+                testID={`scout-tab-${t.key}`}
                 onPress={() => setActiveTab(t.key)}
                 style={[s.tab, active && s.tabActive]}
               >
@@ -318,7 +333,9 @@ export default function ScoutDashboard() {
           })}
         </ScrollView>
 
-        {activeTab === 'overview' && (
+        {countsFailed ? <Button onPress={() => void retryCounts()}>Could not load dashboard totals. Retry</Button> : null}
+        {activityFailed ? <Button onPress={() => void refetchActivity()}>Could not load activity. Retry</Button> : null}
+        {activeTab === 'overview' && !activityFailed && (
           <OverviewTab
             activity={activity as any[]}
             savedCount={stats.saved}
@@ -326,7 +343,7 @@ export default function ScoutDashboard() {
           />
         )}
 
-        {activeTab === 'pipeline' && <ScoutPipelineInline />}
+        {activeTab === 'pipeline' && <ScoutPipeline />}
 
         {activeTab === 'saved' && (
           <SavedAthletesList
@@ -335,6 +352,9 @@ export default function ScoutDashboard() {
             onView={goAthlete}
             onMessage={goMessages}
             onLetter={goLetter}
+            failed={savedFailed}
+            retry={()=>void refetchSaved()}
+            onPipeline={setPipelineAthlete}
           />
         )}
 
@@ -354,6 +374,7 @@ export default function ScoutDashboard() {
           />
         )}
       </ScrollView>
+      {pipelineAthlete?<AddToPipelineDialog key={pipelineAthlete.id} open onOpenChange={open=>{if(!open)setPipelineAthlete(null);}} athleteId={pipelineAthlete.id} athleteData={pipelineAthlete}/>:null}
     </SafeAreaView>
   );
 }
@@ -423,126 +444,6 @@ function OverviewTab({
   );
 }
 
-/* ----------------------------- Pipeline (inline) ----------------------------- */
-
-function ScoutPipelineInline() {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const { data: stages = [], isLoading: sl } = useScoutPipelineStages();
-
-  const { data: athletes = [], isLoading: al } = useQuery({
-    queryKey: ['scout-pipeline-athletes-detail', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-      const { data, error } = await supabase
-        .from('scout_athlete_pipeline_status' as any)
-        .select(
-          '*, player_profiles:athlete_profile_id(id, full_name, position, school, profile_image_url, custom_url)',
-        )
-        .eq('scout_user_id', user.id);
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!user?.id,
-  });
-
-  const move = useMutation({
-    mutationFn: async ({ id, stageId }: { id: string; stageId: string }) => {
-      const { error } = await supabase
-        .from('scout_athlete_pipeline_status' as any)
-        .update({ stage_id: stageId })
-        .eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scout-pipeline-athletes-detail'] });
-      Toast.show({ type: 'success', text1: 'Athlete moved' });
-    },
-    onError: (e: any) => {
-      Toast.show({ type: 'error', text1: 'Move failed', text2: e?.message });
-    },
-  });
-
-  if (sl || al) {
-    return (
-      <Card>
-        <CardContent style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
-          <ActivityIndicator color={colors.primary} />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!stages || stages.length === 0) {
-    return (
-      <Card>
-        <CardContent style={{ paddingVertical: spacing.lg, alignItems: 'center', gap: spacing.sm }}>
-          <Users size={28} color={colors.mutedForeground} />
-          <Text style={s.cardTitleText}>No Pipeline Stages</Text>
-          <Text style={[s.muted, { textAlign: 'center' }]}>
-            Complete onboarding to set up your scout pipeline.
-          </Text>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <View style={{ gap: spacing.md }}>
-      {stages.map((stage: any) => {
-        const sa = (athletes as any[]).filter((a: any) => a.stage_id === stage.id);
-        return (
-          <Card key={stage.id}>
-            <CardHeader>
-              <View style={s.stageHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                  <View style={[s.stageDot, { backgroundColor: stage.color || colors.primary }]} />
-                  <Text style={s.cardTitleText}>{stage.name}</Text>
-                </View>
-                <Badge variant="secondary">{String(sa.length)}</Badge>
-              </View>
-            </CardHeader>
-            <CardContent style={{ gap: spacing.xs, paddingBottom: spacing.md }}>
-              {sa.length === 0 ? (
-                <Text style={s.muted}>Empty</Text>
-              ) : (
-                sa.map((a: any) => {
-                  const p = a.player_profiles || {};
-                  const otherStages = (stages as any[]).filter((x: any) => x.id !== stage.id);
-                  const next = otherStages[0];
-                  return (
-                    <View key={a.id} style={s.pipelineRow}>
-                      <Avatar
-                        size={36}
-                        source={p.profile_image_url ? { uri: p.profile_image_url } : undefined}
-                        fallback={(p.full_name || 'A').slice(0, 2)}
-                      />
-                      <View style={{ flex: 1 }}>
-                        <Text style={s.athleteName}>{p.full_name || 'Unknown'}</Text>
-                        <Text style={s.muted}>{[p.position, p.school].filter(Boolean).join(' • ')}</Text>
-                      </View>
-                      {next ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onPress={() => move.mutate({ id: a.id, stageId: next.id })}
-                          rightIcon={<ChevronRight size={12} color={colors.foreground} />}
-                        >
-                          {next.name}
-                        </Button>
-                      ) : null}
-                    </View>
-                  );
-                })
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
-    </View>
-  );
-}
-
 /* ------------------------- Saved Athletes List ------------------------- */
 
 function SavedAthletesList({
@@ -550,27 +451,17 @@ function SavedAthletesList({
   loading,
   onView,
   onMessage,
-  onLetter,
+  onLetter, failed, retry, onPipeline,
 }: {
   items: any[];
   loading: boolean;
   onView: (a: any) => void;
-  onMessage: (name?: string) => void;
+  onMessage: (athlete:any) => void;
   onLetter: (a: any) => void;
+  failed:boolean;retry:()=>void;onPipeline:(athlete:any)=>void;
 }) {
   const queryClient = useQueryClient();
-  const remove = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('saved_athletes').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scout-saved-athletes'] });
-      Toast.show({ type: 'success', text1: 'Athlete removed' });
-    },
-    onError: (e: any) =>
-      Toast.show({ type: 'error', text1: 'Remove failed', text2: e?.message }),
-  });
+  const remove=useRemoveSavedAthlete();
 
   return (
     <Card>
@@ -581,7 +472,7 @@ function SavedAthletesList({
       <CardContent style={{ paddingBottom: spacing.md, gap: spacing.sm }}>
         {loading ? (
           <ActivityIndicator color={colors.primary} />
-        ) : items.length === 0 ? (
+        ) : failed ? <Button onPress={retry}>Could not load saved athletes. Retry</Button> : items.length === 0 ? (
           <Text style={s.muted}>No saved athletes yet. Use search to find and save athletes.</Text>
         ) : (
           items.map((item: any) => {
@@ -605,6 +496,7 @@ function SavedAthletesList({
                     <Button
                       size="sm"
                       variant="outline"
+                      disabled={item.athlete_unavailable}
                       onPress={() => onView(a)}
                       leftIcon={<Eye size={12} color={colors.foreground} />}
                     >
@@ -613,22 +505,25 @@ function SavedAthletesList({
                     <Button
                       size="sm"
                       variant="outline"
-                      onPress={() => onMessage(a.full_name)}
+                      disabled={item.athlete_unavailable}
+                      onPress={() => onMessage(a)}
                       leftIcon={<MessageSquare size={12} color={colors.foreground} />}
                     >
                       Message
                     </Button>
                     <Button
                       size="sm"
+                      disabled={item.athlete_unavailable}
                       onPress={() => onLetter(a)}
                       leftIcon={<Send size={12} color={colors.primaryForeground} />}
                     >
                       Letter
                     </Button>
+                    <Button size="sm" variant="outline" disabled={item.athlete_unavailable} onPress={()=>onPipeline(a)}>Add to pipeline</Button>
                     <Button
                       size="sm"
                       variant="ghost"
-                      onPress={() => remove.mutate(item.id)}
+                      onPress={() => remove.mutate(item.id,{onSuccess:()=>Toast.show({type:'success',text1:'Athlete removed'}),onError:(e:any)=>Toast.show({type:'error',text1:'Remove failed',text2:e.message})})}
                       leftIcon={<Trash2 size={12} color={colors.destructive} />}
                       textStyle={{ color: colors.destructive }}
                     >
@@ -755,7 +650,7 @@ function TransferPortalFeedInline({ sport }: { sport?: string }) {
 
 function ScoutAnalyticsInline() {
   const { user } = useAuth();
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading, isError, refetch } = useQuery({
     queryKey: ['scout-analytics', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
@@ -773,6 +668,7 @@ function ScoutAnalyticsInline() {
           .select('id', { count: 'exact', head: true })
           .eq('scout_user_id', user.id),
       ]);
+      for (const result of [pipelineRes, lettersRes, activityRes]) if (result.error) throw result.error;
       return {
         pipeline: pipelineRes.count || 0,
         letters: lettersRes.count || 0,
@@ -782,6 +678,7 @@ function ScoutAnalyticsInline() {
     enabled: !!user?.id,
   });
 
+  if (isError) return <Button onPress={() => void refetch()}>Could not load analytics. Retry</Button>;
   if (isLoading) {
     return (
       <Card>

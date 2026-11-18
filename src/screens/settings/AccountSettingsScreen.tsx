@@ -9,10 +9,9 @@
 // - "Manage Subscription" customer-portal: opens returned URL via Linking.openURL.
 //   On iOS, opens Apple's subscription management page instead (Guideline 3.1.1).
 // - "Change Password" navigates into AuthStack → PasswordReset deep-link surface.
-// - Notification toggles here are local-only mirrors of the web (web also has no
-//   persistence). Kept stateful for parity. Real prefs live on NotificationSettingsScreen.
+// Notification preferences are account-scoped on NotificationSettingsScreen.
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, SafeAreaView, ActivityIndicator, TextInput, Pressable, Switch, Alert, Linking, Platform } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, SafeAreaView, ActivityIndicator, TextInput, Pressable, Alert, Linking, Platform } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Mail, Lock, User as UserIcon, Shield, Bell, Phone, Crown, Zap, ExternalLink } from 'lucide-react-native';
 import { BackButton } from '@/components/BackButton';
@@ -24,20 +23,16 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { colors, typography, spacing } from '@/lib/theme';
 
-const NOTIFICATION_LABELS = ['Welcome Emails', 'Coach Contact Notifications', 'Letter Sent Confirmations', 'Weekly Digest'] as const;
-
 export default function AccountSettingsScreen() {
   const nav = useNavigation<NavigationProp<any>>();
   const { user, isLoading: authLoading } = useAuth();
   const { profile, updateProfile } = usePlayerProfile();
-  const { isSubscribed, tierName, subscriptionEnd, isCoachOrScout, isLoading: subLoading } = useSubscription();
+  const { isSubscribed, hasPaidSubscription, hasRoleAccess, tierName, subscriptionEnd, isCoachOrScout, isLoading: subLoading } = useSubscription();
 
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isUpdatingPhone, setIsUpdatingPhone] = useState(false);
   const [isOpeningPortal, setIsOpeningPortal] = useState(false);
-  const [notifs, setNotifs] = useState<Record<string, boolean>>(
-    NOTIFICATION_LABELS.reduce((acc, l) => ({ ...acc, [l]: true }), {} as Record<string, boolean>),
-  );
+
 
   const isPremium = isSubscribed || isCoachOrScout;
 
@@ -98,7 +93,7 @@ export default function AccountSettingsScreen() {
         <Card>
           <CardHeader>
             <View style={s.row}>
-              {isPremium ? <Crown size={20} color="#f0c419" /> : <Zap size={20} color={colors.mutedForeground} />}
+              {hasPaidSubscription ? <Crown size={20} color="#f0c419" /> : <Zap size={20} color={colors.mutedForeground} />}
               <CardTitle>Subscription</CardTitle>
             </View>
             <CardDescription>Your current plan and billing</CardDescription>
@@ -115,12 +110,12 @@ export default function AccountSettingsScreen() {
                   <View style={{ gap: 4 }}>
                     <View style={[s.badge, isPremium ? s.badgePrimary : s.badgeSecondary]}>
                       <Text style={[s.badgeText, isPremium ? s.badgeTextPrimary : s.badgeTextSecondary]}>
-                        {isCoachOrScout ? 'Coach / Scout Access' : tierName || (isPremium ? 'Premium' : 'Free')}
+                        {tierName || 'Free'}
                       </Text>
                     </View>
                     {subscriptionEnd ? (
                       <Text style={s.smallMuted}>
-                        Renews{' '}
+                        Access until{' '}
                         {new Date(subscriptionEnd).toLocaleDateString('en-US', {
                           month: 'long',
                           day: 'numeric',
@@ -129,13 +124,13 @@ export default function AccountSettingsScreen() {
                       </Text>
                     ) : null}
                   </View>
-                  {!isPremium && (
+                  {!hasPaidSubscription && (
                     <Pressable style={s.primaryBtnSm} onPress={() => nav.navigate('Pricing' as any)}>
-                      <Text style={s.primaryBtnSmText}>Upgrade</Text>
+                      <Text style={s.primaryBtnSmText}>View paid plans</Text>
                     </Pressable>
                   )}
                 </View>
-                {isPremium && !isCoachOrScout && (
+                {hasPaidSubscription && (
                   <Pressable style={s.outlineBtn} onPress={handleManageSubscription} disabled={isOpeningPortal}>
                     {isOpeningPortal ? (
                       <ActivityIndicator size="small" color={colors.foreground} />
@@ -147,7 +142,7 @@ export default function AccountSettingsScreen() {
                     )}
                   </Pressable>
                 )}
-                {isPremium ? <Text style={s.smallMuted}>You have full access to all premium features.</Text> : null}
+                {hasPaidSubscription ? <Text style={s.smallMuted}>Your paid plan includes Recruiter Assistant. Other features follow your plan and account permissions.</Text> : hasRoleAccess ? <Text style={s.smallMuted}>Your role includes free recruiting tools. Paid features and event purchases are separate.</Text> : null}
               </>
             )}
           </CardContent>
@@ -216,16 +211,7 @@ export default function AccountSettingsScreen() {
             <CardDescription>Manage notification preferences</CardDescription>
           </CardHeader>
           <CardContent style={s.cardBody}>
-            {NOTIFICATION_LABELS.map((label) => (
-              <View key={label} style={s.toggleRow}>
-                <Text style={s.toggleLabel}>{label}</Text>
-                <Switch
-                  value={notifs[label]}
-                  onValueChange={(v) => setNotifs((p) => ({ ...p, [label]: v }))}
-                  trackColor={{ true: colors.primary, false: colors.border }}
-                />
-              </View>
-            ))}
+            <Pressable style={s.outlineBtn} onPress={()=>nav.navigate('NotificationSettings' as any)}><Bell size={16} color={colors.foreground}/><Text style={s.outlineBtnText}>Notification Settings</Text></Pressable>
           </CardContent>
         </Card>
 
@@ -245,7 +231,7 @@ export default function AccountSettingsScreen() {
             </View>
             <Pressable
               style={s.outlineBtn}
-              onPress={() => nav.navigate('AuthStack' as any, { screen: 'PasswordReset' })}>
+              onPress={() => nav.navigate('Settings' as any, {changePassword:true})}>
               <Lock size={16} color={colors.foreground} />
               <Text style={s.outlineBtnText}>Change Password</Text>
             </Pressable>

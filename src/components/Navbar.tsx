@@ -1,3 +1,4 @@
+import {useHomeNavigation} from '@/navigation/HomeNavigation';
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { useNavigation, useRoute, NavigationProp } from '@react-navigation/native';
@@ -13,10 +14,12 @@ import type { UserRole } from '@/lib/constants';
 export function Navbar() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
   const { user, userRole } = useAuth() as any;
+  const globalHome=useHomeNavigation();
   const home = user
     ? roleToInitialRoute(userRole as UserRole | null | undefined)
     : 'PublicTabs';
 
+  if(globalHome)return null;
   return (
     <View>
       <ImpersonationBanner />
@@ -38,7 +41,7 @@ export function Navbar() {
               </Pressable>
             </>
           ) : (
-            <Pressable onPress={() => nav.navigate('AuthStack' as any)} style={s.signInBtn}>
+            <Pressable onPress={() => nav.navigate('AuthStack' as any, {screen:'SignIn'})} style={s.signInBtn}>
               <Text style={s.signInText}>Sign In</Text>
             </Pressable>
           )}

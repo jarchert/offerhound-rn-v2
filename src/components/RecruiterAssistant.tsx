@@ -1,3 +1,4 @@
+import {withThemeAlpha} from '@/lib/theme';
 // RecruiterAssistant — RN port of Lovable src/components/RecruiterAssistant.tsx.
 // Verbatim behavior/copy; web primitives swapped for RN equivalents. No liberties
 // with strings, suggested questions, streaming protocol, or server contract.
@@ -24,7 +25,7 @@ import { ScrollArea } from '@/components/ui/ScrollArea';
 import { PatentPendingBadge } from '@/components/ui/PatentPendingBadge';
 import { toast } from '@/components/ui/toast';
 import { colors, typography, spacing, radius } from '@/lib/theme';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, SUPABASE_ANON_KEY } from '@/integrations/supabase/client';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { useContactEvents } from '@/hooks/useContactEvents';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -52,7 +53,7 @@ export function RecruiterAssistant() {
   const scrollRef = useRef<ScrollView | null>(null);
   const { data: contactEvents } = useContactEvents();
   const { profile } = usePlayerProfile();
-  const { isSubscribed } = useSubscription();
+  const {hasPaidSubscription:isSubscribed} = useSubscription();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -102,10 +103,11 @@ export function RecruiterAssistant() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          apikey: SUPABASE_ANON_KEY,
           Authorization: `Bearer ${session?.access_token ?? ''}`,
         },
         body: JSON.stringify({
-          messages: [...messages, userMessage],
+          messages: [...messages, userMessage].slice(-10),
           athleteProfile: athleteProfileData,
           contactHistory: contactEvents || [],
           isSubscribed,
@@ -117,10 +119,13 @@ export function RecruiterAssistant() {
         if (response.status === 429) {
           toast.error('Rate limit exceeded. Please try again in a moment.');
         } else if (response.status === 402) {
-          toast.error('AI credits exhausted. Please add credits to continue.');
+          toast.error('Recruiter Assistant is included with any paid subscription. Choose a plan to continue.');
+        } else if(response.status===503) {
+          toast.error('Billing could not be checked. Your question is kept; try again later.');
         } else {
           toast.error(errorData.error || 'Failed to get response');
         }
+        setInput(current=>current||messageText);
         setIsLoading(false);
         return;
       }
@@ -203,7 +208,8 @@ export function RecruiterAssistant() {
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      toast.error('Failed to get response from assistant');
+      setInput(current=>current||messageText);
+      toast.error('Failed to get response from assistant. Your question is kept.');
     } finally {
       setIsLoading(false);
     }
@@ -388,7 +394,7 @@ const s = StyleSheet.create({
   emptyState: {
     padding: spacing.md,
     borderRadius: radius.lg,
-    backgroundColor: `${colors.secondary}4D`, // secondary/30
+    backgroundColor: withThemeAlpha('secondary','4D'), // secondary/30
     borderWidth: 1,
     borderColor: colors.border,
     gap: spacing.sm,
@@ -413,7 +419,7 @@ const s = StyleSheet.create({
   suggestion: {
     padding: spacing.sm,
     borderRadius: radius.md,
-    backgroundColor: `${colors.background}80`,
+    backgroundColor: withThemeAlpha('background','80'),
     borderWidth: 1,
     borderColor: 'transparent',
   },
@@ -449,7 +455,7 @@ const s = StyleSheet.create({
     padding: spacing.sm,
   },
   bubbleUser: { backgroundColor: colors.primary },
-  bubbleAssistant: { backgroundColor: `${colors.secondary}80` }, // secondary/50
+  bubbleAssistant: { backgroundColor: withThemeAlpha('secondary','80') }, // secondary/50
   bubbleText: { fontSize: typography.fontSize.sm },
   bubbleTextUser: { color: colors.primaryForeground },
   bubbleTextAssistant: { color: colors.foreground },

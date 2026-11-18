@@ -1,0 +1,45 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Public camp detail and flyer folder-picker cancellation
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: Essential Only
+    timeout: 60000
+- tapOn: Essential Only
+- runFlow:
+    file: common/open-qa-link.yaml
+    env:
+      QA_LINK: offerhound-staging://camps/8f423558-f88d-43e7-9f82-917da80a1fa6
+- extendedWaitUntil:
+    visible: Camp registration QR
+    timeout: 60000
+- scrollUntilVisible:
+    element: Save PNG to folder
+    direction: DOWN
+    timeout: 30000
+- takeScreenshot: launch-camp-flyer-preview
+- tapOn: Save PNG to folder
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - extendedWaitUntil:
+          visible: Cancel
+          timeout: 30000
+      - takeScreenshot: launch-flyer-folder-picker
+      - tapOn: Cancel
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - extendedWaitUntil:
+          visible: Use this folder
+          timeout: 30000
+      - takeScreenshot: launch-flyer-folder-picker
+      - back
+- extendedWaitUntil:
+    visible: Save PNG to folder
+    timeout: 30000
+- assertNotVisible: QR export unavailable
+- takeScreenshot: launch-flyer-picker-canceled

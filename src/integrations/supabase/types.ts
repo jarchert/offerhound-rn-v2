@@ -373,7 +373,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      accept_parent_invitation: { Args: { p_token: string }; Returns: string }
     }
     Enums: {
       activity_type: ActivityType

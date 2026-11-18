@@ -1,0 +1,14 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: QA u13-athlete login restore admin denial and logout
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.u13-athlete@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_U13_PASSWORD}
+- runFlow:
+    file: common/role-check.yaml
+    env:
+      QA_EMAIL: qa.u13-athlete@offerhound.test
+      QA_ROLE_KEY: u13-athlete
+      QA_ROLE_MARKER: ".*Matches.*"

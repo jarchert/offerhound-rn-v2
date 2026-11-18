@@ -1,9 +1,11 @@
+import {useTheme} from '@/contexts/ThemeContext';
+import {resolvedPalette,resolvedGradients} from '@/lib/adaptiveTheme';
 // HeroSection — RN port of Lovable src/components/HeroSection.tsx (verbatim).
 // Layout: full-screen hero with dark gradient bg, ghosted action image on the
 // right, decorative blurred orbs, profile image + content (name, badge, stats,
 // school, CTAs). Web Tailwind classes mapped to StyleSheet using @/lib/theme.
 // Web→RN mappings:
-//   • bg-gradient-dark           → <LinearGradient> (gradients.dark)
+//   • bg-gradient-dark           → <LinearGradient> (dynamicGradients.dark)
 //   • text-gradient-gold         → <MaskedView>+<LinearGradient> (gradients.gold)
 //   • lucide-react               → lucide-react-native
 //   • react-router useNavigate   → @react-navigation/native useNavigation
@@ -58,6 +60,7 @@ interface HeroSectionProps {
 }
 
 export function HeroSection({ isOwnerView = true, profile }: HeroSectionProps) {
+  const {theme}=useTheme();const dynamicGradients=resolvedGradients(theme),palette=resolvedPalette(theme);
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
   const isLg = width >= 1024; // Tailwind `lg:` breakpoint
@@ -161,7 +164,7 @@ export function HeroSection({ isOwnerView = true, profile }: HeroSectionProps) {
       <View style={s.section}>
         {/* Background gradient (bg-gradient-dark) */}
         <LinearGradient
-          colors={gradients.dark}
+          colors={dynamicGradients.dark}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={StyleSheet.absoluteFill}
@@ -172,7 +175,7 @@ export function HeroSection({ isOwnerView = true, profile }: HeroSectionProps) {
           <Image source={heroBgSource} style={s.ghostImg} resizeMode="cover" />
           {/* bg-gradient-to-l from-transparent via-background/50 to-background */}
           <LinearGradient
-            colors={['transparent', 'rgba(16,19,24,0.5)', colors.background]}
+            colors={['transparent',palette.background+'80',palette.background]}
             start={{ x: 1, y: 0.5 }}
             end={{ x: 0, y: 0.5 }}
             style={StyleSheet.absoluteFill}

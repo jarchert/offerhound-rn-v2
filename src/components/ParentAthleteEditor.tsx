@@ -1,22 +1,14 @@
-// TODO(session4): Port full implementation from Ch.13 of the conversion guide.
-// This is a minimal scaffold so the bundle compiles.
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, typography, spacing } from '@/lib/theme';
-
-export function ParentAthleteEditor(_props: any) {
-  return (
-    <View style={s.container}>
-      <Text style={s.text}>[ParentAthleteEditor]</Text>
-      <Text style={s.hint}>Scaffold — port from Ch.13</Text>
-    </View>
-  );
+import React,{useState} from 'react';
+import {View,Text} from 'react-native';
+import {Button} from '@/components/ui/Button';
+import {Input} from '@/components/ui/Input';
+import {supabase} from '@/integrations/supabase/client';
+import {colors} from '@/lib/theme';
+import {guardianProfilePatch,guardianProfileSelect,saveGuardianProfile} from '@/lib/guardianProfileEditor';
+export function ParentAthleteEditor({profileId,onSaved}:{profileId:string;onSaved?:()=>void}){
+ const [original,setOriginal]=useState<any>(null),[draft,setDraft]=useState<Record<string,string>>({}),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
+ async function open(){setBusy(true);setNotice('');try{const r=await supabase.from('player_profiles').select(guardianProfileSelect).eq('id',profileId).maybeSingle();if(r.error||!r.data)throw Error('This profile could not be loaded for editing.');const row:any=r.data;setOriginal(row);const keys=['school','graduation_year','city','state','jersey_number','positions',...(row.is_minor_safe===false?['height','weight','gpa','bio']:[])];setDraft(Object.fromEntries(keys.map(k=>[k,k==='positions'?(row.positions?.length?row.positions:row.position?[row.position]:[]).join(', '):String(row[k]??'')])));}catch(e:any){setNotice(e.message);}finally{setBusy(false);}}
+ async function save(){if(!original)return;setBusy(true);setNotice('');try{const patch=guardianProfilePatch(original,draft);await saveGuardianProfile(supabase,original,patch);setOriginal(null);setDraft({});setNotice(Object.keys(patch).length?'Profile changes saved.':'No changes to save.');onSaved?.();}catch(e:any){setNotice(e.message);}finally{setBusy(false);}}
+ return <View style={{gap:10,padding:16,borderWidth:1,borderColor:colors.border,borderRadius:12}}><Text style={{color:colors.foreground}}>Linked athlete profile</Text>{original?<><Text style={{color:colors.mutedForeground}}>Edit recruiting details. Separate safety and publication controls remain unchanged.</Text>{Object.entries(draft).map(([key,value])=><View key={key} style={{gap:4}}><Text style={{color:colors.foreground}}>{key==='positions'?'Positions (comma separated)':key.replaceAll('_',' ')}</Text><Input accessibilityLabel={key.replaceAll('_',' ')} value={value} editable={!busy} multiline={key==='bio'} onChangeText={v=>setDraft(prev=>({...prev,[key]:v}))}/></View>)}<Button disabled={busy} onPress={()=>void save()}>Save athlete details</Button><Button variant="outline" disabled={busy} onPress={()=>{setOriginal(null);setDraft({});setNotice('Changes discarded.');}}>Cancel editing</Button></>:<Button disabled={busy} onPress={()=>void open()}>{busy?'Loading profile…':'Edit athlete details'}</Button>}{notice?<Text accessibilityRole="alert" style={{color:colors.foreground}}>{notice}</Text>:null}</View>;
 }
-
 export default ParentAthleteEditor;
-
-const s = StyleSheet.create({
-  container: { padding: spacing.md, backgroundColor: colors.muted, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
-  text: { fontFamily: typography.fontFamily.bodySemiBold, color: colors.foreground, fontSize: typography.fontSize.sm },
-  hint: { fontFamily: typography.fontFamily.body, color: colors.mutedForeground, fontSize: typography.fontSize.xs, marginTop: 2 },
-});

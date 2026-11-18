@@ -1,3 +1,4 @@
+import {subscriptionPresentation} from '@/lib/subscriptionPresentation';
 import { useEffect, useMemo, useCallback } from 'react';
 import { Platform } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -28,6 +29,7 @@ import {
 export type SubscriptionTier =
   | 'none'
   | 'free'
+  | 'paid'
   | SubscriptionTierId;
 
 export interface UserSubscriptionRow {
@@ -54,17 +56,12 @@ interface RoleEntitlement {
 }
 
 async function fetchRoleEntitlement(userId: string): Promise<RoleEntitlement> {
-  // Three parallel reads; any non-null match → free server-side entitlement.
+  // Billing exemptions are separate from recruiter verification and account role labels.
   const [adminRes, coachRes, scoutRes] = await Promise.all([
-    supabase
-      .from('user_roles' as never)
-      .select('role')
-      .eq('user_id', userId)
-      .eq('role', 'admin')
-      .maybeSingle(),
+    supabase.rpc('is_admin'),
     supabase
       .from('coach_profiles')
-      .select('id')
+      .select('id, is_club_coach')
       .eq('user_id', userId)
       .maybeSingle(),
     supabase
@@ -74,9 +71,9 @@ async function fetchRoleEntitlement(userId: string): Promise<RoleEntitlement> {
       .maybeSingle(),
   ]);
 
-  const isAdmin = !!adminRes.data;
-  const isCoach = !!coachRes.data;
-  const isScout = !!scoutRes.data;
+  const isAdmin = !adminRes.error && adminRes.data === true;
+  const isCoach = !coachRes.error && !!coachRes.data && coachRes.data.is_club_coach === false;
+  const isScout = !scoutRes.error && !!scoutRes.data;
   return {
     isAdmin,
     isCoach,
@@ -91,6 +88,7 @@ async function fetchActiveSubscription(userId: string): Promise<UserSubscription
     .select('*')
     .eq('user_id', userId)
     .eq('is_active', true)
+    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -113,6 +111,7 @@ async function callValidateReceipt(args: ValidateReceiptArgs) {
     body: args,
   });
   if (error) throw error;
+  if (data?.error) throw new Error(data.error);
   return data;
 }
 
@@ -144,6 +143,8 @@ export interface UseSubscriptionResult {
 
   // Legacy surface (existing callers depend on these)
   isSubscribed: boolean;
+  hasPaidSubscription: boolean;
+  hasRoleAccess: boolean;
   priceId: string | null;
   subscriptionEnd: string | null;
   tierName: string | null;
@@ -183,6 +184,12 @@ export function useSubscription(): UseSubscriptionResult {
     enabled: !!isAuthenticated && !!userId,
     staleTime: 30_000,
   });
+
+  // Web purchases are verified by the backend; never infer paid access from role.
+  const webQuery=useQuery({queryKey:['subscription','web',userId],enabled:!!isAuthenticated&&!!userId,staleTime:30000,queryFn:async()=>{
+    const {data,error}=await supabase.functions.invoke('check-subscription');
+    return error||data?.error?null:data;
+  }});
 
   // Listen for store-side purchase events and reconcile via the edge function.
   useEffect(() => {
@@ -233,6 +240,7 @@ export function useSubscription(): UseSubscriptionResult {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_KEY(userId) }),
       queryClient.invalidateQueries({ queryKey: ROLE_KEY(userId) }),
+      queryClient.invalidateQueries({ queryKey: ['subscription','web',userId] }),
     ]);
   }, [queryClient, userId]);
 
@@ -240,34 +248,16 @@ export function useSubscription(): UseSubscriptionResult {
     const role = roleQuery.data;
     const subRow = subQuery.data ?? null;
 
-    let tier: SubscriptionTier;
-    let isActive: boolean;
-
-    if (role?.hasFreeAccess) {
-      tier = 'free';
-      isActive = true;
-    } else if (subRow?.is_active) {
-      const mapped = tierIdForSku(subRow.product_id);
-      tier = (mapped ?? (subRow.tier as SubscriptionTier)) ?? 'none';
-      isActive = true;
-    } else {
-      tier = 'none';
-      isActive = false;
-    }
-
-    const tierName =
-      tier === 'free'
-        ? 'Free (role)'
-        : tier === 'none'
-          ? null
-          : (PRICING_TIERS.find(t => t.id === tier)?.name ?? tier);
+    const presentation=subscriptionPresentation(!!role?.hasFreeAccess,subRow,webQuery.data,tierIdForSku,PRICING_TIERS);
 
     return {
       // new surface
       subscription: subRow,
-      tier,
-      isActive,
-      isLoading: roleQuery.isLoading || subQuery.isLoading,
+      tier:presentation.tier as SubscriptionTier,
+      isActive:presentation.isActive,
+      hasRoleAccess:presentation.hasRoleAccess,
+      hasPaidSubscription:presentation.hasPaidSubscription,
+      isLoading: roleQuery.isLoading || subQuery.isLoading || webQuery.isLoading,
       purchase: async (sku: string) => {
         await purchaseMutation.mutateAsync(sku);
       },
@@ -275,10 +265,10 @@ export function useSubscription(): UseSubscriptionResult {
         await restoreMutation.mutateAsync();
       },
       // legacy surface
-      isSubscribed: isActive,
-      priceId: subRow?.product_id ?? null,
-      subscriptionEnd: subRow?.expires_at ?? null,
-      tierName,
+      isSubscribed: presentation.isActive,
+      priceId: presentation.priceId,
+      subscriptionEnd: presentation.subscriptionEnd,
+      tierName:presentation.tierName,
       isCoachOrScout: !!(role?.isCoach || role?.isScout),
       refresh,
     };
@@ -287,6 +277,8 @@ export function useSubscription(): UseSubscriptionResult {
     roleQuery.isLoading,
     subQuery.data,
     subQuery.isLoading,
+    webQuery.data,
+    webQuery.isLoading,
     purchaseMutation,
     restoreMutation,
     refresh,

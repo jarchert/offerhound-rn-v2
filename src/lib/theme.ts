@@ -1,3 +1,5 @@
+import {adaptiveColors} from './adaptiveTheme';
+export {withThemeAlpha} from './adaptiveTheme';
 // src/lib/theme.ts
 // Design tokens — **exact hex values derived from Lovable src/index.css HSL**.
 // Every color here was computed from the Lovable CSS variables to guarantee
@@ -23,60 +25,7 @@
 //   dark: linear-gradient(180°, #101318 → #0a0b0f)
 //   card: linear-gradient(145°, #1d212a → #14171e)
 
-export const colors = {
-  // Core surfaces
-  background: '#101318',       // hsl(220 20% 8%)  — app background ("near black")
-  backgroundDark: '#0a0b0f',   // hsl(220 18% 5%)  — gradient-dark endpoint
-  card: '#191c24',             // hsl(220 18% 12%)
-  cardHigh: '#1d212a',         // hsl(220 18% 14%) — gradient-card start
-  cardLow: '#14171e',          // hsl(220 18% 10%) — gradient-card end + sidebar
-
-  // Text
-  foreground: '#fffcf4',       // hsl(45 100% 98%) — warm cream
-  foregroundSubtle: '#808897', // hsl(220 10% 55%) — muted foreground
-
-  // Brand — championship gold
-  primary: '#e7af08',          // hsl(45 93% 47%)
-  primaryForeground: '#101318',
-  primaryEnd: '#f39d24',       // hsl(35 90% 55%) — gradient gold end
-
-  // Accent — lighter gold
-  accent: '#edbd2a',           // hsl(45 85% 55%)
-  accentForeground: '#101318',
-
-  // Secondary (navy)
-  secondary: '#272b34',        // hsl(220 15% 18%)
-  secondaryForeground: '#eae8e0',
-
-  // Muted
-  muted: '#20242b',            // hsl(220 15% 15%)
-  mutedForeground: '#808897',
-
-  // Status
-  destructive: '#dc2828',
-  destructiveForeground: '#fffcf4',
-  success: '#16a149',
-  successForeground: '#ffffff',
-  warning: '#f49e0a',
-  warningForeground: '#000000',
-  info: '#0da2e7',
-  infoForeground: '#ffffff',
-
-  // Border / input
-  border: '#2b303a',           // hsl(220 15% 20%)
-  input: '#2b303a',
-  ring: '#e7af08',
-
-  // Sidebar
-  sidebarBackground: '#14171e',
-  sidebarForeground: '#eae8e0',
-  sidebarBorder: '#2b303a',
-
-  // Transparency helpers
-  overlay: 'rgba(0, 0, 0, 0.5)',
-  overlayStrong: 'rgba(0, 0, 0, 0.7)',
-  goldShadow: 'rgba(231, 175, 8, 0.3)',   // --shadow-gold: 0 4px 30px -5px hsl(45 93% 47% / 0.3)
-};
+export const colors = adaptiveColors();
 
 export const gradients = {
   // Championship gold: 135° → #e7af08 → #f39d24

@@ -1,0 +1,31 @@
+name: OfferHound native referral access verification
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        type: string
+        required: true
+      platform:
+        type: choice
+        required: true
+        default: ios
+        options: [ios, android]
+jobs:
+  candidate:
+    type: repack
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      profile: staging
+      message: Independently verify non-paid launch repairs on compatible build20 native runtime
+  referral_permissions:
+    type: maestro
+    needs: [candidate]
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ needs.candidate.outputs.build_id }}
+      flow_path: .maestro/staging-referral-permissions.yaml
+      record_screen: true
+      retries: 0

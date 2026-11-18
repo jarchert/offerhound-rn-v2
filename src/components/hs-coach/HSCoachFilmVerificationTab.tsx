@@ -54,32 +54,34 @@ export function HSCoachFilmVerificationTab() {
   const [submitting, setSubmitting] = useState(false);
 
   // Roster athlete profile IDs
-  const { data: rosterIds } = useQuery({
+  const { data: rosterIds,isError:rosterError,refetch:refetchRoster } = useQuery({
     queryKey: ['hs-coach-film-roster-ids', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data } = await supabase
+      const { data,error } = await supabase
         .from('team_rosters')
         .select('athlete_profile_id, teams!inner(coach_user_id)')
         .eq('teams.coach_user_id', user.id)
-        .not('athlete_profile_id', 'is', null);
+        .not('athlete_profile_id', 'is', null).is('removed_at',null).not('status','in','(removed,transferred,declined)').not('athlete_accepted_at','is',null).eq('teams.status','active');
+      if(error)throw error;
       return (data || []).map((r: any) => r.athlete_profile_id);
     },
     enabled: !!user,
   });
 
   // Pull all film/media verification rows for roster athletes
-  const { data: mediaRows, isLoading } = useQuery({
-    queryKey: ['hs-coach-film-verifications', rosterIds],
+  const { data: mediaRows,isLoading,isError:dataError,refetch:refetchData } = useQuery({
+    queryKey: ['hs-coach-film-verifications',user?.id,rosterIds],
     queryFn: async () => {
       if (!rosterIds || rosterIds.length === 0) return [];
-      const { data } = await supabase
+      const { data,error } = await supabase
         .from('media_verifications')
         .select(
           'id, athlete_profile_id, media_url, media_type, external_platform, is_verified, verified_at, coach_notes, created_at, player_profiles:athlete_profile_id(full_name, profile_image_url)'
         )
         .in('athlete_profile_id', rosterIds)
         .order('created_at', { ascending: false });
+      if(error)throw error;
       return data || [];
     },
     enabled: !!rosterIds && rosterIds.length > 0,
@@ -89,15 +91,15 @@ export function HSCoachFilmVerificationTab() {
     if (!user) return;
     setSubmitting(true);
     try {
-      const { error } = await supabase
+      const { data:verified,error } = await supabase
         .from('media_verifications')
         .update({
           is_verified: true,
           verified_at: new Date().toISOString(),
           coach_notes: notes.trim() || null,
         })
-        .eq('id', id);
-      if (error) throw error;
+        .eq('id', id).select('id').single();
+      if(error||verified?.id!==id)throw error||Error('Film verification was not confirmed.');
       toast({
         title: 'Film verified',
         description: 'This film has been marked as authentic by you.',
@@ -116,6 +118,8 @@ export function HSCoachFilmVerificationTab() {
     }
   };
 
+  if(dataError)return <Button onPress={()=>void refetchData()}>Retry loading film requests</Button>;
+  if(rosterError)return <Button onPress={()=>void refetchRoster()}>Retry loading accepted team members</Button>;
   return (
     <ScrollView contentContainerStyle={s.root}>
       <Card>

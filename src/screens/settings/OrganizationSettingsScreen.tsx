@@ -5,8 +5,9 @@
 // - Tabs UI → simple two-button segmented control (no shadcn Tabs in RN).
 // - useScoutOrganization in the RN app returns { organization, isOwner, isMember, memberRole };
 //   web treats the result as the org itself. We unwrap `organization`.
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, SafeAreaView, Pressable } from 'react-native';
+import {Button} from '@/components/ui/Button';
 import { Building2 } from 'lucide-react-native';
 import { BackButton } from '@/components/BackButton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -19,11 +20,13 @@ import { colors, typography, spacing } from '@/lib/theme';
 type TabKey = 'general' | 'members';
 
 export default function OrganizationSettingsScreen() {
-  const { data } = useScoutOrganization();
+  const { data,isLoading,isError,refetch } = useScoutOrganization();
   const org = (data as any)?.organization ?? null;
   const isOwner = !!(data as any)?.isOwner;
   const [tab, setTab] = useState<TabKey>('general');
   const [logoUrl, setLogoUrl] = useState<string | null>(org?.logo_url ?? null);
+  useEffect(()=>setLogoUrl(org?.logo_url??null),[org?.id,org?.logo_url]);
+  if(isLoading||isError)return <SafeAreaView style={s.container}><BackButton label="Back"/><Text style={s.h1}>Organization Settings</Text>{isLoading?<Text style={s.muted}>Loading your organization…</Text>:<><Text accessibilityRole="alert" style={s.muted}>Your organization could not be loaded.</Text><Button onPress={()=>void refetch()}>Retry organization</Button></>}</SafeAreaView>;
 
   return (
     <SafeAreaView style={s.container}>
@@ -62,7 +65,7 @@ export default function OrganizationSettingsScreen() {
             </CardContent>
           </Card>
         ) : (
-          <OrganizationMemberManager />
+          <OrganizationMemberManager organizationId={org?.id} />
         )}
 
         <View style={{ marginTop: spacing.lg }}>

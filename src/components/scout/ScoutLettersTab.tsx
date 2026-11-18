@@ -1,3 +1,4 @@
+import {withThemeAlpha} from '@/lib/theme';
 // Ported from Lovable src/components/scout/ScoutLettersTab.tsx
 // Web → RN mapping:
 //   - Tailwind classes → StyleSheet using @/lib/theme tokens
@@ -323,7 +324,7 @@ const s = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: colors.secondary + '80',
+    backgroundColor: withThemeAlpha('secondary','80'),
     alignItems: 'center',
     justifyContent: 'center',
   },

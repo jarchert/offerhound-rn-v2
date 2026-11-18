@@ -1,3 +1,4 @@
+import {normalizeAthleteImageAsset,athleteImagePath,athleteMediaAllowed,validateMediaBytes,saveAthleteMedia} from '@/lib/athleteMedia';
 // RN port of Lovable src/components/ProfileManagement.tsx.
 //
 // Web→RN mapping:
@@ -134,7 +135,8 @@ export const ProfileManagement = () => {
   };
 
   const pickAndUploadComparisonImage = async () => {
-    if (!user) return;
+    if (!user||!profile?.id) return;
+    if(!await athleteMediaAllowed(supabase,profile.id,message=>toast.error('Upload unavailable',message)))return;
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
@@ -148,24 +150,25 @@ export const ProfileManagement = () => {
       if (result.canceled || !result.assets?.[0]?.uri) return;
 
       setIsUploading(true);
-      const asset = result.assets[0];
+      const asset = await normalizeAthleteImageAsset(result.assets[0]);
       const uri = asset.uri;
-      const ext = uri.split('.').pop() || 'jpg';
-      const path = `${user.id}/comparison-player.${ext}`;
+      const ext = asset.fileName?.split('.').pop()?.toLowerCase() || uri.split('.').pop()?.split('?')[0]?.toLowerCase() || 'jpg';
+      const path = athleteImagePath(profile.id,'comparison',ext);
 
       const response = await fetch(uri);
-      const blob = await response.blob();
+      const blob = await response.arrayBuffer();
+      validateMediaBytes(blob,10*1024*1024);
 
       const { error: uploadError } = await supabase.storage
         .from('profile-images')
-        .upload(path, blob as any, { upsert: true });
+        .upload(path, blob, { upsert: false,contentType:asset.mimeType||'image/jpeg' });
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage
         .from('profile-images')
         .getPublicUrl(path);
 
-      await updateProfile({ player_comparison_image_url: urlData.publicUrl });
+      await saveAthleteMedia(supabase,profile.id,{player_comparison_image_url:urlData.publicUrl},{player_comparison_image_url:profile.player_comparison_image_url||null},()=>void fetchProfile?.());
       fetchProfile?.();
       toast.success('Uploaded', 'Comparison player image saved.');
     } catch {
@@ -482,17 +485,17 @@ const s = StyleSheet.create({
   wrap: { gap: spacing.md, padding: spacing.sm },
 
   overviewContent: { padding: spacing.md, gap: spacing.md },
-  overviewRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  overviewRow: { flexDirection: 'column', alignItems: 'center', gap: spacing.md },
   avatarBubble: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 112,
+    height: 112,
+    borderRadius: 56,
     backgroundColor: colors.secondary,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  avatarImg: { width: 64, height: 64, borderRadius: 32 },
+  avatarImg: { width: 112, height: 112, borderRadius: 56 },
   overviewName: {
     fontFamily: typography.fontFamily.bodySemiBold,
     fontSize: typography.fontSize.base,

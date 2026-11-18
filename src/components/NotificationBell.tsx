@@ -18,16 +18,18 @@ export function NotificationBell({ color = colors.foreground }: NotificationBell
   const { user } = useAuth();
   const nav = useNavigation<any>();
 
-  const { data: unreadCount = 0 } = useQuery({
+  const { data: unreadCount = 0, isError } = useQuery({
     queryKey: ['notif-unread-count', user?.id],
     queryFn: async () => {
       if (!user) return 0;
-      const { count } = await supabase
+      const { count, error } = await supabase
         .from('notifications')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .eq('is_read', false);
-      return count ?? 0;
+      if (error) throw error;
+      if (count === null) throw Error('Unread notifications could not be checked.');
+      return count;
     },
     enabled: !!user,
     refetchInterval: 60_000,
@@ -38,12 +40,13 @@ export function NotificationBell({ color = colors.foreground }: NotificationBell
       onPress={() => nav.navigate('Notifications')}
       style={styles.btn}
       hitSlop={8}
-      accessibilityLabel={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
+      accessibilityRole="button"
+      accessibilityLabel={isError ? 'Notifications, unread count unavailable. Open to retry.' : `Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
     >
       <Bell size={22} color={color} />
-      {unreadCount > 0 && (
+      {(isError || unreadCount > 0) && (
         <View style={styles.badge}>
-          <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : String(unreadCount)}</Text>
+          <Text style={styles.badgeText}>{isError ? '!' : unreadCount > 9 ? '9+' : String(unreadCount)}</Text>
         </View>
       )}
     </Pressable>

@@ -65,13 +65,15 @@ export function AddToPipelineDialog({
   onSuccess,
 }: AddToPipelineDialogProps) {
   const { user } = useAuth();
-  const { data: stages, isLoading: stagesLoading } = useScoutPipelineStages();
-  const { data: pipelineAthletes } = useScoutPipelineAthletes();
+  const { data: stages, isLoading: stagesLoading, isError: stagesError, refetch: retryStages } = useScoutPipelineStages();
+  const { data: pipelineAthletes, isError: pipelineError, refetch: retryPipeline } = useScoutPipelineAthletes();
   const addToPipeline = useAddToPipeline();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<AthleteOption[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchError,setSearchError]=useState('');
+  const [searched,setSearched]=useState(false);
   const [selectedAthlete, setSelectedAthlete] = useState<AthleteOption | null>(null);
   const [selectedStageId, setSelectedStageId] = useState<string>('');
   const [notes, setNotes] = useState('');
@@ -118,22 +120,20 @@ export function AddToPipelineDialog({
   const handleSearch = async () => {
     if (!searchQuery.trim() || !user) return;
 
-    setIsSearching(true);
+    setIsSearching(true);setSearchError('');setSearched(true);
     try {
       const { data, error } = await supabase
-        .from('player_profiles')
+        .from('player_profiles_recruiter_safe' as any)
         .select('id, full_name, position, school, profile_image_url')
         .or(
-          `full_name.ilike.%${searchQuery}%,school.ilike.%${searchQuery}%,position.ilike.%${searchQuery}%`
+          ['full_name','school','position'].map(key=>key+'.ilike.'+JSON.stringify('%'+searchQuery.trim().replace(/[%_\\]/g,c=>'\\'+c)+'%')).join(',')
         )
-        .eq('is_published', true)
-        .eq('is_suspended', false)
         .limit(10);
 
       if (error) throw error;
       setSearchResults((data as AthleteOption[]) || []);
     } catch (error) {
-      console.error('Error searching athletes:', error);
+      setSearchError('Could not search athletes. Try again.');
       setSearchResults([]);
     } finally {
       setIsSearching(false);
@@ -141,7 +141,7 @@ export function AddToPipelineDialog({
   };
 
   const handleSubmit = () => {
-    if (!selectedAthlete || !selectedStageId) return;
+    if (!selectedAthlete || !selectedStageId || stagesError || pipelineError) return;
 
     addToPipeline.mutate(
       {
@@ -176,6 +176,10 @@ export function AddToPipelineDialog({
         </DialogHeader>
 
         <View style={s.body}>
+          {stagesError||pipelineError?<View><Text accessibilityRole="alert" style={{color:colors.destructive}}>Pipeline access could not be confirmed.</Text><Button onPress={()=>{void retryStages();void retryPipeline();}}>Retry pipeline</Button></View>:null}
+          {addToPipeline.isError?<Text accessibilityRole="alert" style={{color:colors.destructive}}>{(addToPipeline.error as Error)?.message||'Addition was not confirmed. Retry after refreshing.'}</Text>:null}
+          {searchError?<Text accessibilityRole="alert" style={{color:colors.destructive}}>{searchError}</Text>:null}
+          {searched&&!isSearching&&!searchError&&!searchResults.length?<Text style={{color:colors.mutedForeground}}>No listed athletes match this search.</Text>:null}
           {/* Athlete Selection */}
           {!athleteId && (
             <View style={s.field}>
@@ -350,6 +354,7 @@ export function AddToPipelineDialog({
           <Button
             onPress={handleSubmit}
             disabled={
+              stagesError || pipelineError ||
               !selectedAthlete ||
               !selectedStageId ||
               addToPipeline.isPending ||

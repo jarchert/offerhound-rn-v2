@@ -1,0 +1,22 @@
+name: OfferHound native club private media QA
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        type: string
+        required: true
+      platform:
+        type: choice
+        required: true
+        default: ios
+        options: [ios, android]
+jobs:
+  gallery:
+    type: maestro
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      flow_path: .maestro/staging-club-private-review.yaml
+      retries: 0
+      record_screen: true

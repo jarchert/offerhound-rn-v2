@@ -1,0 +1,37 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Recommendation subject permission refusal preserves recipient separation
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.hs-coach@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_HS_COACH_PASSWORD}
+- extendedWaitUntil:
+    visible: (?s).*HS Coach Dashboard.*
+    timeout: 60000
+- runFlow:
+    file: common/open-qa-link.yaml
+    env:
+      QA_LINK: offerhound-staging://hs-coach/letters?intent=referral&recipientCategory=college-coach&letterType=player-recommendation&subjectAthleteProfileId=c7628650-4560-4cff-b5f7-d2bde6bb8d45
+- runFlow:
+    file: common/reveal-text.yaml
+    env:
+      QA_SCROLL_TEXT: Recommendation subject
+- runFlow:
+    file: common/reveal-text.yaml
+    env:
+      QA_SCROLL_TEXT: You can only recommend athletes on an active roster you coach.
+- takeScreenshot: native-referral-permission-refusal
+- runFlow:
+    file: common/reveal-control.yaml
+    env:
+      QA_SCROLL_ID: letter-generate
+- assertVisible:
+    id: letter-generate
+    enabled: false
+- takeScreenshot: native-referral-generation-blocked
+# Read-only: never Generate or Send, never accept a consent or add a roster.
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.hs-coach@offerhound.test

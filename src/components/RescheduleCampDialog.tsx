@@ -1,3 +1,4 @@
+import {getCanonicalOrigin} from '@/lib/canonicalDomain';
 // Parity port from Lovable src/components/RescheduleCampDialog.tsx (verbatim logic).
 // Web→RN translations:
 //   <div>/<p>/<span>/<strong>/<label>/<button>/<a>/<ul>/<li> → <View>/<Text>/<Pressable>/Linking
@@ -419,18 +420,16 @@ export function RescheduleCampDialog({ camp, open, onOpenChange }: RescheduleCam
           return;
         }
         try {
-          const { error } = await supabase.from('notifications').insert({
-            user_id: r.user_id,
-            title: args.title,
-            message: args.body,
-            type: 'camp_rescheduled',
-            link: `/camps/${camp.id}?ref=reschedule&attempt=${attemptId}`,
+          const { data: noticeResult, error } = await supabase.rpc('send_camp_notice' as any, {
+            _camp_id: camp.id, _kind:'camp_rescheduled', _recipient:r.user_id,
+            _title:args.title, _message:args.body,
+            _link:`/camps/${camp.id}?ref=reschedule&attempt=${attemptId}`,
           } as any);
-          if (error) {
+          if (error || noticeResult !== 'created') {
             failed.push({
               user_id: r.user_id,
-              code: classifyFailure(error.message),
-              reason: error.message,
+              code: classifyFailure(error?.message || 'Notification was not created'),
+              reason: error?.message || 'Notification was not created',
             });
           } else {
             delivered += 1;
@@ -839,7 +838,7 @@ export function RescheduleCampDialog({ camp, open, onOpenChange }: RescheduleCam
 
   const openAuditLink = (attemptId: string, auditId?: string | null) => {
     const path = `/admin/audit-log?camp_id=${camp.id}&attempt=${encodeURIComponent(attemptId)}${auditId ? `&audit=${auditId}` : ''}`;
-    void Linking.openURL(`https://offerhound.app${path}`);
+    void Linking.openURL(`${getCanonicalOrigin()}${path}`);
   };
 
   return (

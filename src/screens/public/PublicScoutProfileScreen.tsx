@@ -1,3 +1,6 @@
+import {useLetterCenter} from '@/hooks/useLetterCenter';
+import {useAuth} from '@/hooks/useAuth';
+import {ProfileUnavailable} from '@/components/ProfileUnavailable';
 // Ported from Lovable web src/pages/PublicScoutProfile.tsx (122 LOC).
 // Web → RN translation:
 //   - useParams → useRoute<RouteProp>().params
@@ -33,6 +36,8 @@ export default function PublicScoutProfileScreen() {
   const { params } = useRoute<R>();
   const id = params?.scoutId;
   const nav = useNavigation<any>();
+  const {goToLetterForAthlete}=useLetterCenter();
+  const {user,isLoading:authRestoring}=useAuth();
 
   const { data: coachProfile } = useCoachProfile();
   const { profile: athleteProfile } = usePlayerProfile();
@@ -46,57 +51,34 @@ export default function PublicScoutProfileScreen() {
   const isAthlete = !!(athleteProfile as any)?.id;
   const isScout = !!scoutProfile;
 
-  const { data: scout, isLoading } = useQuery({
-    queryKey: ['public-scout-profile', id],
+  const { data: scout, isLoading,isError:profileFailed,refetch:retryProfile } = useQuery({
+    queryKey: ['public-scout-profile', user?.id, id],
     queryFn: async () => {
       if (!id) return null;
-      const { data } = await supabase
+      const { data,error } = await supabase
         .from('scout_profiles' as any)
         .select('*')
         .eq('id', id)
         .maybeSingle();
+      if(error)throw error;
       return data as any;
     },
-    enabled: !!id,
+    enabled: !!id&&!authRestoring,
   });
 
   const handleSendLetter = () => {
     if (!scout) return;
-    // PORT-PENDING: Lovable web uses `navigate("/letters", { state: { coach } })` and
-    // `navigate("/<role>/letters?<query>")` to seed the AI Letter Center. RN's
-    // LetterComposer screen hasn't been wired to consume role-scoped scout-prefill
-    // params yet; we route into the shared LetterComposer with what data we can
-    // pass via params. Track via session-parity follow-up.
-    const prefill = {
-      recipientCategory: 'scout',
-      recipientType: 'coach',
-      recipientName: (scout as any).name || '',
-      recipientEmail: (scout as any).email || '',
-      organizationName: (scout as any).company || (scout as any).title || '',
-      recipientTitle: (scout as any).title || '',
-      letterType: isAthlete
-        ? 'initial-interest'
-        : isScout
-        ? 'initial-interest'
-        : 'scout-introduction',
-    };
-    nav.navigate('LetterComposer' as any, { prefill });
+    goToLetterForAthlete({full_name:scout.name,email:scout.email,school:scout.company||scout.title},{recipientCategory:'scout',recipientType:'coach',surface:'public-scout-profile'});
   };
 
-  if (isLoading) {
+  if (isLoading||authRestoring) {
     return (
       <View style={s.loading}>
         <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
-  if (!scout) {
-    return (
-      <View style={s.loading}>
-        <Text style={s.muted}>Scout not found.</Text>
-      </View>
-    );
-  }
+  if(profileFailed||!scout)return <ProfileUnavailable kind="scout" id={id} failed={profileFailed} retry={retryProfile}/>;
 
   const city = (scout as any).city as string | undefined;
   const state = (scout as any).state as string | undefined;

@@ -22,6 +22,7 @@ export const PRICING_TIERS: PricingTier[] = [
        mode: "subscription",
        badge: "Most Popular",
        features: [
+          "Recruiter Assistant included with subscription",
           "Professional athlete profile page",
           "AI-powered recruiting letters",
           "Coach search & contact tools",
@@ -39,6 +40,7 @@ export const PRICING_TIERS: PricingTier[] = [
        interval: "month",
        mode: "subscription",
        features: [
+          "Recruiter Assistant included with subscription",
           "Everything in Recruit Pro",
           "Direct coach communication",
           "Profile analytics & insights",
@@ -57,6 +59,7 @@ export const PRICING_TIERS: PricingTier[] = [
        mode: "subscription",
        badge: "Best Value",
        features: [
+          "Recruiter Assistant included with subscription",
           "Everything in Recruit Elite",
           "Up to 4 athlete profiles",
           "Family dashboard",
@@ -89,6 +92,7 @@ export const PRICING_TIERS: PricingTier[] = [
        interval: "year",
        mode: "subscription",
        features: [
+          "Recruiter Assistant included with subscription",
           "Team roster management",
           "Player development tracking",
           "College placement tools",
@@ -120,6 +124,7 @@ export const PRICING_TIERS: PricingTier[] = [
       mode: "payment",
       badge: "Unlimited",
       features: [
+          "Recruiter Assistant included with subscription",
          "Unlimited events per year",
          "Registration & check-in",
          "Athlete evaluations",

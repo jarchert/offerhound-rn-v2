@@ -1,0 +1,86 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Creator device draft survives tab unmount and cold restart without publishing
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.influencer@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_INFLUENCER_PASSWORD}
+- extendedWaitUntil:
+    visible: QA Influencer
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      id: creator-post-title
+    direction: DOWN
+    timeout: 30000
+- assertVisible: Headline for the post
+- tapOn:
+    id: creator-post-title
+- inputText: QA LOCAL DRAFT 20261118
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: creator-post-content
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: creator-post-content
+- inputText: Synthetic device-only draft. Do not publish.
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: creator-tab-library
+    direction: UP
+    timeout: 30000
+- tapOn:
+    id: creator-tab-library
+- extendedWaitUntil:
+    visible: Content Library
+    timeout: 45000
+- assertNotVisible: Could not load creator content. Retry
+- takeScreenshot: creator-library-loaded
+- tapOn:
+    id: creator-tab-composer
+- scrollUntilVisible:
+    element:
+      id: creator-post-title
+    direction: DOWN
+    timeout: 30000
+- assertVisible: QA LOCAL DRAFT 20261118
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: QA Influencer
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      id: creator-post-title
+    direction: DOWN
+    timeout: 30000
+- assertVisible: QA LOCAL DRAFT 20261118
+- scrollUntilVisible:
+    element:
+      id: creator-post-content
+    direction: DOWN
+    timeout: 30000
+- assertVisible: Synthetic device-only draft. Do not publish.
+- takeScreenshot: creator-draft-restored
+- tapOn:
+    id: creator-post-content
+- eraseText: 1000
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: creator-post-title
+    direction: UP
+    timeout: 30000
+- tapOn:
+    id: creator-post-title
+- eraseText: 1000
+- hideKeyboard
+- assertVisible: Headline for the post
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.influencer@offerhound.test

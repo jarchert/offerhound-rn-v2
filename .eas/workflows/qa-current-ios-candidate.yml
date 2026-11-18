@@ -1,0 +1,61 @@
+name: OfferHound latest iOS non-paid repair and private media acceptance
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        type: string
+        required: true
+      platform:
+        type: choice
+        required: true
+        default: ios
+        options: [ios, android]
+jobs:
+  candidate:
+    type: repack
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      profile: staging
+      message: Independently verify non-paid launch repairs on compatible build20 native runtime
+  home_settings:
+    type: maestro
+    needs: [candidate]
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ needs.candidate.outputs.build_id }}
+      flow_path: .maestro/staging-launch-parity.yaml
+      record_screen: true
+      retries: 0
+  parent:
+    type: maestro
+    needs: [candidate]
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ needs.candidate.outputs.build_id }}
+      flow_path: .maestro/staging-role-parent.yaml
+      record_screen: true
+      retries: 0
+  referral:
+    type: maestro
+    needs: [candidate]
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ needs.candidate.outputs.build_id }}
+      flow_path: .maestro/staging-referral-permissions.yaml
+      record_screen: true
+      retries: 0
+  club_private_media:
+    type: maestro
+    needs: [candidate]
+    runs_on: macos-medium
+    environment: preview
+    params:
+      build_id: ${{ needs.candidate.outputs.build_id }}
+      flow_path: .maestro/staging-club-private-media.yaml
+      record_screen: true
+      retries: 0

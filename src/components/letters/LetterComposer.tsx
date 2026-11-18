@@ -1,3 +1,8 @@
+import {useQuery} from '@tanstack/react-query';
+import {loadReferralSubject} from '@/lib/athleteReferral';
+import {useLocalDraft} from '@/hooks/useLocalDraft';
+import {useAuth} from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 // Parity port from Lovable src/components/letters/LetterComposer.tsx.
 // Web→RN mapping: shadcn Card/Button/Input/Label/Textarea/Badge/Dialog → @/components/ui/*;
 // lucide-react → lucide-react-native; sonner toast → @/components/ui/toast;
@@ -52,6 +57,8 @@ interface SenderProfile {
 }
 
 interface LetterComposerProps {
+  subjectAthleteProfileId?: string;
+  referralRequested?: boolean;
   senderType: SenderType;
   senderProfile: SenderProfile;
   selectedLetterType: { type: string; title: string; description: string } | null;
@@ -97,6 +104,8 @@ const SENDER_ICONS: Record<SenderType, any> = {
 };
 
 export function LetterComposer({
+  subjectAthleteProfileId,
+  referralRequested,
   senderType,
   senderProfile,
   selectedLetterType,
@@ -109,26 +118,26 @@ export function LetterComposer({
   initialRecipientTitle,
   recipientCategory,
 }: LetterComposerProps) {
+  const {user} = useAuth();
+  const draftScope = `letter:${senderType}:${selectedLetterType?.type||'unselected'}:${initialRecipientEmail||initialRecipientName||'manual'}:${recipientCategory||'any'}:${subjectAthleteProfileId||'no-subject'}`;
+  const subject=useQuery({queryKey:['letter-subject-facts',user?.id,subjectAthleteProfileId],queryFn:()=>loadReferralSubject(supabase,subjectAthleteProfileId!),enabled:!!user&&!!subjectAthleteProfileId,retry:false,staleTime:0});
+  const subjectBlocked=!!referralRequested&&!subjectAthleteProfileId||!!subjectAthleteProfileId&&(!subject.data||subject.isError||subject.isPending);
   const lockedRecipientType = recipientCategory ? CATEGORY_TO_RECIPIENT_TYPE[recipientCategory] : undefined;
-  const [recipientType, setRecipientType] = useState<RecipientType>(lockedRecipientType || initialRecipientType || 'athlete');
-  const [recipientName, setRecipientName] = useState(initialRecipientName || '');
-  const [recipientEmail, setRecipientEmail] = useState(initialRecipientEmail || '');
-  const [organizationName, setOrganizationName] = useState(initialOrganizationName || '');
-  const [recipientTitle, setRecipientTitle] = useState(initialRecipientTitle || '');
-  const [athletePosition, setAthletePosition] = useState('');
-  const [athleteSchool, setAthleteSchool] = useState('');
-  const [athleteGradYear, setAthleteGradYear] = useState('');
-  const [customContext, setCustomContext] = useState('');
-  const [letterContent, setLetterContent] = useState('');
+  const [recipientType, setRecipientType] = useLocalDraft<RecipientType>(user?.id, `${draftScope}:recipientType`, lockedRecipientType || initialRecipientType || 'athlete');
+  const [recipientName, setRecipientName] = useLocalDraft(user?.id, `${draftScope}:recipientName`, initialRecipientName || '');
+  const [recipientEmail, setRecipientEmail] = useLocalDraft(user?.id, `${draftScope}:recipientEmail`, initialRecipientEmail || '');
+  const [organizationName, setOrganizationName] = useLocalDraft(user?.id, `${draftScope}:organizationName`, initialOrganizationName || '');
+  const [recipientTitle, setRecipientTitle] = useLocalDraft(user?.id, `${draftScope}:recipientTitle`, initialRecipientTitle || '');
+  const [athletePosition, setAthletePosition] = useLocalDraft(user?.id, `${draftScope}:athletePosition`, '');
+  const [athleteSchool, setAthleteSchool] = useLocalDraft(user?.id, `${draftScope}:athleteSchool`, initialOrganizationName || '');
+  const [athleteGradYear, setAthleteGradYear] = useLocalDraft(user?.id, `${draftScope}:athleteGradYear`, '');
+  const [customContext, setCustomContext] = useLocalDraft(user?.id, `${draftScope}:customContext`, '');
+  const [letterContent, setLetterContent] = useLocalDraft(user?.id, `${draftScope}:letterContent`, '');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [showSendDialog, setShowSendDialog] = useState(false);
 
-  useEffect(() => { if (lockedRecipientType) setRecipientType(lockedRecipientType); else if (initialRecipientType) setRecipientType(initialRecipientType); }, [lockedRecipientType, initialRecipientType]);
-  useEffect(() => { if (initialRecipientName) setRecipientName(initialRecipientName); }, [initialRecipientName]);
-  useEffect(() => { if (initialRecipientEmail) setRecipientEmail(initialRecipientEmail); }, [initialRecipientEmail]);
-  useEffect(() => { if (initialOrganizationName) setOrganizationName(initialOrganizationName); }, [initialOrganizationName]);
-  useEffect(() => { if (initialRecipientTitle) setRecipientTitle(initialRecipientTitle); }, [initialRecipientTitle]);
+  useEffect(() => { if (lockedRecipientType) setRecipientType(lockedRecipientType); }, [lockedRecipientType]);
 
   const isAthleteAudience = recipientCategory ? (recipientCategory === 'athlete' || recipientCategory === 'parent') : recipientType !== 'coach';
   const orgFieldLabel =
@@ -141,6 +150,7 @@ export function LetterComposer({
 
   const handleGenerate = async () => {
     if (!selectedLetterType) { toast.error('Please select a letter type first'); return; }
+    if(subjectBlocked){toast.error('Confirm athlete sharing permissions before generating.');return;}
     setIsGenerating(true);
     try {
       const body: Record<string, any> = {
@@ -150,6 +160,7 @@ export function LetterComposer({
         recipientCategory: recipientCategory || (recipientType === 'coach' ? 'college-coach' : recipientType),
         customContext: customContext || undefined,
         senderProfile,
+        ...(subjectAthleteProfileId?{subjectAthleteProfileId}:{}),
       };
       if (recipientName) {
         body.recipientInfo = {
@@ -161,25 +172,16 @@ export function LetterComposer({
           school: isAthleteAudience ? (athleteSchool || undefined) : undefined,
           graduation_year: isAthleteAudience ? (athleteGradYear || undefined) : undefined,
         };
-        body.athleteInfo = body.recipientInfo;
+        if(isAthleteAudience&&!subjectAthleteProfileId)body.athleteInfo = body.recipientInfo;
       }
-      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-      const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-      const response = await fetch(`${supabaseUrl}/functions/v1/generate-coach-scout-letter`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${supabaseKey}` },
-        body: JSON.stringify(body),
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({} as any));
-        toast.error(errorData.error || 'Failed to generate letter');
-        return;
-      }
-      const data = await response.json();
-      if (data.letter) { setLetterContent(data.letter); toast.success('Letter generated for this contact!'); }
+      const { data, error } = await supabase.functions.invoke('generate-coach-scout-letter', { body });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if(typeof data?.letter!=='string'||!data.letter.trim())throw Error('No letter was returned. Your previous draft is kept.');
+      setLetterContent(data.letter); toast.success('Letter generated for this contact!');
     } catch (error) {
       console.error('Error generating letter:', error);
-      toast.error('Failed to generate letter');
+      toast.error(error instanceof Error?error.message:'Failed to generate letter');
     } finally { setIsGenerating(false); }
   };
 
@@ -239,6 +241,8 @@ export function LetterComposer({
     >
       <ScrollView contentContainerStyle={s.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={s.root}>
+          {referralRequested&&!subjectAthleteProfileId&&<Text>This referral has no valid linked athlete. Return to the roster and try again.</Text>}
+          {subjectAthleteProfileId&&<Card><CardHeader><CardTitle>Recommendation subject</CardTitle><CardDescription>The athlete is the subject. Enter the college coach as the recipient below.</CardDescription></CardHeader><CardContent>{subject.isPending?<Text>Checking athlete sharing permissions…</Text>:subject.isError?<View><Text>{subject.error.message}</Text><Button onPress={()=>void subject.refetch()}>Retry athlete preview</Button></View>:Object.entries(subject.data||{}).map(([key,value])=><Text key={key}>{key.replace(/_/g,' ')}: {Array.isArray(value)?value.join(', '):value}</Text>)}{subject.data&&<Text>Self-reported profile facts. Add only first-hand observations you can support.</Text>}</CardContent></Card>}
           {/* Sender profile card */}
           <Card style={s.senderCard}>
             <CardContent style={s.senderContent}>
@@ -335,7 +339,7 @@ export function LetterComposer({
             </CardContent>
           </Card>
 
-          <Button onPress={handleGenerate} disabled={isGenerating || !selectedLetterType} size="lg" style={s.generateBtn}>
+          <Button testID="letter-generate" accessibilityLabel={isGenerating ? "Generating tailored letter" : `Generate ${selectedLetterType?.title || 'Letter'}`} onPress={handleGenerate} disabled={isGenerating || !selectedLetterType || subjectBlocked} size="lg" style={s.generateBtn}>
             {isGenerating ? (
               <View style={s.btnRow}><Loader2 size={16} color={colors.primaryForeground} /><Text style={s.btnPrimaryText}>  Generating tailored letter...</Text></View>
             ) : (
@@ -373,7 +377,7 @@ export function LetterComposer({
                       <Text style={s.btnText}>  {isCopied ? 'Copied!' : 'Copy'}</Text>
                     </View>
                   </Button>
-                  <Button variant="outline" onPress={handleGenerate} disabled={isGenerating}>
+                  <Button variant="outline" onPress={handleGenerate} disabled={isGenerating || subjectBlocked}>
                     <View style={s.btnRow}><Sparkles size={16} color={colors.foreground} /><Text style={s.btnText}>  Regenerate</Text></View>
                   </Button>
                 </View>

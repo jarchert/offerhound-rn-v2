@@ -11,7 +11,7 @@ import { colors, typography, spacing, radius } from '@/lib/theme';
 interface Message {
   id: string;
   conversation_id: string;
-  sender_id: string;
+  sender_user_id: string;
   content: string;
   created_at: string;
   read_at?: string | null;
@@ -58,12 +58,12 @@ export function MessageThread({ conversationId }: { conversationId: string }) {
   useEffect(() => {
     if (!user || messages.length === 0) return;
     const unreadIds = messages
-      .filter((m) => m.sender_id !== user.id && !m.read_at)
+      .filter((m) => m.sender_user_id !== user.id && !m.read_at)
       .map((m) => m.id);
     if (unreadIds.length > 0) {
       void supabase
         .from('messages')
-        .update({ read_at: new Date().toISOString() })
+        .update({ is_read: true, read_at: new Date().toISOString() })
         .in('id', unreadIds);
     }
   }, [messages, user]);
@@ -89,7 +89,7 @@ export function MessageThread({ conversationId }: { conversationId: string }) {
         keyExtractor={(m) => m.id}
         contentContainerStyle={s.list}
         renderItem={({ item }) => {
-          const isMine = item.sender_id === user?.id;
+          const isMine = item.sender_user_id === user?.id;
           return (
             <View style={[s.row, isMine && s.rowMine]}>
               <View style={[s.bubble, isMine ? s.bubbleMine : s.bubbleTheirs]}>

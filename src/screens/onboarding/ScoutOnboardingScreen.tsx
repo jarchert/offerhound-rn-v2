@@ -1,6 +1,6 @@
 // ScoutOnboardingScreen — RN port of Lovable src/pages/ScoutOnboarding.tsx (154 LOC).
 // 3-step flow: Personal → Specialization → Review, then create scout profile.
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, SafeAreaView, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/Button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { useScoutProfile, useCreateScoutProfile } from '@/hooks/useScoutProfile';
+import { useScoutProfile, useCreateScoutProfile, useUpdateScoutProfile } from '@/hooks/useScoutProfile';
 import { colors, typography, spacing } from '@/lib/theme';
 import type { OnboardingStackParamList } from '@/navigation/stacks/OnboardingStack';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
@@ -28,8 +28,10 @@ const SPORTS = ['football', 'basketball', 'baseball', 'soccer', 'softball', 'vol
 export default function ScoutOnboardingScreen() {
   const nav = useNavigation<Nav>();
   const { user, loading: authLoading, isAuthenticated } = useAuth();
-  const { data: existingProfile, isLoading: profileLoading } = useScoutProfile() as any;
+  const { data: existingProfile, isLoading: profileLoading, error: profileError, refetch: retryProfile } = useScoutProfile() as any;
   const createProfile = useCreateScoutProfile() as any;
+  const updateProfile = useUpdateScoutProfile() as any;
+  const hydratedProfile = useRef<string | null>(null);
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
     name: '', title: '', email: user?.email || '', phone: '',
@@ -37,6 +39,13 @@ export default function ScoutOnboardingScreen() {
     city: '', state: '',
     twitter: '', instagram: '', tiktok: '', youtube: '', facebook: '',
   });
+
+  useEffect(() => {
+    if (existingProfile?.id && hydratedProfile.current !== existingProfile.id) {
+      hydratedProfile.current = existingProfile.id;
+      setForm(previous => Object.fromEntries(Object.entries(previous).map(([key, value]) => [key, existingProfile[key] ?? value])) as typeof previous);
+    }
+  }, [existingProfile]);
 
   const update = (key: string, value: string) => setForm(f => ({ ...f, [key]: value }));
 
@@ -57,14 +66,15 @@ export default function ScoutOnboardingScreen() {
   }, [user?.email]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async () => {
+    if (profileError || profileLoading) return;
     try {
-      await createProfile.mutateAsync({
+      await (existingProfile?.id ? updateProfile : createProfile).mutateAsync({
         name: form.name, title: form.title, email: form.email,
         phone: form.phone || null, specialization: form.specialization,
         bio: form.bio || null, city: form.city || null, state: form.state || null,
         onboarding_complete: true,
       });
-      toast({ title: 'Scout profile created!' });
+      toast({ title: existingProfile?.id ? 'Scout profile updated!' : 'Scout profile created!' });
       nav.getParent()?.reset({ index: 0, routes: [{ name: 'ScoutTabs' as any }] });
     } catch (e: any) {
       toast({ title: 'Error', description: e?.message || 'Failed to create profile', variant: 'destructive' });
@@ -78,6 +88,8 @@ export default function ScoutOnboardingScreen() {
       </SafeAreaView>
     );
   }
+
+  if (profileError) return <SafeAreaView style={s.safe}><BackButton /><Text accessibilityRole="alert">Scout profile could not be checked. Retry before creating a profile.</Text><Button onPress={() => void retryProfile()}>Retry profile</Button></SafeAreaView>;
 
   return (
     <SafeAreaView style={s.safe}>

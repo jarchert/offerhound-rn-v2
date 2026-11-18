@@ -54,13 +54,13 @@ export default function InfluencerBoardScreen() {
 
   const hasFilters = search.trim().length > 0 || sport !== 'all' || affiliation !== 'all';
 
-  const { data: influencers = [], isLoading, refetch, isRefetching } = useQuery({
+  const { data: influencers = [], isLoading, refetch, isRefetching, isError } = useQuery({
     queryKey: ['influencer-directory', search, sport, affiliation],
     queryFn: async () => {
       let q = supabase
         .from('influencer_profiles' as any)
         .select(
-          'id, handle, display_name, profile_image_url, primary_sport, sport, affiliation_type, bio, verification_status',
+          'id, handle, display_name, profile_image_url, primary_sport, affiliation_type, bio, verification_status',
         )
         .eq('verification_status', 'verified')
         .order('display_name', { ascending: true })
@@ -70,16 +70,15 @@ export default function InfluencerBoardScreen() {
         q = q.ilike('display_name', `%${search.trim()}%`);
       }
       if (sport !== 'all') {
-        // Prefer primary_sport; fall back to sport via `or` so rows with either
-        // column populated are included.
-        q = q.or(`primary_sport.eq.${sport},sport.eq.${sport}`);
+        // The verified staging contract exposes primary_sport, not a sport column.
+        q = q.eq("primary_sport", sport);
       }
       if (affiliation !== 'all') {
         q = q.eq('affiliation_type', affiliation);
       }
 
       const { data, error } = await q;
-      if (error) return [] as any[];
+      if (error) throw error;
       return (data || []) as any[];
     },
   });
@@ -178,7 +177,7 @@ export default function InfluencerBoardScreen() {
         </View>
 
         {/* Results */}
-        {isLoading ? (
+        {isError ? <Button onPress={() => void refetch()}>Could not load creator directory. Retry</Button> : isLoading ? (
           <Text style={s.empty}>Loading verified influencers…</Text>
         ) : count === 0 ? (
           <Text style={s.empty}>

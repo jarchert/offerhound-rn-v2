@@ -1,0 +1,31 @@
+name: OfferHound disposable creator draft acceptance
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        type: string
+        required: true
+      platform:
+        type: choice
+        required: true
+        default: ios
+        options: [ios, android]
+jobs:
+  candidate:
+    type: repack
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      profile: staging
+      message: Verify disposable adult creator private draft save
+  creator_draft:
+    type: maestro
+    needs: [candidate]
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ needs.candidate.outputs.build_id }}
+      flow_path: .maestro/staging-r18-creator-blog.yaml
+      record_screen: true
+      retries: 0

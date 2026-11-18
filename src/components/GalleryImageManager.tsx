@@ -1,3 +1,4 @@
+import {normalizeAthleteImageAsset,athleteGalleryPath,athleteMediaAllowed,validateMediaBytes,addAthleteGallery,removeAthleteGallery} from '@/lib/athleteMedia';
 // GalleryImageManager — RN port of offerhound-repo/src/components/GalleryImageManager.tsx
 //
 // Multi-image picker that uploads to Supabase Storage `gallery` bucket and saves
@@ -8,12 +9,12 @@
 //   - <img> grid + delete button → <Image> tiles with absolute X overlay
 //   - Tailwind grid → flexWrap StyleSheet computed widths (3-up grid)
 //   - File blob → ArrayBuffer (RN-safe) + supabase.storage.upload
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Plus, Loader2, X } from 'lucide-react-native';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, SUPABASE_URL } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { colors, typography, spacing } from '@/lib/theme';
 
@@ -39,6 +40,8 @@ export function GalleryImageManager({
 }: GalleryImageManagerProps) {
   const [images, setImages] = useState<GalleryImage[]>(galleryImages);
   const [isUploading, setIsUploading] = useState(false);
+  const removing=useRef(false);
+  const [removingIndex,setRemovingIndex]=useState<number|null>(null);
   const { toast } = useToast();
 
   // Keep internal state in sync if parent reloads images
@@ -47,21 +50,10 @@ export function GalleryImageManager({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(galleryImages)]);
 
-  const persist = async (next: GalleryImage[]) => {
-    setImages(next);
-    onImagesUpdated?.(next);
-    // Best-effort persist directly so the editor screen doesn't have to micromanage saves
-    const { error } = await supabase
-      .from('player_profiles')
-      .update({ gallery_images: next as any })
-      .eq('id', athleteId);
-    if (error) {
-      console.error('gallery persist error:', error);
-      toast({ title: 'Save failed', description: error.message, variant: 'destructive' });
-    }
-  };
+  const acceptGallery=async(next:GalleryImage[])=>{setImages(next);await onImagesUpdated?.(next);};
 
   const pickAndUpload = async () => {
+    if(!await athleteMediaAllowed(supabase,athleteId,message=>toast({title:'Upload unavailable',description:message,variant:'destructive'})))return;
     if (images.length >= maxImages) {
       toast({ title: `Max ${maxImages} images allowed`, variant: 'destructive' });
       return;
@@ -86,21 +78,21 @@ export function GalleryImageManager({
 
       setIsUploading(true);
       const newItems: GalleryImage[] = [];
-      for (const asset of result.assets) {
+      for (const selected of result.assets) {
+        const asset=await normalizeAthleteImageAsset(selected);
         // 5MB cap (parity with Lovable web)
-        if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) continue;
+        if (asset.fileSize && asset.fileSize > 10 * 1024 * 1024) continue;
 
         const uriExt =
           asset.uri.split('.').pop()?.split('?')[0]?.toLowerCase() || 'jpg';
         const fileExt = asset.fileName?.split('.').pop()?.toLowerCase() || uriExt;
         const mimeType = asset.mimeType || `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
-        const filePath = `${athleteId}/gallery-${Date.now()}-${Math.random()
-          .toString(36)
-          .slice(2)}.${fileExt}`;
+        const filePath = athleteGalleryPath(athleteId,fileExt);
 
         try {
           const response = await fetch(asset.uri);
           const arrayBuffer = await response.arrayBuffer();
+      validateMediaBytes(arrayBuffer,10*1024*1024);
           const { error } = await supabase.storage
             .from('gallery')
             .upload(filePath, arrayBuffer, { contentType: mimeType, upsert: false });
@@ -108,19 +100,18 @@ export function GalleryImageManager({
             console.error('gallery upload error:', error);
             continue;
           }
-          const {
-            data: { publicUrl },
-          } = supabase.storage.from('gallery').getPublicUrl(filePath);
-          newItems.push({ url: publicUrl, uploadedAt: new Date().toISOString() });
+          const confirmed=await addAthleteGallery(supabase,athleteId,filePath);
+          await acceptGallery(confirmed);
+          newItems.push({url:filePath});
         } catch (err) {
-          console.error('gallery item upload error:', err);
+          toast({title:'Image save not confirmed',description:(err as any)?.message||'Reload before retrying.',variant:'destructive'});
+          break;
         }
       }
 
       if (newItems.length === 0) {
         toast({ title: 'Upload failed', variant: 'destructive' });
       } else {
-        await persist([...images, ...newItems]);
         toast({ title: `${newItems.length} image(s) uploaded` });
       }
     } catch (err: any) {
@@ -135,20 +126,13 @@ export function GalleryImageManager({
   };
 
   const removeImage = async (index: number) => {
-    const target = images[index];
-    const next = images.filter((_, i) => i !== index);
-    // Best-effort storage cleanup
-    if (target?.url?.includes('/gallery/')) {
-      const path = target.url.split('/gallery/')[1];
-      if (path) {
-        try {
-          await supabase.storage.from('gallery').remove([path]);
-        } catch {
-          /* ignore */
-        }
-      }
-    }
-    await persist(next);
+    if(isUploading||removing.current)return;
+    const target=images[index];if(!target)return;
+    removing.current=true;setRemovingIndex(index);
+    try {
+      await acceptGallery(await removeAthleteGallery(supabase,athleteId,target.url));
+    } catch {toast({title:'Removal not confirmed',description:'Reload your gallery before trying again.',variant:'destructive'});}
+    finally {removing.current=false;setRemovingIndex(null);}
   };
 
   return (
@@ -157,13 +141,13 @@ export function GalleryImageManager({
         {images.map((img, i) => (
           <View key={`${img.url}-${i}`} style={s.cell}>
             <Image source={{ uri: img.url }} style={s.image} contentFit="cover" />
-            <Pressable style={s.removeBtn} onPress={() => removeImage(i)}>
+            <Pressable style={s.removeBtn} disabled={isUploading||removingIndex!==null} accessibilityLabel="Remove gallery image" onPress={() => removeImage(i)}>
               <X size={14} color={colors.destructiveForeground} />
             </Pressable>
           </View>
         ))}
         {images.length < maxImages && (
-          <Pressable style={[s.cell, s.addCell]} onPress={pickAndUpload} disabled={isUploading}>
+          <Pressable style={[s.cell, s.addCell]} onPress={pickAndUpload} disabled={isUploading||removingIndex!==null}>
             {isUploading ? (
               <ActivityIndicator color={colors.primary} />
             ) : (

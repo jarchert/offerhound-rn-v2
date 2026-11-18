@@ -1,10 +1,12 @@
+import * as Crypto from 'expo-crypto';
+import {validateMediaBytes} from '@/lib/athleteMedia';
 import { useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, Loader2, Trash2, User } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, SUPABASE_URL } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { colors, typography, spacing } from '@/lib/theme';
 
@@ -80,25 +82,18 @@ export function ScoutProfileImageUpload({
       const uriExt = asset.uri.split('.').pop()?.split('?')[0]?.toLowerCase() || 'jpg';
       const fileExt = asset.fileName?.split('.').pop()?.toLowerCase() || uriExt || 'jpg';
       const mimeType = asset.mimeType || `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
-      const fileName = `scouts/${scoutId}/profile-${Date.now()}.${fileExt}`;
-
-      // Delete old image if exists
-      if (currentImageUrl) {
-        const oldPath = currentImageUrl.split('/profile-images/')[1];
-        if (oldPath) {
-          await supabase.storage.from('profile-images').remove([oldPath]);
-        }
-      }
+      const fileName = `scouts/${scoutId}/profile-${Crypto.randomUUID()}.${fileExt}`;
 
       // Read file as ArrayBuffer for Supabase upload (fetch+blob is unreliable in RN)
       const response = await fetch(asset.uri);
       const arrayBuffer = await response.arrayBuffer();
+      validateMediaBytes(arrayBuffer,10*1024*1024);
 
       const { error: uploadError } = await supabase.storage
         .from('profile-images')
         .upload(fileName, arrayBuffer, {
           cacheControl: '3600',
-          upsert: true,
+          upsert: false,
           contentType: mimeType,
         });
 
@@ -111,7 +106,7 @@ export function ScoutProfileImageUpload({
       const { error: updateError } = await supabase
         .from('scout_profiles')
         .update({ image_url: urlData.publicUrl })
-        .eq('id', scoutId);
+        .eq('id', scoutId).select('id').single();
 
       if (updateError) throw updateError;
 
@@ -139,23 +134,25 @@ export function ScoutProfileImageUpload({
     setIsDeleting(true);
 
     try {
-      const oldPath = currentImageUrl.split('/profile-images/')[1];
-      if (oldPath) {
-        await supabase.storage.from('profile-images').remove([oldPath]);
-      }
-
       const { error: updateError } = await supabase
         .from('scout_profiles')
         .update({ image_url: null })
-        .eq('id', scoutId);
+        .eq('id', scoutId).select('id').single();
 
       if (updateError) throw updateError;
 
       onImageUpdated(null);
+      let cleanupFailed=false;
+      const prefix=SUPABASE_URL+'/storage/v1/object/public/profile-images/'+'scouts/'+scoutId+'/';
+      if(currentImageUrl.startsWith(prefix)){
+        const filename=currentImageUrl.slice(prefix.length);
+        if(/^(profile|logo)-[A-Za-z0-9-]+\.[a-z0-9]{1,5}$/i.test(filename))try{const result=await supabase.storage.from('profile-images').remove(['scouts/'+scoutId+'/'+filename]);cleanupFailed=!!result.error;}catch{cleanupFailed=true;}
+      }
+
 
       toast({
         title: 'Photo Removed',
-        description: 'Your profile photo has been removed.',
+        description: cleanupFailed ? 'Removed from your profile, but file cleanup could not finish. Contact support if this continues.' : 'Removed from your profile.',
       });
     } catch (error: any) {
       console.error('Image delete error:', error);

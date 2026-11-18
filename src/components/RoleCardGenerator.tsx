@@ -1,3 +1,4 @@
+import {getCanonicalOrigin} from '@/lib/canonicalDomain';
 // Ported verbatim (RN-adapted) from Lovable web src/components/RoleCardGenerator.tsx.
 // Web→RN translations applied:
 //   - Tailwind className           → StyleSheet + theme tokens (visual parity)
@@ -6,7 +7,7 @@
 //   - react-icons FA brand icons   → @expo/vector-icons FontAwesome5/6
 //   - qrcode.react QRCodeSVG       → placeholder View (GAP: react-native-qrcode-svg not installed,
 //                                    same convention as AdminInvitationCards)
-//   - window.location.origin       → Constants.expoConfig?.extra?.webBaseUrl ?? 'https://offer-hound.com'
+//   - window.location.origin       → Constants.expoConfig?.extra?.webBaseUrl ?? getCanonicalOrigin()
 //   - HTMLDivElement ref           → react-native-view-shot ref (passed to CardShareActions)
 //   - useToast()                   → @/hooks/use-toast (RN shim)
 import { useRef } from 'react';
@@ -46,7 +47,7 @@ const socialIcons: Record<string, IconRender> = {
 
 // GAP: RN has no window.location.origin. Use stable web baseUrl from app config.
 const WEB_ORIGIN: string =
-  (Constants.expoConfig?.extra as any)?.webBaseUrl || 'https://offer-hound.com';
+  getCanonicalOrigin();
 
 export const RoleCardGenerator = ({ role }: RoleCardGeneratorProps) => {
   const { user } = useAuth();

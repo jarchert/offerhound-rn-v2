@@ -1,0 +1,19 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+---
+- runFlow: wait-role-marker.yaml
+- takeScreenshot: staging-role-${QA_ROLE_KEY}
+- stopApp
+- launchApp
+- runFlow: wait-role-marker.yaml
+- runFlow:
+    file: open-qa-link.yaml
+    env:
+      QA_LINK: offerhound-staging://admin
+- extendedWaitUntil:
+    visible: Admins only
+    timeout: 30000
+- assertNotVisible: Platform overview
+- runFlow:
+    file: logout.yaml
+    env:
+      QA_EMAIL: ${QA_EMAIL}

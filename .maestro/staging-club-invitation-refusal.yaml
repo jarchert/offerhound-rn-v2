@@ -1,0 +1,29 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Private club invitation safely refuses unknown proof
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.adult-athlete@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_ADULT_PASSWORD}
+- runFlow:
+    file: common/open-qa-link.yaml
+    env:
+      # Intentionally fake, never a real invitation token.
+      QA_LINK: offerhound-staging://club-invite#token=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+- extendedWaitUntil:
+    visible: This invitation is unavailable. Ask the coach for a new invitation.
+    timeout: 30000
+- assertVisible:
+    id: club-invitation-claim
+    enabled: false
+- takeScreenshot: club-invitation-unknown-refused
+- tapOn: Close invitation
+- extendedWaitUntil:
+    visible:
+      id: athlete-tab-home
+    timeout: 30000
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.adult-athlete@offerhound.test

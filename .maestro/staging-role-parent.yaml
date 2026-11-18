@@ -1,0 +1,14 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: QA parent login restore admin denial and logout
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.parent@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_PARENT_PASSWORD}
+- runFlow:
+    file: common/role-check.yaml
+    env:
+      QA_EMAIL: qa.parent@offerhound.test
+      QA_ROLE_KEY: parent
+      QA_ROLE_MARKER: "Parent View"

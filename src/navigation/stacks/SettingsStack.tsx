@@ -13,7 +13,7 @@ import FollowingSettingsScreen from '@/screens/settings/FollowingSettingsScreen'
 import LegalStack from '@/navigation/stacks/LegalStack';
 
 export type SettingsStackParamList = {
-  Settings: undefined;
+  Settings: {changePassword?:boolean}|undefined;
   AccountSettings: undefined;
   NotificationSettings: undefined;
   FollowingSettings: undefined;

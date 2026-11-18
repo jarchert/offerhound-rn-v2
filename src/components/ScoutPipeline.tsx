@@ -1,3 +1,5 @@
+import {hydrateRecruiterAthletes} from '@/lib/recruiterAthletes';
+import {Button} from '@/components/ui/Button';
 // RN port of Lovable src/components/ScoutPipeline.tsx.
 //
 // Web→RN mapping:
@@ -56,7 +58,7 @@ export const ScoutPipeline = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: stages = [], isLoading: sl } = useQuery<Stage[]>({
+  const { data: stages = [], isLoading: sl, isError: stagesError, refetch: retryStages } = useQuery<Stage[]>({
     queryKey: ['scout-pipeline-stages', user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -71,34 +73,35 @@ export const ScoutPipeline = () => {
     enabled: !!user,
   });
 
-  const { data: athletes = [], isLoading: al } = useQuery<PipelineAthlete[]>({
+  const { data: athletes = [], isLoading: al, isError: athletesError, refetch: retryAthletes } = useQuery<PipelineAthlete[]>({
     queryKey: ['scout-pipeline-athletes', user?.id],
     queryFn: async () => {
       if (!user) return [];
       const { data, error } = await supabase
         .from('scout_athlete_pipeline_status')
-        .select(
-          '*, player_profiles:athlete_profile_id(id, full_name, position, school, profile_image_url)',
-        )
+        .select('*')
         .eq('scout_user_id', user.id);
       if (error) throw error;
-      return (data as PipelineAthlete[]) || [];
+      return hydrateRecruiterAthletes(supabase,data||[],'player_profiles');
     },
     enabled: !!user,
   });
 
   const move = useMutation({
     mutationFn: async ({ id, stageId }: { id: string; stageId: string }) => {
-      const { error } = await supabase
+      if (!user?.id) throw Error("Sign in to update your pipeline.");
+      const { data, error } = await supabase
         .from('scout_athlete_pipeline_status')
         .update({ stage_id: stageId })
-        .eq('id', id);
+        .eq('id', id).eq('scout_user_id', user.id).select('id,stage_id').single();
       if (error) throw error;
+      if(data?.id!==id||data?.stage_id!==stageId)throw Error('The move was not confirmed. Refresh your pipeline before retrying.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scout-pipeline-athletes'] });
       toast.success('Athlete moved');
     },
+    onError:()=>toast.error('Could not move athlete. Refresh your pipeline and retry.'),
   });
 
   if (sl || al) {
@@ -108,6 +111,8 @@ export const ScoutPipeline = () => {
       </View>
     );
   }
+
+  if(stagesError||athletesError)return <Card><CardContent><Text style={{color:colors.foreground}}>Your pipeline could not be loaded.</Text><Button onPress={()=>{void retryStages();void retryAthletes();}}>Retry pipeline</Button></CardContent></Card>;
 
   if (stages.length === 0) {
     return (

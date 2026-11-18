@@ -1,3 +1,5 @@
+import { useAuth } from '@/hooks/useAuth';
+import { checkInNativeToken, decodeCampToken } from '@/lib/nativeCampCheckin';
 // Ported verbatim from Lovable src/components/CampCheckInOps.tsx
 // Web → RN mapping:
 //   - Tailwind classes → StyleSheet using @/lib/theme tokens
@@ -7,10 +9,8 @@
 //   - <Input ref> + onKeyDown Enter → TextInput ref + onSubmitEditing
 //   - autoFocus retained via TextInput autoFocus
 //   - input onChange(e.target.value) → onChangeText(text)
-//   - GAP: QR camera scanning UI not implemented — expo-barcode-scanner /
-//     expo-camera are NOT installed. Manual token entry path is fully ported;
-//     a future enhancement can wire a Pressable that opens a Camera scanner
-//     and writes its result into scanInput.
+//   - This manager panel supports complete-token entry; camera and image scans
+//     are provided by CampMobileCheckinScreen and the shared CampQrScanner.
 //   - Hover/transition/responsive utility classes are no-ops in RN
 import React, { useState, useRef } from 'react';
 import {
@@ -71,6 +71,7 @@ interface CampCheckInOpsProps {
 }
 
 export function CampCheckInOps({ campId, campName, drillStations = [], positions = [] }: CampCheckInOpsProps) {
+  const {user}=useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('checkin');
   const [scanInput, setScanInput] = useState('');
@@ -78,12 +79,13 @@ export function CampCheckInOps({ campId, campName, drillStations = [], positions
   const scanRef = useRef<TextInput>(null);
 
   const { data: enrollments = [], isLoading } = useQuery({
-    queryKey: ['camp-ops-enrollments', campId],
+    queryKey: ['camp-ops-enrollments', campId,user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('camp_enrollments')
         .select('*')
         .eq('camp_id', campId)
+        .neq('status','cancelled')
         .order('created_at', { ascending: true });
       if (error) throw error;
       return (data || []) as Enrollment[];
@@ -93,43 +95,52 @@ export function CampCheckInOps({ campId, campName, drillStations = [], positions
 
   const checkIn = useMutation({
     mutationFn: async (enrollmentId: string) => {
-      const { error } = await supabase
-        .from('camp_enrollments')
-        .update({ status: 'checked_in', checked_in_at: new Date().toISOString() } as any)
-        .eq('id', enrollmentId);
-      if (error) throw error;
+      const token=enrollments.find(row=>row.id===enrollmentId)?.qr_code_token;
+      if(!user||!token)throw Error('Reload this camp roster before checking in the participant.');
+      return await checkInNativeToken(campId,token,user.id);
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      toast.success(result.status==='already_checked_in'?'Already checked in':'Participant checked in');
       queryClient.invalidateQueries({ queryKey: ['camp-ops-enrollments', campId] });
     },
+    onError:(error:any)=>toast.error('Check-in not confirmed',error.message),
   });
 
   const bulkUpdate = useMutation({
     mutationFn: async (updates: { id: string; group_assignment?: string; position_group?: string }[]) => {
+      if (!updates.length) throw Error('No eligible checked-in participants to assign.');
       for (const { id, ...rest } of updates) {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('camp_enrollments')
           .update(rest as any)
-          .eq('id', id);
+          .eq('id', id)
+          .eq('camp_id', campId)
+          .select('id, group_assignment, position_group')
+          .single();
         if (error) throw error;
+        if (!data || data.id !== id || Object.entries(rest).some(([key, value]) => (data as any)[key] !== value)) {
+          throw Error('Assignment was not confirmed. Reload the roster before retrying.');
+        }
       }
     },
-    onSuccess: () => {
+    onSuccess: () => { toast.success('Assignments Updated'); },
+    onError: (error: any) => { toast.error('Assignments not fully confirmed', error.message); },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['camp-ops-enrollments', campId] });
-      toast.success('Assignments Updated');
     },
   });
 
   const handleScan = async () => {
-    const token = scanInput.trim();
-    if (!token) return;
-    const match = enrollments.find(e => e.qr_code_token === token || e.qr_code_token?.startsWith(token));
+    if (!scanInput.trim()) return;
+    let token: string;
+    try { token = decodeCampToken(scanInput); }
+    catch (error: any) { toast.error('Complete QR code required', error.message); return; }
+    const match = enrollments.find(e => e.qr_code_token?.toLowerCase() === token);
     if (match) {
       if (match.status === 'checked_in') {
         toast.success('Already Checked In', `Athlete #${match.jersey_number || match.id.slice(0, 8)} is already checked in.`);
       } else {
-        await checkIn.mutateAsync(match.id);
-        toast.success('✓ Checked In!', `Athlete #${match.jersey_number || match.id.slice(0, 8)} checked in successfully.`);
+        try{await checkIn.mutateAsync(match.id);}catch{return;}
       }
     } else {
       toast.error('Not Found', 'No enrollment found for this QR code.');
@@ -280,7 +291,7 @@ export function CampCheckInOps({ campId, campName, drillStations = [], positions
                       size="sm"
                       onPress={() => {
                         checkIn.mutate(e.id);
-                        toast.success('✓ Checked In!');
+
                       }}
                       disabled={checkIn.isPending}
                     >
@@ -349,10 +360,10 @@ export function CampCheckInOps({ campId, campName, drillStations = [], positions
         {/* GROUPS & ROTATION TAB */}
         <TabsContent value="groups" style={{ gap: spacing.md }}>
           <View style={s.actionRow}>
-            <Button size="sm" variant="outline" onPress={handleAutoAssignGroups} disabled={bulkUpdate.isPending}>
+            <Button size="sm" variant="outline" onPress={handleAutoAssignGroups} disabled={bulkUpdate.isPending || checkedInCount === 0}>
               Auto-Assign Groups
             </Button>
-            <Button size="sm" variant="outline" onPress={handleAutoAssignPositions} disabled={bulkUpdate.isPending}>
+            <Button size="sm" variant="outline" onPress={handleAutoAssignPositions} disabled={bulkUpdate.isPending || !enrollments.some(e => e.status === 'checked_in' && !e.position_group)}>
               Auto-Assign Positions
             </Button>
             {bulkUpdate.isPending ? <ActivityIndicator size="small" color={colors.primary} /> : null}

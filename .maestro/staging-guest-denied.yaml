@@ -1,0 +1,25 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Unrelated athlete cannot register camp guests
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.adult-athlete@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_ADULT_PASSWORD}
+- extendedWaitUntil:
+    visible: ".*Matches.*"
+    timeout: 60000
+- runFlow:
+    file: common/open-qa-link.yaml
+    env:
+      QA_LINK: offerhound-staging://camps/${MAESTRO_QA_GUEST_CAMP_ID}/mobile-checkin
+- tapOn: ".*Walk-up.*"
+- extendedWaitUntil:
+    visible: Only the camp owner or accepted registration staff can register guests.
+    timeout: 60000
+- assertNotVisible:
+    id: guest-walkup-name
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.adult-athlete@offerhound.test

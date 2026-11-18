@@ -1,0 +1,30 @@
+name: Native quality
+
+on:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  native-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Check native boundaries, types, and deep links
+        run: npm run ci
+      - name: Bundle iOS and Android independently of the web application
+        run: npx expo export --platform ios --platform android --output-dir dist/native
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-bundles-${{ github.sha }}
+          path: dist/native
+          retention-days: 7

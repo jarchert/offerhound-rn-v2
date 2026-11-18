@@ -1,3 +1,4 @@
+import {withThemeAlpha} from '@/lib/theme';
 // LandingScreen — full RN port of Lovable src/pages/Landing.tsx
 // Zero liberties. All copy verbatim. All sections present.
 import React, { useEffect, useMemo, useState, useRef } from 'react';
@@ -416,7 +417,7 @@ const s = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 40,
-    backgroundColor: colors.background + 'F2',
+    backgroundColor: withThemeAlpha('background','F2'),
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     flexDirection: 'row',
@@ -448,7 +449,7 @@ const s = StyleSheet.create({
   heroImage: { opacity: 0.5 },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.background + 'B3',
+    backgroundColor: withThemeAlpha('background','B3'),
   },
   blob: {
     position: 'absolute',
@@ -474,7 +475,7 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xl,
     borderTopWidth: 1,
-    borderTopColor: colors.border + '40',
+    borderTopColor: withThemeAlpha('border','40'),
   },
   sectionLabel: {
     fontFamily: typography.fontFamily.heading,

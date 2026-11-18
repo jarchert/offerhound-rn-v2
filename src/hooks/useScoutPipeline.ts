@@ -1,3 +1,4 @@
+import {hydrateRecruiterAthletes} from '@/lib/recruiterAthletes';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
@@ -34,13 +35,13 @@ export function useScoutPipelineAthletes() {
     queryKey: ["scout-pipeline-athletes", user?.id],
     queryFn: async () => {
        if (!user?.id) return [];
-       // Use athlete_pipeline_status table which exists in the schema
+       // Scout stages and the visible scout board use the scout-owned pipeline.
        const { data, error } = await supabase
-         .from("athlete_pipeline_status")
+         .from("scout_athlete_pipeline_status")
          .select("*")
-         .eq("coach_user_id", user.id);
+         .eq("scout_user_id", user.id);
        if (error) throw error;
-       return data || [];
+       return hydrateRecruiterAthletes(supabase,data||[],'player_profiles');
     },
     enabled: !!user?.id,
   });
@@ -53,10 +54,11 @@ export function useAddToPipeline() {
     mutationFn: async ({ athleteProfileId, stageId, notes, priority }: { athleteProfileId: string; stageId: string; notes?: string; priority?: string }) => {
        if (!user?.id) throw new Error("Not authenticated");
        const { data, error } = await supabase
-         .from("athlete_pipeline_status")
-         .insert({ coach_user_id: user.id, athlete_profile_id: athleteProfileId, stage_id: stageId, notes: notes || null, priority: priority || "medium" })
+         .from("scout_athlete_pipeline_status")
+         .insert({ scout_user_id: user.id, athlete_profile_id: athleteProfileId, stage_id: stageId, notes: notes || null, priority: priority || "medium" })
          .select().single();
        if (error) throw error;
+       if(!data?.id||data.athlete_profile_id!==athleteProfileId||data.stage_id!==stageId||data.scout_user_id!==user.id)throw Error("Pipeline addition was not confirmed. Refresh the board before retrying.");
        return data;
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["scout-pipeline-athletes"] }); },

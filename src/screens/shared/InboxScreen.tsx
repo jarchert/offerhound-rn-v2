@@ -1,3 +1,6 @@
+import {useHomeNavigation} from '@/navigation/HomeNavigation';
+import {conversationContext,conversationSummaries} from '@/lib/conversationContext';
+import {resolveConversationIdentity} from '@/lib/conversationIdentity';
 // InboxScreen — RN port of Lovable web src/pages/Inbox.tsx (parity port).
 // Unified notifications + messages inbox with role-scoped counts.
 import React, { useEffect, useMemo, useState } from 'react';
@@ -62,6 +65,7 @@ function groupByDate<T extends { created_at: string }>(items: T[]) {
 export default function InboxScreen() {
   const { user, loading: authLoading } = useAuth() as any;
   const navigation = useNavigation<any>();
+  const home=useHomeNavigation();
   const qc = useQueryClient();
   const [tab, setTab] = useState<'all' | 'messages' | 'alerts'>('all');
   const activeScope = useActiveRoleScope();
@@ -96,14 +100,11 @@ export default function InboxScreen() {
     enabled: !!user,
   });
 
-  const { data: conversations = [], isLoading: convLoading } = useQuery({
+  const { data: conversations = [], isLoading: convLoading, isError: convError, refetch: refetchConversations } = useQuery({
     queryKey: ['inbox-conversations', user?.id, effectiveRole],
     queryFn: async () => {
       if (!user) return [] as ConversationRow[];
-      let filter: string;
-      if (effectiveConvScope === 'coach_side') filter = `coach_user_id.eq.${user.id}`;
-      else if (effectiveConvScope === 'athlete_side') filter = `athlete_user_id.eq.${user.id}`;
-      else filter = `coach_user_id.eq.${user.id},athlete_user_id.eq.${user.id}`;
+      const filter=`coach_user_id.eq.${user.id},athlete_user_id.eq.${user.id}`;
       const { data, error } = await supabase
         .from('conversations')
         .select('*')
@@ -112,47 +113,17 @@ export default function InboxScreen() {
         .limit(50);
       if (error) throw error;
 
-      const enriched = await Promise.all(
-        (data || []).map(async (conv: any) => {
-          const isCoach = conv.coach_user_id === user.id;
-          const otherId = isCoach ? conv.athlete_user_id : conv.coach_user_id;
-          let otherName = 'Conversation';
-          if (isCoach) {
-            const { data: p } = await supabase
-              .from('player_profiles')
-              .select('full_name')
-              .eq('user_id', otherId)
-              .maybeSingle();
-            if ((p as any)?.full_name) otherName = (p as any).full_name;
-          } else {
-            const { data: p } = await supabase
-              .from('coach_profiles')
-              .select('name')
-              .eq('user_id', otherId)
-              .maybeSingle();
-            if ((p as any)?.name) otherName = (p as any).name;
-          }
-          const { data: lastMsg } = await supabase
-            .from('messages')
-            .select('content')
-            .eq('conversation_id', conv.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          const { count } = await supabase
-            .from('messages')
-            .select('id', { count: 'exact', head: true })
-            .eq('conversation_id', conv.id)
-            .eq('is_read', false)
-            .neq('sender_user_id', user.id);
-          return {
-            ...conv,
-            other_name: otherName,
-            last_message: (lastMsg as any)?.content || null,
-            unread_count: count || 0,
-          } as ConversationRow;
-        })
-      );
+      const scoped=(data||[]).filter((row:any)=>{
+        const {myRole}=conversationContext(row,user.id);
+        return effectiveConvScope==='athlete_side' ? myRole==='athlete' : effectiveConvScope==='coach_side' ? myRole!=='athlete' : true;
+      });
+      const summaries=await conversationSummaries(supabase,scoped.map((c:any)=>c.id),user.id);
+      const enriched=await Promise.all(scoped.map(async (conv:any)=>{
+        const {otherId,otherRole}=conversationContext(conv,user.id);
+        const identity=await resolveConversationIdentity(supabase,otherId,otherRole);
+        const summary=summaries.get(conv.id);
+        return {...conv,other_name:identity.name,last_message:summary?.content??null,unread_count:summary?.unread??0} as ConversationRow;
+      }));
       return enriched;
     },
     enabled: !!user,
@@ -228,6 +199,7 @@ export default function InboxScreen() {
 
   const handleNotifClick = (n: NotificationRow) => {
     if (!n.is_read) markRead.mutate(n.id);
+    if(['guardian_link_request','guardian_linked'].includes(n.type||'')){home?.goHome();return;}
     if (n.link) {
       // Best-effort: route names that match the web link's first segment.
       // Falls back silently if no matching route exists.
@@ -246,8 +218,7 @@ export default function InboxScreen() {
   };
 
   const handleConvClick = (c: ConversationRow) => {
-    if ((c.unread_count || 0) > 0) markConvRead.mutate(c.id);
-    try { navigation.navigate('Messages' as never); } catch { /* noop */ }
+    navigation.navigate('Messages', { conversationId: c.id });
   };
 
   const showRoleScopeBanner =
@@ -257,6 +228,7 @@ export default function InboxScreen() {
     <SafeAreaView style={s.container}>
       <ScrollView contentContainerStyle={s.scrollContent}>
         <BackButton />
+        {convError && <View><Text accessibilityRole="alert" style={{color:colors.destructive}}>Conversations could not load.</Text><Button onPress={()=>void refetchConversations()}>Retry conversations</Button></View>}
 
         <View style={s.header}>
           <View style={s.headerLeft}>

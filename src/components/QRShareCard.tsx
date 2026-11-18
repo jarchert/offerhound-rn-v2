@@ -1,3 +1,4 @@
+import {getProfileUrl} from '@/lib/utils';
 // QRShareCard — RN-only (no Lovable equivalent file). Shows a QR code linking
 // to the athlete's public profile + native Share button.
 //
@@ -23,13 +24,13 @@ interface QRShareCardProps {
   athleteName: string;
 }
 
-const APP_PUBLIC_URL = 'https://offerhound.com';
+
 
 export function QRShareCard({ customUrl, athleteName }: QRShareCardProps) {
   const { toast } = useToast();
   const qrRef = useRef<any>(null);
   const slug = (customUrl || '').trim();
-  const link = slug ? `${APP_PUBLIC_URL}/athlete/${slug}` : '';
+  const link = slug ? getProfileUrl(slug) : '';
 
   const onShare = async () => {
     if (!link) return;

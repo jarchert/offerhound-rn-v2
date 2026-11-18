@@ -1,0 +1,54 @@
+name: OfferHound isolated all-role native authentication
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        type: string
+        required: true
+        description: Finished OfferHound QA simulator or emulator build ID
+      platform:
+        type: choice
+        required: true
+        default: ios
+        options: [ios, android]
+jobs:
+  athletes_guardians:
+    name: Isolated athletes guardians journeys
+    type: maestro
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      flow_path:
+        - .maestro/staging-athlete-auth.yaml
+        - .maestro/staging-role-u13-athlete.yaml
+        - .maestro/staging-role-parent.yaml
+      retries: 0
+      record_screen: true
+  coaching_roles:
+    name: Isolated coaching roles journeys
+    type: maestro
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      flow_path:
+        - .maestro/staging-role-college-coach.yaml
+        - .maestro/staging-role-club-coach.yaml
+        - .maestro/staging-role-hs-coach.yaml
+      retries: 0
+      record_screen: true
+  administration_discovery:
+    name: Isolated administration discovery journeys
+    type: maestro
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      flow_path:
+        - .maestro/staging-admin-auth.yaml
+        - .maestro/staging-role-scout.yaml
+        - .maestro/staging-role-agency-owner.yaml
+        - .maestro/staging-role-influencer.yaml
+      retries: 0
+      record_screen: true

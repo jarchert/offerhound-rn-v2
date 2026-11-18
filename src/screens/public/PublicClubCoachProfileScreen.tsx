@@ -1,3 +1,5 @@
+import {useAuth} from '@/hooks/useAuth';
+import {ProfileUnavailable} from '@/components/ProfileUnavailable';
 // PublicClubCoachProfileScreen — RN port of Lovable web PublicClubCoachProfile.
 // Source: offerhound-repo/src/pages/PublicClubCoachProfile.tsx (175 LOC)
 //
@@ -34,20 +36,22 @@ export default function PublicClubCoachProfileScreen() {
   const { params } = useRoute<R>();
   const id = params?.id;
   const nav = useNavigation<any>();
+  const {user,isLoading:authRestoring}=useAuth();
 
-  const { data: club, isLoading } = useQuery({
-    queryKey: ['public-club-coach-profile', id],
+  const { data: club, isLoading,isError:profileFailed,refetch:retryProfile } = useQuery({
+    queryKey: ['public-club-coach-profile', user?.id, id],
     queryFn: async () => {
       if (!id) return null;
-      const { data } = await supabase
+      const { data,error } = await supabase
         .from('club_coach_profiles')
         .select('*')
         .eq('id', id)
         .neq('is_active', false)
         .maybeSingle();
+      if(error)throw error;
       return data as any;
     },
-    enabled: !!id,
+    enabled: !!id&&!authRestoring,
   });
 
   const { data: teams = [] } = useQuery({
@@ -70,7 +74,7 @@ export default function PublicClubCoachProfileScreen() {
       CommonActions.navigate({ name: 'AuthStack' as any, params: { redirect: '/onboarding' } }),
     );
 
-  if (isLoading) {
+  if (isLoading||authRestoring) {
     return (
       <View style={s.loading}>
         <ActivityIndicator color={colors.primary} />
@@ -78,16 +82,7 @@ export default function PublicClubCoachProfileScreen() {
     );
   }
 
-  if (!club) {
-    return (
-      <View style={s.loading}>
-        <Text style={s.muted}>Club coach not found.</Text>
-        <Button variant="outline" onPress={() => nav.goBack()} style={{ marginTop: spacing.md }}>
-          Go back
-        </Button>
-      </View>
-    );
-  }
+  if(profileFailed||!club)return <ProfileUnavailable kind="club" id={id} failed={profileFailed} retry={retryProfile}/>;
 
   const initials = (club.club_name || 'C')
     .split(' ')

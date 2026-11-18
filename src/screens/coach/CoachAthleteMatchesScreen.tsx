@@ -40,15 +40,13 @@ import type { RootStackParamList } from '@/navigation/RootNavigator';
 
 export default function CoachAthleteMatchesScreen() {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
-  const { data: matches = [], isLoading } = useCoachAthleteMatches();
+  const { data: matches = [], isLoading, isError, refetch } = useCoachAthleteMatches();
   const { refreshMatches, isRefreshing } = useRefreshCoachAthleteMatches();
   const { goToLetterForAthlete } = useLetterCenter();
 
   const goToMessages = (athlete: any) => {
-    // RN Messages screen takes no params today; PORT-PENDING for athlete
-    // pre-selection. We still navigate to Messages so flow continues.
-    nav.navigate('Messages');
-    void athlete;
+    const athleteProfileId=athlete?.id;
+    if(athleteProfileId)nav.navigate('DirectMessageDraft',{athleteProfileId});
   };
 
   return (
@@ -76,6 +74,8 @@ export default function CoachAthleteMatchesScreen() {
 
         {isLoading ? (
           <Text style={s.statusText}>Loading matches...</Text>
+        ) : isError ? (
+          <Card><CardContent><Text accessibilityRole="alert" style={s.emptyText}>Could not load athlete matches.</Text><Button onPress={() => refetch()}>Retry matches</Button></CardContent></Card>
         ) : matches.length === 0 ? (
           <Card>
             <CardContent>

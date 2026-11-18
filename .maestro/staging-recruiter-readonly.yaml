@@ -1,0 +1,49 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Scout pipeline saved list and server athlete search without mutations
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.scout@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_SCOUT_PASSWORD}
+- extendedWaitUntil:
+    visible: ".*QA Scout.*"
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      id: scout-tab-pipeline
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: scout-tab-pipeline
+- extendedWaitUntil:
+    visible: "No Pipeline Stages|Scout Pipeline"
+    timeout: 45000
+- assertNotVisible: Your pipeline could not be loaded.
+- takeScreenshot: recruiter-scout-pipeline
+- tapOn:
+    id: scout-tab-saved
+- extendedWaitUntil:
+    visible: No saved athletes yet. Use search to find and save athletes.
+    timeout: 30000
+- assertNotVisible: Could not load saved athletes. Retry
+- takeScreenshot: recruiter-scout-saved
+- runFlow:
+    file: common/open-qa-link.yaml
+    env:
+      QA_LINK: offerhound-staging://athletes
+- extendedWaitUntil:
+    visible: Athlete Search
+    timeout: 45000
+- assertNotVisible: Athlete search could not be loaded. Check your connection and retry.
+- tapOn: Search by name...
+- inputText: ZZZ_NO_ATHLETE_8472
+- hideKeyboard
+- extendedWaitUntil:
+    visible: No athletes found matching your criteria.
+    timeout: 45000
+- takeScreenshot: recruiter-search-no-results
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.scout@offerhound.test

@@ -27,7 +27,8 @@ interface NILDashboardProps {
 export function NILDashboard({ athleteProfileId }: NILDashboardProps) {
   const [tab, setTab] = useState('compare');
   const [comparisonSchools, setComparisonSchools] = useState<{ name: string; state: string }[]>([]);
-  const [comparisonGross, setComparisonGross] = useState('50000');
+  const [comparisonGross, setComparisonGross] = useState('');
+  const validIncome = /^\d+(\.\d{1,2})?$/.test(comparisonGross.trim()) && Number.isFinite(Number(comparisonGross)) && Number(comparisonGross)>0 && Number(comparisonGross)<=1000000000;
   const { width } = useWindowDimensions();
   const isWide = width >= 640;
 
@@ -87,11 +88,11 @@ export function NILDashboard({ athleteProfileId }: NILDashboardProps) {
               maxSelections={4}
             />
 
-            <NILSideBySideComparison
+            {validIncome ? <NILSideBySideComparison
               schools={comparisonSchools}
               grossIncome={parseFloat(comparisonGross) || 0}
               onRemoveSchool={removeSchool}
-            />
+            /> : <Text style={styles.help}>Enter a positive projected income to see an illustrative comparison.</Text>}
           </View>
         </TabsContent>
 

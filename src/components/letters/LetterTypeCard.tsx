@@ -44,7 +44,7 @@ export function LetterTypeCard({
             {isSelected && (
               <View style={s.hintRow}>
                 <Sparkles size={12} color={colors.primary} />
-                <Text style={s.hintText}>Click "Generate" to create letter</Text>
+                <Text style={s.hintText}>Selected — scroll below the letter types to the form and Generate button</Text>
               </View>
             )}
           </View>

@@ -1,3 +1,4 @@
+import {getCanonicalOrigin} from '@/lib/canonicalDomain';
 // Ported verbatim from Lovable src/components/AdminInvitationCards.tsx
 // Web → RN mapping:
 //   - Tailwind classes → StyleSheet using @/lib/theme tokens
@@ -158,7 +159,7 @@ export function AdminInvitationCards() {
 
   // GAP: RN has no window.location.origin. Use a stable web baseUrl placeholder.
   // TODO: pull from app config / EAS env once wired.
-  const baseUrl = 'https://offerhound.app';
+  const baseUrl = getCanonicalOrigin();
 
   const invitationTypes: InvitationCardProps[] = [
     {

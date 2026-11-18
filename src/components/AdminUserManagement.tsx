@@ -24,7 +24,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';

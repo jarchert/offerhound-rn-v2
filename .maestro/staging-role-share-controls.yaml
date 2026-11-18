@@ -1,0 +1,24 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Role share card opens and cancels without sending
+---
+- runFlow:
+    file: common/check-role-share.yaml
+    env:
+      SHARE_QA_EMAIL: qa.hs-coach@offerhound.test
+      SHARE_QA_PASSWORD: ${MAESTRO_QA_HS_COACH_PASSWORD}
+      SHARE_DIALOG_TITLE: Share HS Coach Card
+      SHARE_SCREENSHOT: role-share-hs-controls
+- runFlow:
+    file: common/check-role-share.yaml
+    env:
+      SHARE_QA_EMAIL: qa.club-coach@offerhound.test
+      SHARE_QA_PASSWORD: ${MAESTRO_QA_CLUB_COACH_PASSWORD}
+      SHARE_DIALOG_TITLE: Share Club Coach Card
+      SHARE_SCREENSHOT: role-share-club-controls
+- runFlow:
+    file: common/check-role-share.yaml
+    env:
+      SHARE_QA_EMAIL: qa.agency-owner@offerhound.test
+      SHARE_QA_PASSWORD: ${MAESTRO_QA_AGENCY_PASSWORD}
+      SHARE_DIALOG_TITLE: Share Scout Card
+      SHARE_SCREENSHOT: role-share-agency-controls

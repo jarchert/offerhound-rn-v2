@@ -1,18 +1,29 @@
+import {sanitizeGuardianInvitationUrl} from '@/lib/guardianInvitation';
+import {sanitizeClubInvitationUrl} from '@/lib/clubInvitation';
+import { isNativeOAuthCallback } from '@/lib/nativeOAuth';
 // linking.ts — React Navigation deep-link config per Part 2 §2.1
-// Universal Links: https://playbook-promoter.lovable.app/* and https://offerhound.app/*
+// Universal Links include the canonical OfferHound web domain.
 // Custom scheme: offerhoundv2://
-// Route coverage: 122 paths from Lovable app.
+// Coverage is recorded by the separate URL audit; parser matches do not certify screen parity.
 import type { LinkingOptions } from '@react-navigation/native';
 import * as Linking from 'expo-linking';
 
 export const linking: LinkingOptions<any> = {
+  getInitialURL: async()=>{const url=await Linking.getInitialURL();return url?sanitizeGuardianInvitationUrl(sanitizeClubInvitationUrl(url)):null;},
+  subscribe: listener=>{const sub=Linking.addEventListener('url',({url})=>listener(sanitizeGuardianInvitationUrl(sanitizeClubInvitationUrl(url))));return()=>sub.remove();},
   prefixes: [
     Linking.createURL('/'),
     'offerhoundv2://',
+    'offerhound-staging://',
+    'https://friday-night-recruiting.lovable.app',
+    'https://offer-hound.com',
+    'https://www.offer-hound.com',
     'https://offerhound.app',
     'https://www.offerhound.app',
     'https://playbook-promoter.lovable.app',
   ],
+  // AuthContext owns OAuth code exchange, including cold and warm callbacks.
+  filter: url => !isNativeOAuthCallback(url),
   config: {
     // Root-level stacks dispatched by RootNavigator based on auth + role
     screens: {
@@ -39,7 +50,7 @@ export const linking: LinkingOptions<any> = {
           SportLanding_hockey: 'hockey',
           SportLanding_swimming: 'swimming',
           SportLanding_golf: 'golf',
-          SportLanding_trackfield: 'track-field',
+          SportLanding_trackfield: { path: 'track-field', alias: ['track'] },
           SportLanding_cheerleading: 'cheerleading',
           SportLanding_wrestling: 'wrestling',
         },
@@ -49,7 +60,7 @@ export const linking: LinkingOptions<any> = {
       AuthStack: {
         screens: {
           Landing: 'landing',
-          SignIn: 'signin',
+          SignIn: { path: 'signin', alias: ['auth'] },
           SignUp: 'signup',
           BetaRegister: 'beta-register',
           ParentalConsent: 'parental-consent',
@@ -62,10 +73,10 @@ export const linking: LinkingOptions<any> = {
       OnboardingStack: {
         screens: {
           Onboarding: 'onboarding',
-          CoachOnboarding: 'coach-onboarding',
+          CoachOnboarding: { path: 'coach-onboarding', alias: ['coach/onboarding'] },
           ScoutOnboarding: 'scout-onboarding',
-          InfluencerOnboarding: 'influencer-onboarding',
-          QuickStartSelect: 'quick-start',
+          InfluencerOnboarding: { path: 'influencer-onboarding', alias: ['influencers/onboarding'] },
+          QuickStartSelect: { path: 'quick-start', alias: ['register'] },
           QuickStartCoach: 'quick-start/coach',
           QuickStartScout: 'quick-start/scout',
           QuickStartOrganization: 'quick-start/organization',
@@ -76,19 +87,19 @@ export const linking: LinkingOptions<any> = {
       // Camp ecosystem (shared across roles)
       CampStack: {
         screens: {
-          CampDiscovery: 'camps',
+          CampDiscovery: 'camp-discovery',
           CampsList: 'camps/list',
           CampsDiscover: 'camps/discover',
           ClaimCampSpot: 'camps/claim',
           CampDetail: 'camps/:campId',
           CampLeaderboard: 'camps/:campId/leaderboard',
-          CampDeliverables: 'camps/:campId/deliverables/:enrollmentId',
-          CampSpectator: 'spectator/:token',
-          CampStaffCheckin: 'staff-checkin/:token',
-          CampMobileCheckin: 'camps/:campId/mobile-checkin',
-          CampEvaluatorScoring: 'camps/:campId/score',
-          CampLeaderboardEmbed: 'camps/:campId/leaderboard-embed',
-          UnsubscribeCampAlerts: 'camps/unsubscribe',
+          CampDeliverables: { path: 'camps/:campId/deliverables/:enrollmentId', alias: ['camps/:campId/enrollments/:enrollmentId/deliverables'] },
+          CampSpectator: { path: 'spectator/:token', alias: ['camp/spectator/:token'] },
+          CampStaffCheckin: { path: 'staff-checkin/:token', alias: ['camp/staff-checkin/:token'] },
+          CampMobileCheckin: { path: 'camps/:campId/mobile-checkin', alias: ['coach/camps/:campId/checkin'] },
+          CampEvaluatorScoring: { path: 'camps/:campId/score', alias: ['coach/camps/:campId/evaluate'] },
+          CampLeaderboardEmbed: { path: 'camps/:campId/leaderboard-embed', alias: ['embed/leaderboard/:campId'] },
+          UnsubscribeCampAlerts: { path: 'camps/unsubscribe', alias: ['unsubscribe/camp-alerts'] },
         },
       },
 
@@ -96,6 +107,8 @@ export const linking: LinkingOptions<any> = {
       SettingsStack: {
         screens: {
           Settings: 'settings',
+          AccountSettings: 'account-settings',
+          OrganizationSettings: 'organization/settings',
           NotificationSettings: 'settings/notifications',
           FollowingSettings: 'settings/following',
           CookieSettings: 'settings/privacy',
@@ -107,22 +120,29 @@ export const linking: LinkingOptions<any> = {
       PublicProfileStack: {
         screens: {
           PublicProfile: 'p/:customUrl',
-          AthleteProfileByUrl: 'a/:customUrl',
+          AthleteProfileByUrl: { path: 'a/:customUrl', alias: ['athlete/:customUrl'] },
           ProfileLegacy: 'profile/:customUrl',
-          PublicScoutProfile: 'scout/:scoutId',
-          InfluencerProfile: 'influencer/:handle',
-          InfluencerBlogPost: 'influencer/:handle/blog/:slug',
-          InviteShareCard: 'invite',
+          PublicScoutProfile: { path: 'scout/:scoutId', alias: ['scouts/:scoutId'] },
+          InfluencerProfile: { path: 'influencer/:handle', alias: ['influencers/:handle'] },
+          InfluencerBlogPost: { path: 'influencer/:handle/blog/:slug', alias: ['influencers/:handle/blog/:slug'] },
+          InviteShareCard: { path: 'invite', alias: ['invite/share-card'] },
+          Gallery: 'gallery',
+          SampleAthlete: 'sample-athlete',
+          SampleAthleteGallery: 'sample-athlete/gallery',
+          PublicClubDiscovery: {path:'discover/clubs',alias:['discover/teams']},
+          ContactActivity: 'activity',
+          SubmitTestimonial: 'testimonial',
+          SubmitReference: 'reference/:token',
         },
       },
 
       // Athlete role tabs
       AthleteTabs: {
         screens: {
-          HomeTab: 'athlete',
-          MatchesTab: 'athlete/matches',
+          HomeTab: { path: 'athlete', alias: ['home'] },
+          MatchesTab: {path:'athlete/matches',alias:['matches']},
           MessagesTab: 'athlete/messages',
-          LettersTab: 'athlete/letters',
+          LettersTab: {path:'athlete/letters',alias:['letters']},
           ProfileTab: 'athlete/profile',
         },
       },
@@ -130,37 +150,34 @@ export const linking: LinkingOptions<any> = {
       // Coach role tabs
       CoachTabs: {
         screens: {
-          DashboardTab: 'coach',
+          DashboardTab: { path: 'coach', alias: ['coach/dashboard'] },
           PipelineTab: 'coach/pipeline',
           CampsTab: 'coach/camps',
           LettersTab: 'coach/letters',
-          DirectoryTab: 'coach/directory',
         },
       },
 
       // Scout role tabs
       ScoutTabs: {
         screens: {
-          DashboardTab: 'scout',
+          DashboardTab: { path: 'scout', alias: ['scout/dashboard'] },
           LettersTab: 'scout/letters',
-          TrendsTab: 'scout/trends',
-          OnboardingTab: 'scout/guide',
         },
       },
 
       // Club coach role tabs
       ClubCoachTabs: {
         screens: {
-          DashboardTab: 'club-coach',
-          CampsTab: 'club-coach/camps',
-          LettersTab: 'club-coach/letters',
+          DashboardTab: { path: 'club-coach', alias: ['club/dashboard'] },
+          CampsTab: {path:'club-coach/camps',alias:['club/camps']},
+          LettersTab: {path:'club-coach/letters',alias:['club/letters']},
         },
       },
 
       // HS coach role tabs
       HSCoachTabs: {
         screens: {
-          DashboardTab: 'hs-coach',
+          DashboardTab: { path: 'hs-coach', alias: ['hs-coach/dashboard'] },
           LettersTab: 'hs-coach/letters',
         },
       },
@@ -168,7 +185,7 @@ export const linking: LinkingOptions<any> = {
       // Parent role tabs
       ParentTabs: {
         screens: {
-          DashboardTab: 'parent',
+          DashboardTab: { path: 'parent', alias: ['parent/dashboard'] },
           TrustSafetyTab: 'parent/safety',
         },
       },
@@ -176,7 +193,7 @@ export const linking: LinkingOptions<any> = {
       // Influencer role tabs
       InfluencerTabs: {
         screens: {
-          DashboardTab: 'influencer',
+          DashboardTab: { path: 'influencer', alias: ['influencer/dashboard'] },
           BoardTab: 'influencer/board',
           PodcastsTab: 'influencer/podcasts',
         },
@@ -185,7 +202,7 @@ export const linking: LinkingOptions<any> = {
       // Agency role tabs (NEW in Session 2)
       AgencyTabs: {
         screens: {
-          DashboardTab: 'agency',
+          DashboardTab: { path: 'agency', alias: ['agency/dashboard'] },
           LettersTab: 'agency/letters',
         },
       },
@@ -203,6 +220,11 @@ export const linking: LinkingOptions<any> = {
       },
 
       // Cross-cutting public screens
+      Messages: 'messages',
+      DirectMessageDraft: 'messages/new',
+      ClubInvitation: 'club-invite',
+      GuardianInvitation: 'guardian-invite',
+      Inbox: {path:'inbox',alias:['notifications']},
       Install: 'install',
       FounderMessage: 'founder-message',
       LeaveReview: 'leave-review',
@@ -211,7 +233,7 @@ export const linking: LinkingOptions<any> = {
       SavedCamps: 'camps',
       AthleteSearch: 'athletes',
       InfluencerBoard: 'influencers',
-      CoachDirectory: 'coaches',
+      CoachDirectory: { path: 'coaches', alias: ['coach/directory', 'coach-directory'] },
       CoachProfile: 'coaches/:id',
       PublicClubCoachProfile: 'club-coach/:id',
       SavedCoaches: 'saved-coaches',
@@ -220,9 +242,43 @@ export const linking: LinkingOptions<any> = {
       ScoutTrends: 'scout/trends',
       Pricing: 'pricing',
       SubscriptionSuccess: 'subscription/success',
+      Support: 'support',
+      CoachCommunicationRules: 'coach-communication-rules',
+      NILIntelligence: 'nil-intelligence',
+      CoachCampaigns: 'coach/campaigns',
+      CoachMatches: 'coach/matches',
+      ParentTrustSafety: 'parent-trust-safety',
+      NewsAndLearn: {path:'news-learn',alias:['news-and-learn']},
+      RoleLanding: 'dashboard',
+      LegalStack: {screens:{PrivacyPolicy:'privacy',TermsOfUse:'terms',CCPARights:'ccpa',CookiesPolicy:'cookies',CommunityGuidelines:'community-guidelines',Accessibility:'accessibility'}},
+
+      WebMarketingCenter: '/admin/marketing-center',
+      WebAdminOnboarding: '/admin/onboarding',
+      WebOptoutAudit: '/admin/optout-audit',
+      WebTestPasswords: '/admin/test-passwords',
+      WebHSCoachProfile: '/hs-coach/:id',
+      WebAgencyProfile: '/agency/:id',
+      WebSportSample: '/sample-athlete/:sport',
+      WebSportSampleGallery: '/sample-athlete/:sport/gallery',
+      WebSmsTerms: '/sms-terms',
+      WebAISlides: '/ai-experience-slides',
+      WebAthleteSlides: '/athlete-experience-slides',
+      WebAthleteProfileSlides: '/athlete-profile-slides',
+      WebCoachSlides: '/coach-experience-slides',
+      WebAdminInfluencers: '/admin/influencers',
+      WebAdminPodcasts: '/admin/podcasts',
+      WebAdminMedia: '/admin/media-center',
+      WebChartSmoke: '/__rechart-smoke',
+      WebChartArtifacts: '/admin/recharts-artifacts',
+      WebLetterAnalytics: '/admin/letter-analytics',
+      WebMarketingRender: '/marketing-render/cards',
+      WebConsent: '/consent/:token',
+      WebMinorInvite: '/minor-invite/:token',
+      WebRosterConsent: '/roster-consent/:token',
+      WebFootballHub: '/athlete/football-hub',
 
       // Fallback not-found (optional; RN v7 supports this)
-      NotFound: '*',
+      NotFound: { path: '*', alias: ['scout/guide'] },
     },
   },
 };

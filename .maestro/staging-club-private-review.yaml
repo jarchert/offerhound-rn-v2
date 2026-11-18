@@ -1,0 +1,52 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Native club private photo picker upload
+---
+- addMedia:
+    - fixtures/qa-gallery.png
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.club-coach@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_CLUB_COACH_PASSWORD}
+- extendedWaitUntil:
+    visible: (?s).*Club Dashboard.*
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      id: club-tab-overview
+    direction: DOWN
+    centerElement: true
+- repeat:
+    times: 8
+    commands:
+      - runFlow:
+          when:
+            notVisible:
+              id: club-tab-media
+          commands:
+            - swipe:
+                from:
+                  id: club-dashboard-tab-strip
+                  point: 90%, 50%
+                direction: LEFT
+                duration: 400
+- assertVisible:
+    id: club-tab-media
+- tapOn:
+    id: club-tab-media
+- runFlow:
+    file: common/reveal-text.yaml
+    env:
+      QA_SCROLL_TEXT: Media Gallery
+- runFlow:
+    file: common/reveal-text.yaml
+    env:
+      QA_SCROLL_TEXT: QA disposable native installed UI 20261117
+- assertVisible: QA disposable native installed UI 20261117
+- takeScreenshot: persisted-private-club-image
+- tapOn: Open photo
+- assertVisible: Private media
+- assertVisible: Close preview
+- takeScreenshot: signed-private-club-preview
+- tapOn: Close preview
+- stopApp

@@ -1,3 +1,4 @@
+import {Button} from '@/components/ui/Button';
 // HSCoachLettersScreen — RN port of Lovable src/pages/HSCoachLetters.tsx (72 LOC).
 // Web→RN mapping: react-router-dom→@react-navigation/native; lucide-react→lucide-react-native;
 // shadcn lowercase→PascalCase; Tailwind→StyleSheet via @/lib/theme; sonner→@/hooks/use-toast.
@@ -18,7 +19,7 @@ export default function HSCoachLettersScreen() {
   const nav = useNavigation<any>();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { data: profile, isLoading: profileLoading } = useHSCoachProfile();
-  const { history, isLoading: historyLoading, addToHistory, deleteFromHistory } =
+  const { history, isLoading: historyLoading, error:historyError, refetch:retryHistory, addToHistory, deleteFromHistory } =
     useUnifiedLetterHistory('hs-coach');
   const { toast } = useToast();
   const [isSending, setIsSending] = useState(false);
@@ -51,13 +52,15 @@ export default function HSCoachLettersScreen() {
         const e = await r.json().catch(() => ({}));
         throw new Error(e.error || 'Failed');
       }
-      await addToHistory({
+      const delivery=await r.json().catch(()=>null);
+      if(delivery?.success!==true||delivery?.delivery?.status!=='provider_accepted')throw Error(delivery?.error||'Email delivery was not confirmed. Your draft is kept.');
+      try{await addToHistory({
         recipient_name: data.recipientName,
         recipient_email: data.recipientEmail,
         organization_name: data.organizationName,
         letter_type: data.letterType,
         letter_content: data.letterContent,
-      } as any);
+      } as any);}catch{toast({title:'Email accepted, but history could not be saved. Do not resend.',variant:'destructive'});return;}
       toast({ title: `Letter sent to ${data.recipientEmail}` });
     } catch (e: any) {
       toast({ title: e?.message ?? 'Failed', variant: 'destructive' });
@@ -82,6 +85,7 @@ export default function HSCoachLettersScreen() {
     <SafeAreaView style={s.root}>
       <View style={s.header}>
         <BackButton label="Back" />
+        {historyError?<View><Text accessibilityRole="alert" style={{color:colors.destructive}}>Letter history could not be loaded.</Text><Button onPress={()=>void retryHistory()}>Retry letter history</Button></View>:null}
         <Text style={s.headerTitle}>HS Coach Letters</Text>
       </View>
       <ScrollView contentContainerStyle={s.content}>
@@ -91,7 +95,7 @@ export default function HSCoachLettersScreen() {
             name: p.full_name || p.name || 'Coach',
             email: p.email,
             phone: p.phone,
-            title: p.title || 'Head Coach',
+            title: p.title || undefined,
             school: p.school_name || p.school,
             sport: p.sport,
             secondary_sports: p.secondary_sports,

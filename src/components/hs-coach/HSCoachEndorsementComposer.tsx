@@ -76,20 +76,11 @@ function StarRow({
 }) {
   return (
     <View style={styles.starRow}>
-      {[1, 2, 3, 4, 5].map((n) => (
-        <Pressable
-          key={n}
-          onPress={() => onChange(n)}
-          accessibilityRole="button"
-          accessibilityLabel={`${n} star${n > 1 ? 's' : ''}`}
-          hitSlop={6}
-        >
-          <Star
-            size={24}
-            color={n <= value ? colors.primary : colors.mutedForeground}
-            fill={n <= value ? colors.primary : 'transparent'}
-            opacity={n <= value ? 1 : 0.4}
-          />
+      {Array.from({length:10},(_,index)=>index+1).map((n)=>(
+        <Pressable key={n} onPress={()=>onChange(n)} accessibilityRole="button"
+          accessibilityLabel={`Score ${n} out of 10`} accessibilityState={{selected:n===value}}
+          style={{padding:8,minWidth:30,alignItems:'center',borderRadius:6,backgroundColor:n===value?colors.primary:colors.secondary}}>
+          <Text style={{color:n===value?colors.primaryForeground:colors.foreground}}>{n}</Text>
         </Pressable>
       ))}
     </View>
@@ -116,34 +107,36 @@ export function HSCoachEndorsementComposer() {
   const [yearsKnown, setYearsKnown] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const { data: rosterAthletes } = useQuery({
+  const { data: rosterAthletes,isError:rosterError,refetch:refetchRoster } = useQuery({
     queryKey: ['hs-coach-endorsement-roster', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data } = await supabase
+      const { data,error } = await supabase
         .from('team_rosters')
         .select(
           'athlete_profile_id, athlete_name, position, jersey_number, teams!inner(coach_user_id), player_profiles:athlete_profile_id(id, full_name, profile_image_url, position, school)',
         )
         .eq('teams.coach_user_id', user.id)
-        .not('athlete_profile_id', 'is', null)
+        .not('athlete_profile_id', 'is', null).is('removed_at',null).not('status','in','(removed,transferred,declined)').not('athlete_accepted_at','is',null).eq('teams.status','active')
         .neq('status', 'removed');
+      if(error)throw error;
       return data || [];
     },
     enabled: !!user,
   });
 
-  const { data: existingEndorsements } = useQuery({
+  const { data: existingEndorsements,isError:dataError,refetch:refetchData } = useQuery({
     queryKey: ['hs-coach-endorsements', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data } = await supabase
+      const { data,error } = await supabase
         .from('athlete_testimonials')
         .select(
           'id, athlete_profile_id, overall_character_score, testimonial_text, created_at, player_profiles:athlete_profile_id(full_name, profile_image_url)',
         )
         .eq('author_user_id', user.id)
         .order('created_at', { ascending: false });
+      if(error)throw error;
       return data || [];
     },
     enabled: !!user,
@@ -162,18 +155,19 @@ export function HSCoachEndorsementComposer() {
       });
       return;
     }
-    const allScored = SCORE_CATEGORIES.every((c) => scores[c.key] > 0);
+    const allScored = SCORE_CATEGORIES.every((c) => Number.isInteger(scores[c.key]) && scores[c.key] >= 1 && scores[c.key] <= 10);
     if (!allScored) {
       toast({
-        title: 'Please rate all 5 character categories',
+        title: 'Rate all 5 categories from 1 to 10',
         variant: 'destructive',
       });
       return;
     }
 
+    if(yearsKnown.trim()&&(!Number.isInteger(Number(yearsKnown))||Number(yearsKnown)<0)){toast({title:'Enter a whole number of years known',variant:'destructive'});return;}
     setSubmitting(true);
     try {
-      const { error } = await supabase.from('athlete_testimonials').insert({
+      const { data:recorded,error } = await supabase.from('athlete_testimonials').insert({
         athlete_profile_id: selectedAthleteId,
         author_user_id: user.id,
         author_role: 'high_school_coach',
@@ -190,10 +184,10 @@ export function HSCoachEndorsementComposer() {
         areas_for_growth_comment: growth.trim() || null,
         additional_comments: additional.trim() || null,
         relationship_to_athlete: 'High School Coach',
-        years_known: yearsKnown ? parseInt(yearsKnown, 10) : null,
+        years_known: yearsKnown.trim() ? Number(yearsKnown) : null,
         is_visible: true,
-      });
-      if (error) throw error;
+      }).select('id,athlete_profile_id,author_user_id,author_name,author_role').single();
+      if(error||!recorded?.id||recorded.athlete_profile_id!==selectedAthleteId||recorded.author_user_id!==user.id||!recorded.author_name||!recorded.author_role)throw error||Error('Endorsement was not confirmed.');
       toast({
         title: 'Endorsement submitted',
         description:
@@ -224,6 +218,8 @@ export function HSCoachEndorsementComposer() {
     }
   };
 
+  if(dataError)return <Button onPress={()=>void refetchData()}>Retry loading endorsements</Button>;
+  if(rosterError)return <Button onPress={()=>void refetchRoster()}>Retry loading accepted team members</Button>;
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -457,6 +453,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   starRow: {
+    flexWrap:'wrap',
     flexDirection: 'row',
     gap: spacing.xs,
   },

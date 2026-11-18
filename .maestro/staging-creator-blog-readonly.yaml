@@ -1,0 +1,60 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Creator blog list and new editor load without writing
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.influencer@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_INFLUENCER_PASSWORD}
+- extendedWaitUntil:
+    visible: QA Influencer
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      id: creator-tab-blogs
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: creator-tab-gallery
+- extendedWaitUntil:
+    visible: No gallery media yet.
+    timeout: 45000
+- tapOn:
+    id: creator-tab-blogs
+- extendedWaitUntil:
+    visible: No blogs yet. Create a draft to get started.
+    timeout: 45000
+- tapOn: New blog
+- extendedWaitUntil:
+    visible: A bold, scroll-stopping title
+    timeout: 45000
+- assertVisible: Excerpt
+- assertVisible: Content
+- assertNotVisible: This blog post is unavailable.
+- takeScreenshot: creator-blog-editor-loaded
+- runFlow:
+    file: common/reveal-text.yaml
+    env:
+      QA_SCROLL_TEXT: Cover image link
+- runFlow:
+    file: common/reveal-text.yaml
+    env:
+      QA_SCROLL_TEXT: Sports
+- runFlow:
+    file: common/reveal-text.yaml
+    env:
+      QA_SCROLL_TEXT: Signed-in members
+- assertVisible: Everyone
+- takeScreenshot: creator-blog-audience-controls
+- runFlow:
+    file: common/reveal-text-up.yaml
+    env:
+      QA_SCROLL_TEXT: New post
+- tapOn: Back
+- extendedWaitUntil:
+    visible: No blogs yet. Create a draft to get started.
+    timeout: 45000
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.influencer@offerhound.test

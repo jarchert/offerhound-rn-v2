@@ -174,25 +174,23 @@ export function CampCrossCampInviteDialog({ open, onOpenChange, targetCampId, ta
       const { error } = await supabase.from('camp_cross_camp_invites').insert(rows);
       if (error) throw error;
 
-      const notifications = rows
-        .filter((r) => r.athlete_user_id)
-        .map((r) => ({
-          user_id: r.athlete_user_id!,
-          title: "You're invited to a new camp",
-          message: `Coach invited you to ${targetCampName} based on your prior performance.`,
-          type: 'camp_invite',
-          link: `/camps`,
-        }));
-      if (notifications.length > 0) {
-        await supabase.from('notifications').insert(notifications);
+      let created=0,muted=0,failed=0;
+      for(const row of rows.filter(r=>r.athlete_user_id)) {
+        try {
+          const {data,error:noticeError}=await supabase.rpc('send_camp_notice' as any,{
+            _camp_id:targetCampId,_kind:'camp_invite',_recipient:row.athlete_user_id,
+            _title:"You're invited to a new camp",_message:`Coach invited you to ${targetCampName}.`,_link:'/camps',
+          } as any);
+          if(noticeError)failed++;else if(data==='created')created++;else if(data==='muted')muted++;else failed++;
+        }catch{failed++;}
       }
-
-      return rows.length;
+      return {count:rows.length,created,muted,failed};
     },
-    onSuccess: (count) => {
+    onSuccess: ({count,created,muted,failed}) => {
       toast({
-        title: `${count} invite${count === 1 ? '' : 's'} queued`,
-        description: 'Athletes with accounts received an in-app alert.',
+        title: `${count} invite${count === 1 ? '' : 's'} recorded`,
+        description: `${created} in-app alerts created. ${muted} muted by preferences.${failed?' '+failed+' alerts could not be created; invitations remain recorded.':''}`,
+        ...(failed?{variant:'destructive' as const}:{}),
       });
       setSelected(new Set());
       qc.invalidateQueries({ queryKey: ['camp-invites-target', targetCampId] });

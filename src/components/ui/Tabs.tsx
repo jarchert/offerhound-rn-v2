@@ -9,19 +9,19 @@ export function Tabs({ value, onValueChange, children, style }: { value: string;
   return <Ctx.Provider value={{ value, onValueChange }}><View style={[s.root, style]}>{children}</View></Ctx.Provider>;
 }
 
-export function TabsList({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
+export function TabsList({ children, style,testID }: { children: React.ReactNode; style?: ViewStyle;testID?:string }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.listScroll}>
+    <ScrollView testID={testID} horizontal showsHorizontalScrollIndicator={false} style={s.listScroll}>
       <View style={[s.list, style]}>{children}</View>
     </ScrollView>
   );
 }
 
-export function TabsTrigger({ value, children, style, textStyle }: { value: string; children: React.ReactNode; style?: ViewStyle; textStyle?: TextStyle }) {
+export function TabsTrigger({ value, children, style, textStyle, testID }: { value: string; children: React.ReactNode; style?: ViewStyle; textStyle?: TextStyle; testID?: string }) {
   const ctx = useContext(Ctx);
   const active = ctx.value === value;
   return (
-    <Pressable style={[s.trigger, active && s.triggerActive, style]} onPress={() => ctx.onValueChange(value)}>
+    <Pressable testID={testID} accessibilityRole="tab" accessibilityState={{selected:active}} accessibilityLabel={typeof children==='string'?children:undefined} style={[s.trigger, active && s.triggerActive, style]} onPress={() => ctx.onValueChange(value)}>
       <Text style={[s.triggerText, active && s.triggerTextActive, textStyle]}>{children}</Text>
     </Pressable>
   );

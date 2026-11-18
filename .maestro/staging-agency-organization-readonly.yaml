@@ -1,0 +1,32 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Agency organization and actual memberships load without changes
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa.agency-owner@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_AGENCY_PASSWORD}
+- extendedWaitUntil:
+    visible: QA Synthetic Agency
+    timeout: 60000
+- runFlow:
+    file: common/open-qa-link.yaml
+    env:
+      QA_LINK: offerhound-staging://organization/settings
+- extendedWaitUntil:
+    visible: Organization Settings
+    timeout: 45000
+- extendedWaitUntil:
+    visible: QA Synthetic Agency
+    timeout: 45000
+- assertNotVisible: No organization found.
+- tapOn: ^Members$
+- extendedWaitUntil:
+    visible: No recorded memberships are visible to your account.
+    timeout: 45000
+- assertNotVisible: No organization selected.
+- takeScreenshot: agency-memberships-confirmed-empty
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.agency-owner@offerhound.test

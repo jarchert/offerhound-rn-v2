@@ -1,3 +1,6 @@
+import {KeyboardSafeBody} from '@/components/KeyboardSafeBody';
+import {supportChatHeaders,supportChatTurns} from '@/lib/supportChatRequest';
+import {useLocalDraft} from '@/hooks/useLocalDraft';
 // AICoachScreen — chat-style AI recruiting coach ("OfferHound Coach™").
 // Backed by the deployed `support-chat` Supabase edge function (same function
 // the Lovable web GlobalAICoachIcon uses), which proxies the Lovable AI gateway
@@ -19,12 +22,11 @@ import {
   SafeAreaView,
   TextInput,
   Pressable,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
 } from 'react-native';
 import { FlashList, FlashListRef } from '@shopify/flash-list';
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/integrations/supabase/client';
+import { supabase,SUPABASE_URL, SUPABASE_ANON_KEY } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navbar } from '@/components/Navbar';
 import { BackButton } from '@/components/BackButton';
@@ -67,8 +69,9 @@ function roleToUserType(role: string | null | undefined): SupportUserType {
     case 'club_coach':
       return 'club_coach';
     case 'scout':
-    case 'agency':
       return 'scout';
+    case 'agency':
+      return 'organization';
     default:
       return 'guest';
   }
@@ -106,25 +109,26 @@ const QUICK_PROMPTS = [
   'Explain NIL deals for a high school athlete',
 ];
 
+function promptsForRole(type:SupportUserType):string[] {
+  switch(type) {
+    case 'organization': return ['Plan our scouting team workflow','Compare prospects consistently','Help organize our agency pipeline','Prepare outreach for our agency'];
+    case 'scout': return ['Build a prospect evaluation checklist','Organize my scouting notes','Plan a recruiting event visit','Prepare professional prospect outreach'];
+    case 'coach':
+    case 'club_coach': return ['Organize my recruiting pipeline','Compare prospects for team needs','Plan coach outreach','Help support my athletes with recruiting'];
+    case 'parent': return ['Help me support my athlete','Plan a family recruiting timeline','Prepare questions for a campus visit','Explain recruiting communication for parents'];
+    default: return QUICK_PROMPTS;
+  }
+}
+
 export default function AICoachScreen() {
-  const { userRole, isAuthenticated } = useAuth();
+  const { user, userRole, isAuthenticated } = useAuth();
   const userType = roleToUserType(userRole);
-  const [turns, setTurns] = useState<ChatTurn[]>([
+  const [turns, setTurns, historyStorageError] = useLocalDraft<ChatTurn[]>(user?.id, `ai-history:${userType}`, [
     { ...WELCOME, content: welcomeForRole(userType, isAuthenticated) },
   ]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useLocalDraft(user?.id, `ai-input:${userType}`, '');
   const [isStreaming, setIsStreaming] = useState(false);
   const listRef = useRef<FlashListRef<ChatTurn> | null>(null);
-
-  // Keep the opening line in sync if the resolved role changes while the user
-  // hasn't started chatting yet (mirrors web's userType-driven initial message).
-  useEffect(() => {
-    setTurns((prev) =>
-      prev.length === 1 && prev[0].id === 'welcome'
-        ? [{ ...prev[0], content: welcomeForRole(userType, isAuthenticated) }]
-        : prev,
-    );
-  }, [userType, isAuthenticated]);
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
@@ -159,21 +163,14 @@ export default function AICoachScreen() {
       setIsStreaming(true);
 
       try {
-        // Deployed support-chat function expects { messages, userType,
-        // isAuthenticated } and is authorized with the anon/publishable key
-        // (not the user JWT) — same contract the web GlobalAICoachIcon uses.
+        // The server derives personalization from the session token.
+        const headers=await supportChatHeaders(supabase,SUPABASE_ANON_KEY,isAuthenticated);
         const url = `${SUPABASE_URL}/functions/v1/support-chat`;
-        const history = [...turns, userTurn].map((t) => ({
-          role: t.role,
-          content: t.content,
-        }));
+        const history=supportChatTurns([...turns,userTurn]);
 
         const resp = await fetch(url, {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-          },
+          headers,
           body: JSON.stringify({
             messages: history,
             userType,
@@ -256,12 +253,13 @@ export default function AICoachScreen() {
           prev.map((t) => (t.id === asstTurn.id ? { ...t, streaming: false } : t)),
         );
       } catch (e: any) {
+        setInput(current=>current||text);
         setTurns((prev) =>
           prev.map((t) =>
             t.id === asstTurn.id
               ? {
                   ...t,
-                  content: `Sorry, I couldn't reach the coach. ${e?.message ?? ''}`.trim(),
+                  content: e?.name==='SessionRequiredError' ? 'Please sign in again. Your question is kept.' : 'The coach could not respond. Your question is kept; check your connection and try again.',
                   streaming: false,
                 }
               : t,
@@ -285,9 +283,8 @@ export default function AICoachScreen() {
         </View>
       </View>
 
-      <KeyboardAvoidingView
-        style={s.chat}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {historyStorageError && <Text accessibilityRole="alert" style={{color:colors.destructive}}>Conversation could not be saved on this device.</Text>}
+      <KeyboardSafeBody>
         <FlashList
           ref={listRef as any}
           data={turns}
@@ -300,7 +297,7 @@ export default function AICoachScreen() {
                 <View style={[s.bubble, isUser ? s.bubbleMine : s.bubbleAsst]}>
                   <Text style={[s.text, isUser ? s.textMine : s.textAsst]}>
                     {item.content}
-                    {item.streaming ? '▍' : ''}
+                    {item.streaming && isStreaming ? '▍' : ''}
                   </Text>
                 </View>
               </View>
@@ -310,7 +307,7 @@ export default function AICoachScreen() {
 
         {turns.length <= 1 ? (
           <View style={s.prompts}>
-            {QUICK_PROMPTS.map((p) => (
+            {promptsForRole(userType).map((p) => (
               <Pressable key={p} style={s.prompt} onPress={() => send(p)}>
                 <Text style={s.promptText}>{p}</Text>
               </Pressable>
@@ -340,7 +337,7 @@ export default function AICoachScreen() {
             )}
           </Pressable>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardSafeBody>
     </SafeAreaView>
   );
 }

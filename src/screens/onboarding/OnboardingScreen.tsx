@@ -1,3 +1,9 @@
+import {persistOnboardingStep} from '@/lib/onboardingPersistence';
+import {useAcceptTerms} from '@/hooks/useTermsAcceptance';
+import {randomUUID} from 'expo-crypto';
+import {getCanonicalOrigin} from '@/lib/canonicalDomain';
+import {normalizeAthleteImageAsset,athleteImagePath,athleteMediaAllowed,validateMediaBytes,saveAthleteMedia} from '@/lib/athleteMedia';
+import {profilePositions} from '@/lib/profilePositions';
 // OnboardingScreen — RN port of Lovable src/pages/Onboarding.tsx (~720 LOC web).
 // Six-step athlete onboarding wizard:
 //   0. Terms acceptance
@@ -74,7 +80,7 @@ const STEPS = [
 ];
 
 const GRAD_YEARS = ['2024', '2025', '2026', '2027', '2028', '2029', '2030'];
-const PROFILE_BASE_URL = 'https://offer-hound.com/athlete';
+const PROFILE_BASE_URL = getCanonicalOrigin()+'/p';
 
 function formatSlug(s: string) {
   return s
@@ -112,6 +118,8 @@ export default function OnboardingScreen() {
   const [currentStep, setCurrentStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [termsLoaded, setTermsLoaded] = useState(false);
+  const [termsSaved,setTermsSaved]=useState(false);
+  const acceptTerms=useAcceptTerms();
   const [termsAgreed, setTermsAgreed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -147,21 +155,17 @@ export default function OnboardingScreen() {
   useEffect(() => {
     if (!profile) return;
     const p = profile as any;
-    const existingPositions: string[] = Array.isArray(p.positions)
-      ? p.positions
-      : p.position
-      ? [p.position]
-      : [];
+    const existingPositions = profilePositions(p);
     setForm({
       sport: p.sport || 'football',
       custom_url: p.custom_url || '',
       full_name: p.full_name || '',
       school: p.school || '',
       state: p.state || '',
-      graduation_year: p.graduation_year || '',
-      gpa: p.gpa || '',
-      height: p.height || '',
-      weight: p.weight || '',
+      graduation_year: String(p.graduation_year ?? ''),
+      gpa: String(p.gpa ?? ''),
+      height: String(p.height ?? ''),
+      weight: String(p.weight ?? ''),
       position: p.position || '',
       bio: p.bio || '',
       highlight_video_url: p.highlight_video_url || '',
@@ -179,21 +183,22 @@ export default function OnboardingScreen() {
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await supabase
-          .from('terms_acceptances' as any)
-          .select('id, accepted_at')
+        const { data,error } = await supabase
+          .from('terms_acceptance' as any)
+          .select('id')
           .eq('user_id', user.id)
-          .order('accepted_at', { ascending: false })
           .limit(1)
           .maybeSingle();
         if (cancelled) return;
+        if(error)throw error;
         if (data) {
           setTermsAgreed(true);
+          setTermsSaved(true);
           // If we already have terms acceptance, skip step 0 by default.
           setCurrentStep((s) => (s === 0 ? 1 : s));
         }
       } catch {
-        // table may not exist — silently ignore
+        if(!cancelled)setError('Your prior terms acceptance could not be checked. Check your connection and try again.');
       } finally {
         if (!cancelled) setTermsLoaded(true);
       }
@@ -205,7 +210,7 @@ export default function OnboardingScreen() {
 
   // After profile loads, jump to first incomplete step (resume support).
   useEffect(() => {
-    if (!profile || !termsLoaded) return;
+    if (!profile || !termsLoaded || !termsSaved) return;
     const p = profile as any;
     if (p.is_published) {
       // Already published — let them land on step 5 to view/share.
@@ -225,7 +230,7 @@ export default function OnboardingScreen() {
       return;
     }
     setCurrentStep((s) => (s < 4 ? 4 : s));
-  }, [profile, termsLoaded]);
+  }, [profile, termsLoaded,termsSaved]);
 
   const sportConfig = getSportConfig(form.sport);
   const sportPositions = getPositionsForSport(form.sport);
@@ -274,6 +279,9 @@ export default function OnboardingScreen() {
   // Photo upload (Step 3)
   // ────────────────────────────────────────────────────────────────────────
   const pickProfileImage = async () => {
+    if(!user)return;
+    if(!profile?.id){showToast('error','Profile required','Save your basic profile before adding media.');return;}
+    if(profile?.id&&!await athleteMediaAllowed(supabase,profile.id,message=>showToast('error','Upload unavailable',message)))return;
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
@@ -287,27 +295,21 @@ export default function OnboardingScreen() {
         quality: 0.85,
       });
       if (result.canceled || !result.assets?.[0]) return;
-      const asset = result.assets[0];
+      const asset = await normalizeAthleteImageAsset(result.assets[0]);
       setSubmitting(true);
       try {
-        const ext = asset.uri.split('.').pop()?.toLowerCase() || 'jpg';
-        const path = `${user?.id || 'anon'}/profile-${Date.now()}.${ext}`;
+        const ext = asset.fileName?.split('.').pop()?.toLowerCase() || asset.uri.split('.').pop()?.split('?')[0]?.toLowerCase() || 'jpg';
+        const path = athleteImagePath(profile?.id,'profile',ext,user.id);
         const response = await fetch(asset.uri);
-        const blob = await response.blob();
+        const blob = await response.arrayBuffer();
+        validateMediaBytes(blob,10*1024*1024);
         const { error: uploadErr } = await supabase.storage
-          .from('player-media')
-          .upload(path, blob, { contentType: `image/${ext}`, upsert: true });
+          .from('profile-images')
+          .upload(path, blob, { contentType: `image/${ext}`, upsert: false });
         if (uploadErr) throw uploadErr;
-        const { data: pub } = supabase.storage.from('player-media').getPublicUrl(path);
+        const { data: pub } = supabase.storage.from('profile-images').getPublicUrl(path);
         const url = pub.publicUrl;
-        setProfileImageUrl(url);
-        if (profile) {
-          try {
-            await updateProfile({ profile_image_url: url } as any);
-          } catch {
-            showToast('error', 'Saved locally', 'Will sync when online');
-          }
-        }
+        await saveAthleteMedia(supabase,profile.id,{profile_image_url:url},{profile_image_url:profileImageUrl||null},value=>setProfileImageUrl(value||''));
         showToast('success', 'Photo uploaded');
       } catch (e: any) {
         showToast('error', 'Upload failed', e?.message || 'Try again');
@@ -336,6 +338,7 @@ export default function OnboardingScreen() {
       if (!form.school.trim()) return 'School name is required';
       if (!form.graduation_year) return 'Graduation year is required';
       if (positions.length === 0) return 'Select at least one position';
+      if(form.gpa.trim()&&(!Number.isFinite(Number(form.gpa))||Number(form.gpa)<0||Number(form.gpa)>5))return 'Enter a GPA between 0 and 5, or leave it blank.';
     }
     return null;
   };
@@ -343,90 +346,9 @@ export default function OnboardingScreen() {
   // ────────────────────────────────────────────────────────────────────────
   // Persist current step
   // ────────────────────────────────────────────────────────────────────────
-  const persistStep = async (step: number): Promise<void> => {
-    if (step === 0) {
-      try {
-        await supabase.from('terms_acceptances' as any).insert({
-          user_id: user?.id,
-          accepted_at: new Date().toISOString(),
-        });
-      } catch {
-        showToast('info', 'Saved locally', 'terms_acceptances unavailable');
-      }
-      return;
-    }
-
-    if (step === 1) {
-      const slug = formatSlug(form.custom_url || generatedSlug);
-      const data: any = {
-        custom_url: slug,
-        full_name: form.full_name,
-        sport: form.sport,
-      };
-      try {
-        if (!profile) await createProfile(data);
-        else await updateProfile(data);
-      } catch (e: any) {
-        showToast('error', 'Save failed', e?.message || 'Will retry later');
-      }
-      return;
-    }
-
-    if (step === 2) {
-      const data: any = {
-        position: positions[0] || form.position,
-        positions,
-        school: form.school,
-        state: form.state,
-        graduation_year: form.graduation_year,
-        gpa: form.gpa,
-        height: form.height,
-        weight: form.weight,
-        bio: form.bio,
-      };
-      try {
-        if (!profile) await createProfile(data);
-        else await updateProfile(data);
-      } catch (e: any) {
-        showToast('error', 'Save failed', e?.message || 'Will retry later');
-      }
-      return;
-    }
-
-    if (step === 3) {
-      const data: any = {
-        highlight_video_url: form.highlight_video_url,
-        instagram_url: form.instagram_url,
-        twitter_url: form.twitter_url,
-        tiktok_url: form.tiktok_url,
-        profile_image_url: profileImageUrl,
-      };
-      try {
-        if (!profile) await createProfile(data);
-        else await updateProfile(data);
-      } catch (e: any) {
-        showToast('error', 'Save failed', e?.message || 'Will retry later');
-      }
-      return;
-    }
-
-    if (step === 4) {
-      // Save coach references — table may not exist, handle gracefully.
-      const valid = coachRefs.filter((c) => c.name.trim() && c.email.trim());
-      if (valid.length === 0) return;
-      try {
-        await supabase.from('coach_references' as any).insert(
-          valid.map((c) => ({
-            athlete_user_id: user?.id,
-            coach_name: c.name,
-            coach_email: c.email,
-          })),
-        );
-      } catch {
-        showToast('info', 'Saved locally', 'coach_references unavailable');
-      }
-      return;
-    }
+  const persistStep = async (step:number):Promise<void> => {
+    await persistOnboardingStep({step,profile,form,userId:user?.id,createProfile,updateProfile,positions,profileImageUrl,coachRefs,client:supabase,acceptTerms:()=>acceptTerms.mutateAsync(),termsSaved,newToken:randomUUID,slug:formatSlug(form.custom_url||generatedSlug)});
+    if(step===0)setTermsSaved(true);
   };
 
   // ────────────────────────────────────────────────────────────────────────
@@ -443,10 +365,13 @@ export default function OnboardingScreen() {
     setSubmitting(true);
     try {
       await persistStep(currentStep);
+      if (currentStep < 5) setCurrentStep((s) => s + 1);
+    } catch(e:any) {
+      setError(e?.message||'Your changes could not be saved. Please retry.');
+      showToast('error','Save failed','Your entries are kept. Check your connection and retry.');
     } finally {
       setSubmitting(false);
     }
-    if (currentStep < 5) setCurrentStep((s) => s + 1);
   };
 
   const handleBack = () => {
@@ -557,12 +482,12 @@ export default function OnboardingScreen() {
                   review and accept our Terms of Use and Privacy Policy.
                 </Text>
                 <View style={s.linksWrap}>
-                  <Pressable style={s.linkRow}>
+                  <Pressable accessibilityRole="link" style={s.linkRow} onPress={() => nav.navigate('SettingsStack' as any,{screen:'LegalStack',params:{screen:'TermsOfUse'}})}>
                     <FileText size={16} color={colors.primary} />
                     <Text style={s.link}>Terms of Use</Text>
                     <ExternalLink size={12} color={colors.mutedForeground} />
                   </Pressable>
-                  <Pressable style={s.linkRow}>
+                  <Pressable accessibilityRole="link" style={s.linkRow} onPress={() => nav.navigate('SettingsStack' as any,{screen:'LegalStack',params:{screen:'PrivacyPolicy'}})}>
                     <FileText size={16} color={colors.primary} />
                     <Text style={s.link}>Privacy Policy</Text>
                     <ExternalLink size={12} color={colors.mutedForeground} />
@@ -618,7 +543,7 @@ export default function OnboardingScreen() {
                 <Label>Custom URL</Label>
                 <View style={s.urlRow}>
                   <View style={s.urlPrefix}>
-                    <Text style={s.urlPrefixText}>offer-hound.com/athlete/</Text>
+                    <Text style={s.urlPrefixText}>{getCanonicalOrigin().replace('https://','')}/p/</Text>
                   </View>
                   <Input
                     value={form.custom_url}

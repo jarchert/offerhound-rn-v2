@@ -112,8 +112,8 @@ export function DashboardCampsList() {
   const userState = (profile as any)?.state || (profile as any)?.home_state || null;
   const userSport = (profile as any)?.sport || null;
 
-  const { data: allCamps = [], isLoading } = useQuery({
-    queryKey: ['dashboard-camps', userSport],
+  const { data: allCamps = [], isLoading, isError, refetch } = useQuery({
+    queryKey: ['dashboard-camps', user?.id],
     queryFn: async () => {
       let query = supabase
         .from('college_camps')
@@ -121,10 +121,8 @@ export function DashboardCampsList() {
         .gte('start_date', new Date().toISOString().split('T')[0])
         .order('start_date', { ascending: true })
         .limit(500);
-      if (userSport) {
-        query = query.ilike('sport', userSport);
-      }
-      const { data } = await query;
+      const { data, error } = await query;
+      if (error) throw error;
       return (data || []) as CollegeCamp[];
     },
   });
@@ -224,8 +222,8 @@ export function DashboardCampsList() {
     <View style={styles.root}>
       <Tabs value={campTab} onValueChange={setCampTab}>
         <TabsList style={styles.tabsList}>
-          <TabsTrigger value="all">All Camps</TabsTrigger>
-          <TabsTrigger value="saved">My Camps</TabsTrigger>
+          <TabsTrigger testID="camps-all-tab" value="all">All Camps</TabsTrigger>
+          <TabsTrigger testID="camps-saved-tab" value="saved">My Camps</TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -275,7 +273,7 @@ export function DashboardCampsList() {
         </View>
       )}
 
-      {isLoading ? (
+      {isError ? <View accessibilityRole="alert"><Text style={{color:colors.destructive}}>Camps could not be loaded. Please try again.</Text><Button onPress={()=>refetch()}>Retry</Button></View> : isLoading ? (
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="small" color={colors.primary} />
         </View>

@@ -1,0 +1,5 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Club and agency operational read checks
+---
+- runFlow: staging-club-calendar-readonly.yaml
+- runFlow: staging-agency-organization-readonly.yaml

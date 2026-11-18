@@ -121,7 +121,7 @@ export default function LettersScreen() {
   const { user } = useAuth();
   const { profile } = usePlayerProfile();
   const { isSubscribed, isLoading: isSubLoading } = useSubscription();
-  const { history, isLoading: isHistoryLoading, addToHistory, refetch } = useUnifiedLetterHistory('athlete');
+  const { history, isLoading: isHistoryLoading, addToHistory, refetch, error: historyError } = useUnifiedLetterHistory('athlete');
 
   const [tab, setTab] = useState<'compose' | 'history'>('compose');
   const [selectedType, setSelectedType] = useState<LetterType>('contact');
@@ -211,7 +211,7 @@ export default function LettersScreen() {
     setIsSending(true);
     try {
       const subject = `Recruiting Interest - ${athleteData.name} (${athleteData.position}, Class of ${athleteData.classYear})`;
-      const { error } = await supabase.functions.invoke('send-letter', {
+      const { data:delivery, error } = await supabase.functions.invoke('send-letter', {
         body: {
           to: coachEmail,
           subject,
@@ -222,13 +222,14 @@ export default function LettersScreen() {
         },
       });
       if (error) throw error;
-      await addToHistory({
+      if(delivery?.success!==true||delivery?.delivery?.status!=='provider_accepted')throw Error(delivery?.error||'Email delivery was not confirmed. Your draft is kept.');
+      try{await addToHistory({
         recipient_name: coachName || 'Coach',
         recipient_email: coachEmail,
         organization_name: schoolName || null,
         letter_type: selectedType,
         letter_content: letterContent,
-      });
+      });}catch{Toast.show({type:'error',text1:'Email accepted; history unavailable',text2:'Do not resend this letter. Contact support if history does not recover.'});return;}
       Toast.show({ type: 'success', text1: `Email sent to ${coachEmail}!` });
     } catch (err: any) {
       Toast.show({ type: 'error', text1: 'Failed to send', text2: err?.message ?? '' });
@@ -247,6 +248,7 @@ export default function LettersScreen() {
   const renderHeader = () => (
     <View style={s.headerWrap}>
       <BackButton />
+      {historyError ? <View><Text accessibilityRole="alert" style={{color: colors.destructive}}>Letter history could not be loaded.</Text><Button onPress={() => void refetch()}>Retry letter history</Button></View> : null}
       <Text style={s.title}>Letter Management</Text>
       <Text style={s.subtitle}>Create, customize, and send recruiting letters to coaches.</Text>
 

@@ -1,3 +1,4 @@
+import {withThemeAlpha} from '@/lib/theme';
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { colors, typography, radius } from '@/lib/theme';
@@ -42,7 +43,7 @@ export function OfferHoundWatermark({
 // hex + alpha — primary @ ~30% (border) and background @ ~60% (fill).
 // '4D' ≈ 30% alpha, '99' ≈ 60% alpha.
 const BORDER_PRIMARY_30 = colors.primary + '4D';
-const BG_BACKGROUND_60 = colors.background + '99';
+const BG_BACKGROUND_60 = withThemeAlpha('background','99');
 const TEXT_PRIMARY_90 = colors.primary + 'E6'; // ~90%
 
 const styles = StyleSheet.create({

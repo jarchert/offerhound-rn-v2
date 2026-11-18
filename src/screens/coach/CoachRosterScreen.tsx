@@ -1,8 +1,9 @@
+import {hydrateRecruiterAthletes} from '@/lib/recruiterAthletes';
 // CoachRosterScreen — full recruiting pipeline Kanban board for coaches.
 // Fetches recruiting_pipeline_stages + athlete_pipeline_status (joined to
 // player_profiles), groups athletes by stage, lets coaches move athletes
 // between stages, search & add athletes to the pipeline.
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,7 +17,7 @@ import {
   FlatList,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { useNavigation, useRoute, NavigationProp } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 import { Search, X, Plus, ChevronRight } from 'lucide-react-native';
 
@@ -70,6 +71,10 @@ export default function CoachRosterScreen() {
   const queryClient = useQueryClient();
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
   const [showAddModal, setShowAddModal] = useState(false);
+  const route=useRoute();
+  const initialAthlete=(route.params as any)?.initialAthlete as PlayerProfile|undefined;
+  const closeAdd=()=>{setShowAddModal(false);(nav as any).setParams({initialAthlete:undefined});};
+  useEffect(()=>{if(typeof initialAthlete?.id==='string')setShowAddModal(true);},[initialAthlete?.id]);
 
   // Stages query, with auto-seed of defaults when missing.
   const stagesQuery = useQuery<Stage[]>({
@@ -91,10 +96,10 @@ export default function CoachRosterScreen() {
           .insert(rows)
           .select();
         if (insertErr) {
-          // Fall back to in-memory defaults if insert blocked.
-          return rows.map((r, i) => ({ id: `default-${i}`, ...r })) as any;
+          throw insertErr;
         }
-        return (inserted || []) as any;
+        if(inserted?.length!==rows.length||inserted.some((r:any)=>!r.id||r.coach_user_id!==user.id))throw Error('Pipeline stages were not confirmed. Retry loading.');
+        return inserted as any;
       }
       return data as any;
     },
@@ -107,22 +112,24 @@ export default function CoachRosterScreen() {
     queryFn: async () => {
       if (!user) return [];
       const { data, error } = await supabase
-        .from('athlete_pipeline_status' as any)
-        .select('*, player_profiles:athlete_profile_id(id, full_name, position, school, graduation_year, profile_image_url)')
+        .from('athlete_pipeline_status')
+        .select('*')
         .eq('coach_user_id', user.id);
       if (error) throw error;
-      return (data || []) as any;
+      return hydrateRecruiterAthletes(supabase,data||[],'player_profiles');
     },
     enabled: !!user,
   });
 
   const moveAthlete = useMutation({
     mutationFn: async ({ athleteRowId, newStageId }: { athleteRowId: string; newStageId: string }) => {
-      const { error } = await supabase
-        .from('athlete_pipeline_status' as any)
+      if(!user?.id)throw Error('Sign in to update your pipeline.');
+      const { data, error } = await supabase
+        .from('athlete_pipeline_status')
         .update({ stage_id: newStageId })
-        .eq('id', athleteRowId);
+        .eq('id', athleteRowId).eq('coach_user_id',user.id).select('id,stage_id').single();
       if (error) throw error;
+      if(data?.id!==athleteRowId||data?.stage_id!==newStageId)throw Error('Move was not confirmed. Refresh the pipeline.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recruiting-pipeline-athletes'] });
@@ -139,19 +146,21 @@ export default function CoachRosterScreen() {
       const stages = stagesQuery.data ?? [];
       const firstStage = stages[0];
       if (!firstStage) throw new Error('No pipeline stages available');
-      const { error } = await supabase
-        .from('athlete_pipeline_status' as any)
+      const { data, error } = await supabase
+        .from('athlete_pipeline_status')
         .insert({
           coach_user_id: user.id,
           athlete_profile_id: athleteProfileId,
           stage_id: firstStage.id,
-        });
+        }).select('id,athlete_profile_id,stage_id').single();
+      if(error?.code==='23505')throw Error('This athlete is already on your pipeline. Refresh to see their stage.');
       if (error) throw error;
+      if(!data?.id||data.athlete_profile_id!==athleteProfileId||data.stage_id!==firstStage.id)throw Error('Addition was not confirmed. Refresh the pipeline.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recruiting-pipeline-athletes'] });
       Toast.show({ type: 'success', text1: 'Athlete added to pipeline' });
-      setShowAddModal(false);
+      closeAdd();
     },
     onError: (e: any) => {
       Toast.show({ type: 'error', text1: 'Add failed', text2: e?.message ?? '' });
@@ -172,7 +181,7 @@ export default function CoachRosterScreen() {
   );
 
   const openAthleteProfile = (athleteProfileId: string) => {
-    (nav as any).navigate('PublicProfileStack', { screen: 'PublicProfile', params: { profileId: athleteProfileId } });
+    (nav as any).navigate('PublicProfileStack', { screen: 'PublicProfile', params: { customUrl: athleteProfileId } });
   };
 
   const goToSearch = () => {
@@ -189,6 +198,12 @@ export default function CoachRosterScreen() {
         </View>
         <Button size="sm" onPress={() => setShowAddModal(true)} leftIcon={<Plus size={16} color={colors.primaryForeground} />}>
           Add Athlete
+        </Button>
+      </View>
+
+      <View style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.sm }}>
+        <Button variant="outline" onPress={goToSearch} leftIcon={<Search size={16} color={colors.foreground} />}>
+          Search Athletes
         </Button>
       </View>
 
@@ -280,7 +295,9 @@ export default function CoachRosterScreen() {
 
       <AddAthleteModal
         visible={showAddModal}
-        onClose={() => setShowAddModal(false)}
+        onClose={closeAdd}
+        initialAthlete={initialAthlete}
+        stageName={stages[0]?.name}
         existingProfileIds={athletes.map(a => a.athlete_profile_id)}
         onSelect={(profileId) => addAthlete.mutate({ athleteProfileId: profileId })}
         loading={addAthlete.isPending}
@@ -297,24 +314,26 @@ interface AddModalProps {
   existingProfileIds: string[];
   onSelect: (profileId: string) => void;
   loading: boolean;
+  initialAthlete?:PlayerProfile;stageName?:string;
 }
 
-function AddAthleteModal({ visible, onClose, existingProfileIds, onSelect, loading }: AddModalProps) {
+function AddAthleteModal({ visible, onClose, existingProfileIds, onSelect, loading, initialAthlete, stageName }: AddModalProps) {
+  const {user}=useAuth();
   const [query, setQuery] = useState('');
 
   const searchQuery = useQuery<PlayerProfile[]>({
-    queryKey: ['athlete-search', query],
+    queryKey: ['pipeline-athlete-search', user?.id, query],
     queryFn: async () => {
       if (!query.trim()) return [];
       const { data, error } = await supabase
-        .from('player_profiles' as any)
+        .from('player_profiles_recruiter_safe' as any)
         .select('id, full_name, position, school, graduation_year, profile_image_url')
         .ilike('full_name', `%${query.trim()}%`)
         .limit(20);
       if (error) throw error;
       return (data || []) as any;
     },
-    enabled: visible && query.trim().length >= 2,
+    enabled: !!user && visible && query.trim().length >= 2,
   });
 
   return (
@@ -327,6 +346,7 @@ function AddAthleteModal({ visible, onClose, existingProfileIds, onSelect, loadi
               <X size={20} color={colors.foreground} />
             </Pressable>
           </View>
+          {initialAthlete?.id?<View><Text style={s.modalHint}>{initialAthlete.full_name} · {stageName||'Loading pipeline stage…'}</Text><Button disabled={loading||!stageName||existingProfileIds.includes(initialAthlete.id)} onPress={()=>onSelect(initialAthlete.id)}>{existingProfileIds.includes(initialAthlete.id)?'Already in pipeline':'Add selected athlete'}</Button></View>:null}
           <View style={s.searchRow}>
             <Search size={16} color={colors.mutedForeground} />
             <TextInput
@@ -340,7 +360,7 @@ function AddAthleteModal({ visible, onClose, existingProfileIds, onSelect, loadi
           </View>
           {searchQuery.isLoading ? (
             <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.md }} />
-          ) : (
+          ) : searchQuery.isError ? <Button onPress={()=>void searchQuery.refetch()}>Could not search athletes. Retry</Button> : (
             <FlatList
               data={searchQuery.data ?? []}
               keyExtractor={p => p.id}

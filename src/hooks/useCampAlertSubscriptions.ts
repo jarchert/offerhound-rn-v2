@@ -64,6 +64,9 @@ export function useCampAlertSubscriptions() {
         }
         throw error;
       }
+      if (!data?.id || data.user_id !== user.id || data.sport !== sport || data.email?.toLowerCase() !== email.trim().toLowerCase()) {
+        throw new Error('Subscription was not confirmed. Reload before retrying.');
+      }
       return data;
     },
     onSuccess: (data) => {
@@ -79,13 +82,16 @@ export function useCampAlertSubscriptions() {
     mutationFn: async (subscriptionId: string) => {
       if (!user?.id) throw new Error('Not authenticated');
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('camp_alert_subscriptions')
         .update({ unsubscribed_at: new Date().toISOString() })
         .eq('id', subscriptionId)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .select('id, user_id, unsubscribed_at')
+        .single();
 
       if (error) throw error;
+      if (!data?.id || data.id !== subscriptionId || data.user_id !== user.id || !data.unsubscribed_at || !Number.isFinite(Date.parse(data.unsubscribed_at))) throw new Error('Subscription change was not confirmed. Reload before retrying.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['camp-alert-subscriptions'] });
@@ -100,13 +106,16 @@ export function useCampAlertSubscriptions() {
     mutationFn: async (subscriptionId: string) => {
       if (!user?.id) throw new Error('Not authenticated');
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('camp_alert_subscriptions')
         .update({ unsubscribed_at: null })
         .eq('id', subscriptionId)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .select('id, user_id, unsubscribed_at')
+        .single();
 
       if (error) throw error;
+      if (!data?.id || data.id !== subscriptionId || data.user_id !== user.id || data.unsubscribed_at !== null) throw new Error('Subscription change was not confirmed. Reload before retrying.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['camp-alert-subscriptions'] });
@@ -121,13 +130,16 @@ export function useCampAlertSubscriptions() {
     mutationFn: async (subscriptionId: string) => {
       if (!user?.id) throw new Error('Not authenticated');
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('camp_alert_subscriptions')
         .delete()
         .eq('id', subscriptionId)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .select('id, user_id, unsubscribed_at')
+        .single();
 
       if (error) throw error;
+      if (!data?.id || data.id !== subscriptionId || data.user_id !== user.id) throw new Error('Subscription change was not confirmed. Reload before retrying.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['camp-alert-subscriptions'] });

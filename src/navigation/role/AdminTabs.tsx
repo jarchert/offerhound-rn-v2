@@ -1,6 +1,9 @@
 // AdminTabs — 6 tabs per Part 2 §2.1: Overview, Users, Moderation, Content, Audit, Settings
 // Part 32 describes admin suite conversion.
 import React from 'react';
+import { Text, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAdminRole } from '@/hooks/useAdminRole';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '@/lib/theme';
 import { roleTabScreenOptions } from '@/navigation/role/roleTabScreenOptions';
@@ -17,13 +20,23 @@ import AdminSettingsScreen from '@/screens/admin/AdminSettingsScreen';
 const Tab = createBottomTabNavigator();
 
 export default function AdminTabs() {
+  const { isAdmin, loading } = useAdminRole();
+  // Do not mount any admin screen (or its queries) until the server allows it.
+  if (loading || !isAdmin) {
+    return (
+      <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
+        {loading && <ActivityIndicator color={colors.primary} />}
+        <Text style={{ color: colors.foreground }}>{loading ? 'Checking access…' : 'Admins only'}</Text>
+      </SafeAreaView>
+    );
+  }
   return (
     <Tab.Navigator
       screenOptions={roleTabScreenOptions}>
       <Tab.Screen name="OverviewTab" component={AdminDashboard} options={{ title: 'Overview', tabBarIcon: ({ color, size }) => <BarChart2 size={size} color={color} /> }} />
       <Tab.Screen name="UsersTab" component={AdminUsersScreen} options={{ title: 'Users', tabBarIcon: ({ color, size }) => <Users size={size} color={color} /> }} />
       <Tab.Screen name="ModerationTab" component={AdminModerationScreen} options={{ title: 'Moderate', tabBarIcon: ({ color, size }) => <AlertTriangle size={size} color={color} /> }} />
-      <Tab.Screen name="ContentTab" component={AdminContentScreen} options={{ title: 'Content', tabBarIcon: ({ color, size }) => <FileText size={size} color={color} /> }} />
+      <Tab.Screen name="ContentTab" component={AdminContentScreen} options={{ title: 'Content', tabBarButtonTestID:'admin-content-tab', tabBarIcon: ({ color, size }) => <FileText size={size} color={color} /> }} />
       <Tab.Screen name="AuditTab" component={AdminAuditScreen} options={{ title: 'Audit', tabBarIcon: ({ color, size }) => <ClipboardList size={size} color={color} /> }} />
       <Tab.Screen name="LettersAnalyticsTab" component={AdminLetterAnalytics} options={{ title: 'Letters', tabBarIcon: ({ color, size }) => <Mail size={size} color={color} /> }} />
       <Tab.Screen name="SettingsTab" component={AdminSettingsScreen} options={{ title: 'Settings', tabBarIcon: ({ color, size }) => <Settings size={size} color={color} /> }} />

@@ -1,3 +1,4 @@
+import {useHomeNavigation} from '@/navigation/HomeNavigation';
 // RoleTabScreenOptions — shared screenOptions factory for all role tab navigators.
 // Adds:
 //   - NotificationBell as headerRight (persistent across all role screens)
@@ -10,8 +11,12 @@ import { Text, StyleSheet } from 'react-native';
 import { colors, typography, spacing } from '@/lib/theme';
 import { NotificationBell } from '@/components/NotificationBell';
 
+function RoleTabHeaderRight() {
+  const globalHome=useHomeNavigation();
+  return globalHome?null:<NotificationBell />;
+}
 export function roleTabHeaderRight() {
-  return <NotificationBell />;
+  return <RoleTabHeaderRight />;
 }
 
 export const roleTabScreenOptions = {

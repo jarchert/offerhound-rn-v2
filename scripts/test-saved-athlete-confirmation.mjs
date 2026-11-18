@@ -1,0 +1,10 @@
+import fs from'node:fs';import vm from'node:vm';import ts from'typescript';import assert from'node:assert/strict';
+let response={data:[]},viewer={id:'synthetic-coach'},filters=[];const exports={};
+const helper={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/recruiterAthletes.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:helper});
+const query={order(){return this;},range(){return this;},eq(k,v){filters.push([k,v]);return this;},select(){return this;},single:async()=>response,then(resolve){return Promise.resolve(response).then(resolve);}};
+const hooks={'@/lib/recruiterAthletes':helper,'@tanstack/react-query':{useQuery:x=>x,useMutation:x=>x,useQueryClient:()=>({invalidateQueries(){}})},'@/hooks/useAuth':{useAuth:()=>({user:viewer})},'@/integrations/supabase/client':{supabase:{from:()=>({select:()=>query,delete:()=>query,update:()=>query})}}};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/hooks/useSavedAthletes.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,require:n=>hooks[n]});
+response={error:Error('offline')};await assert.rejects(()=>exports.useSavedAthletes().queryFn(),/offline/);
+for(const name of ['useRemoveSavedAthlete','useUpdateSavedAthlete']){const mutation=exports[name]().mutationFn,args=name==='useRemoveSavedAthlete'?'saved-id':{id:'saved-id',notes:'Updated',priority:'high'};response={data:null};await assert.rejects(()=>mutation(args),/not confirmed/);assert(filters.some(([k,v])=>k==='coach_user_id'&&v===viewer.id));response={data:{id:'saved-id',notes:'Wrong',priority:'high'}};if(name==='useUpdateSavedAthlete')await assert.rejects(()=>mutation(args),/not confirmed/);response={data:{id:'saved-id',notes:'Updated',priority:'high'}};await mutation(args);}
+viewer=null;await assert.rejects(()=>exports.useRemoveSavedAthlete().mutationFn('saved-id'),/Sign in/);
+console.log('PASS: actual shortlist hooks surface failed loads, scope writes to signed-in owner and reject empty/mismatched mutation confirmations. No live records changed.');

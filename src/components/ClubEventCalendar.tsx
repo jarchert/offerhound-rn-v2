@@ -2,7 +2,8 @@
 // RN-adapted verbatim. shadcn/Calendar primitive replaced with a manual month-grid
 // (no react-native-calendars dependency). datetime-local inputs become two text fields.
 import { useState, useMemo } from "react";
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert } from "react-native";
+import {calendarLocalInput,saveClubEvent,deleteClubEvent} from "@/lib/clubCalendar";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -62,17 +63,18 @@ export function ClubEventCalendar() {
   const [form, setForm] = useState<EventForm>(emptyForm);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
 
-  const { data: teams = [] } = useQuery({
+  const { data: teams = [],isLoading:teamsLoading,isError:teamsFailed,refetch:retryTeams } = useQuery({
     queryKey: ["club-event-teams", user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data } = await supabase.from("teams").select("id, name").eq("coach_user_id", user.id).neq("status", "archived");
+      const { data,error } = await supabase.from("teams").select("id, name").eq("coach_user_id", user.id).neq("status", "archived");
+      if(error)throw error;
       return data || [];
     },
     enabled: !!user,
   });
 
-  const { data: events = [], isLoading } = useQuery({
+  const { data: events = [], isLoading,isError:eventsFailed,refetch:retryEvents } = useQuery({
     queryKey: ["club-events", user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -89,26 +91,7 @@ export function ClubEventCalendar() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: EventForm) => {
-      if (!user) throw new Error("Not authenticated");
-      if (!data.team_id) throw new Error("Please select a team");
-      const payload = {
-        coach_user_id: user.id,
-        title: data.title,
-        event_type: data.event_type,
-        start_time: data.start_time,
-        end_time: data.end_time || null,
-        location: data.location || null,
-        description: data.description || null,
-        team_id: data.team_id,
-        is_mandatory: data.is_mandatory,
-      };
-      if (editingEvent) {
-        const { error } = await supabase.from("team_events").update(payload).eq("id", editingEvent.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("team_events").insert(payload);
-        if (error) throw error;
-      }
+      return saveClubEvent(supabase,user?.id||'',data,editingEvent?.id,editingEvent);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["club-events"] });
@@ -122,22 +105,24 @@ export function ClubEventCalendar() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("team_events").delete().eq("id", id);
-      if (error) throw error;
+      return deleteClubEvent(supabase,user?.id||'',id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["club-events"] });
       toast({ title: "Event Deleted" });
     },
+    onError:(error:any)=>toast({title:"Could not delete event",description:error.message,variant:"destructive"}),
   });
+
+  const confirmDelete=(id:string)=>Alert.alert('Delete this event?','This removes the event from the team calendar.',[{text:'Cancel',style:'cancel'},{text:'Delete',style:'destructive',onPress:()=>deleteMutation.mutate(id)}]);
 
   const openEdit = (event: any) => {
     setEditingEvent(event);
     setForm({
       title: event.title,
       event_type: event.event_type,
-      start_time: event.start_time?.slice(0, 16) || "",
-      end_time: event.end_time?.slice(0, 16) || "",
+      start_time: calendarLocalInput(event.start_time),
+      end_time: calendarLocalInput(event.end_time),
       location: event.location || "",
       description: event.description || "",
       team_id: event.team_id,
@@ -180,6 +165,8 @@ export function ClubEventCalendar() {
 
   return (
     <ScrollView contentContainerStyle={{ gap: spacing.lg, padding: spacing.md }}>
+      {teamsFailed?<Button variant="outline" onPress={()=>void retryTeams()}>Could not load event teams. Retry</Button>:null}
+      {eventsFailed?<Button variant="outline" onPress={()=>void retryEvents()}>Could not load events. Retry</Button>:null}
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: spacing.md }}>
         <View style={{ flexShrink: 1 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
@@ -191,7 +178,7 @@ export function ClubEventCalendar() {
         <View style={{ flexDirection: "row", gap: spacing.xs }}>
           <Button variant={view === "calendar" ? "default" : "outline"} size="sm" onPress={() => setView("calendar")}>Calendar</Button>
           <Button variant={view === "list" ? "default" : "outline"} size="sm" onPress={() => setView("list")}>List</Button>
-          <Button onPress={() => { setEditingEvent(null); setForm(emptyForm); setShowAddDialog(true); }}>
+          <Button disabled={teamsLoading||teamsFailed||!teams.length} onPress={() => { setEditingEvent(null); setForm(emptyForm); setShowAddDialog(true); }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
               <Plus size={16} color={colors.primaryForeground} />
               <Text style={{ color: colors.primaryForeground, fontFamily: typography.fontFamily.bodySemiBold }}>Add Event</Text>
@@ -200,7 +187,9 @@ export function ClubEventCalendar() {
         </View>
       </View>
 
-      {view === "calendar" ? (
+      {isLoading?<Text style={s.muted}>Loading calendar events…</Text>:null}
+      {!teamsLoading&&!teamsFailed&&!teams.length?<Text style={s.muted}>Create an active team before adding events.</Text>:null}
+      {!eventsFailed && view === "calendar" ? (
         <Card>
           <CardHeader style={{ paddingBottom: spacing.xs }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -290,7 +279,7 @@ export function ClubEventCalendar() {
                         <Button variant="ghost" size="sm" onPress={() => openEdit(e)}>
                           <Edit size={12} color={colors.foreground} />
                         </Button>
-                        <Button variant="ghost" size="sm" onPress={() => deleteMutation.mutate(e.id)}>
+                        <Button variant="ghost" size="sm" disabled={deleteMutation.isPending} onPress={() => confirmDelete(e.id)}>
                           <Trash2 size={12} color={colors.destructive} />
                         </Button>
                       </View>
@@ -301,7 +290,7 @@ export function ClubEventCalendar() {
             )}
           </CardContent>
         </Card>
-      ) : (
+      ) : eventsFailed ? null : (
         <Card>
           <CardHeader>
             <CardTitle>Upcoming Events</CardTitle>
@@ -353,7 +342,7 @@ export function ClubEventCalendar() {
                         <Button variant="ghost" size="sm" onPress={() => openEdit(e)}>
                           <Edit size={12} color={colors.foreground} />
                         </Button>
-                        <Button variant="ghost" size="sm" onPress={() => deleteMutation.mutate(e.id)}>
+                        <Button variant="ghost" size="sm" disabled={deleteMutation.isPending} onPress={() => confirmDelete(e.id)}>
                           <Trash2 size={12} color={colors.destructive} />
                         </Button>
                       </View>
@@ -367,17 +356,17 @@ export function ClubEventCalendar() {
       )}
 
       {/* Add/Edit Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={(open: boolean) => { if (!open) { setShowAddDialog(false); setEditingEvent(null); } }}>
+      <Dialog open={showAddDialog} onOpenChange={(open: boolean) => { if (!open && !saveMutation.isPending) { setShowAddDialog(false); setEditingEvent(null); } }}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editingEvent ? "Edit Event" : "Create Event"}</DialogTitle></DialogHeader>
           <View style={{ gap: spacing.md }}>
             <View style={{ gap: spacing.xs }}>
               <Label>Title *</Label>
-              <Input value={form.title} onChangeText={(v) => setForm({ ...form, title: v })} />
+              <Input editable={!saveMutation.isPending} value={form.title} onChangeText={(v) => setForm({ ...form, title: v })} />
             </View>
             <View style={{ gap: spacing.xs }}>
               <Label>Type</Label>
-              <Select value={form.event_type} onValueChange={(v) => setForm({ ...form, event_type: v })}>
+              <Select value={form.event_type} onValueChange={(v) => {if(!saveMutation.isPending)setForm({ ...form, event_type: v });}}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {EVENT_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
@@ -385,16 +374,16 @@ export function ClubEventCalendar() {
               </Select>
             </View>
             <View style={{ gap: spacing.xs }}>
-              <Label>Start * (YYYY-MM-DDTHH:MM)</Label>
-              <Input value={form.start_time} onChangeText={(v) => setForm({ ...form, start_time: v })} placeholder="2025-01-15T18:00" />
+              <Label>Start * (YYYY-MM-DDTHH:MM, device local time)</Label>
+              <Input editable={!saveMutation.isPending} value={form.start_time} onChangeText={(v) => setForm({ ...form, start_time: v })} placeholder="2025-01-15T18:00" />
             </View>
             <View style={{ gap: spacing.xs }}>
               <Label>End (YYYY-MM-DDTHH:MM)</Label>
-              <Input value={form.end_time} onChangeText={(v) => setForm({ ...form, end_time: v })} placeholder="2025-01-15T20:00" />
+              <Input editable={!saveMutation.isPending} value={form.end_time} onChangeText={(v) => setForm({ ...form, end_time: v })} placeholder="2025-01-15T20:00" />
             </View>
             <View style={{ gap: spacing.xs }}>
               <Label>Team *</Label>
-              <Select value={form.team_id} onValueChange={(v) => setForm({ ...form, team_id: v })}>
+              <Select value={form.team_id} onValueChange={(v) => {if(!saveMutation.isPending)setForm({ ...form, team_id: v });}}>
                 <SelectTrigger><SelectValue placeholder="Select team" /></SelectTrigger>
                 <SelectContent>
                   {teams.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
@@ -403,14 +392,14 @@ export function ClubEventCalendar() {
             </View>
             <View style={{ gap: spacing.xs }}>
               <Label>Location</Label>
-              <Input value={form.location} onChangeText={(v) => setForm({ ...form, location: v })} />
+              <Input editable={!saveMutation.isPending} value={form.location} onChangeText={(v) => setForm({ ...form, location: v })} />
             </View>
             <View style={{ gap: spacing.xs }}>
               <Label>Description</Label>
-              <Textarea value={form.description} onChangeText={(v) => setForm({ ...form, description: v })} numberOfLines={2} />
+              <Textarea editable={!saveMutation.isPending} value={form.description} onChangeText={(v) => setForm({ ...form, description: v })} numberOfLines={2} />
             </View>
             <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
-              <Switch value={form.is_mandatory} onValueChange={(v: boolean) => setForm({ ...form, is_mandatory: v })} />
+              <Switch value={form.is_mandatory} onValueChange={(v: boolean) => {if(!saveMutation.isPending)setForm({ ...form, is_mandatory: v });}} />
               <Label>Mandatory attendance</Label>
             </View>
           </View>
@@ -418,7 +407,7 @@ export function ClubEventCalendar() {
             <Button variant="outline" onPress={() => { setShowAddDialog(false); setEditingEvent(null); }}>Cancel</Button>
             <Button
               onPress={() => saveMutation.mutate(form)}
-              disabled={!form.title.trim() || !form.start_time || !form.team_id || saveMutation.isPending}
+              disabled={teamsFailed||teamsLoading||!form.title.trim() || !form.start_time || !form.team_id || saveMutation.isPending}
             >
               <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
                 {saveMutation.isPending && <ActivityIndicator size="small" color={colors.primaryForeground} />}

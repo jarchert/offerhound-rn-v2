@@ -1,5 +1,6 @@
 // InfluencerOnboardingScreen — RN port of Lovable src/pages/InfluencerOnboarding.tsx (244 LOC).
 // Single-page form (4 cards) → inserts influencer_profiles + influencer_social_links.
+import {saveCreatorOnboarding} from '@/lib/creatorOnboarding';
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, SafeAreaView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -54,6 +55,8 @@ export default function InfluencerOnboardingScreen() {
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [checkFailed,setCheckFailed]=useState(false);
+  const [checkAttempt,setCheckAttempt]=useState(0);
 
   const [form, setForm] = useState({
     display_name: '', handle: '', bio: '', brand_type: 'media',
@@ -72,17 +75,19 @@ export default function InfluencerOnboardingScreen() {
     if (!user) { nav.getParent()?.reset({ index: 0, routes: [{ name: 'AuthStack' as any }] }); return; }
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
+      setChecking(true);setCheckFailed(false);
+      const { data, error } = await supabase
         .from('influencer_profiles' as any)
         .select('id')
         .eq('user_id', user.id)
         .maybeSingle();
       if (cancelled) return;
+      if (error) {setCheckFailed(true);setChecking(false);return;}
       if (data) nav.getParent()?.reset({ index: 0, routes: [{ name: 'InfluencerTabs' as any }] });
       else setChecking(false);
     })();
     return () => { cancelled = true; };
-  }, [user, authLoading, nav]);
+  }, [user, authLoading, nav, checkAttempt]);
 
   const normalize = (platform: string, raw: string): string | null => {
     const v = (raw || '').trim();
@@ -100,6 +105,7 @@ export default function InfluencerOnboardingScreen() {
   };
 
   const submit = async () => {
+    if (checking || checkFailed) return;
     if (!user) { toast({ title: 'Please sign in first', variant: 'destructive' }); return; }
     if (!form.display_name.trim() || !form.bio.trim()) {
       toast({ title: 'Required', description: 'Display name and bio are required', variant: 'destructive' });
@@ -116,36 +122,10 @@ export default function InfluencerOnboardingScreen() {
       if (form.languages) tags.push(`lang:${form.languages}`);
       if (form.website.trim()) tags.push(`site:${form.website.trim()}`);
 
-      const { error } = await supabase.from('influencer_profiles' as any).insert({
-        user_id: user.id,
-        display_name: form.display_name.trim(),
-        handle,
-        bio: form.bio.trim(),
-        primary_sport: 'general',
-        affiliation_type: form.brand_type,
-        region_city: form.region_city || null,
-        region_state: form.region_state || null,
-        content_tags: tags,
-        syndication_webhook_url: form.syndication_webhook_url.trim() || null,
-        syndication_enabled: !!form.syndication_webhook_url.trim(),
-      });
-      if (error) {
-        if ((error as any).code === '23505') throw new Error('That handle is already taken — please choose another.');
-        throw error;
-      }
-      const { data: created } = await supabase
-        .from('influencer_profiles' as any)
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      const id = (created as any)?.id;
-      if (id) {
-        const links = SOCIAL
-          .map(p => ({ platform: p.key, url: normalize(p.key, (form as any)[`social_${p.key}`]) }))
-          .filter(l => !!l.url)
-          .map(l => ({ influencer_id: id, platform: l.platform, profile_url: l.url as string }));
-        if (links.length) await supabase.from('influencer_social_links' as any).insert(links);
-      }
+      await saveCreatorOnboarding(supabase,user.id,{
+        display_name:form.display_name.trim(),handle,bio:form.bio.trim(),primary_sport:'general',affiliation_type:form.brand_type,
+        region_city:form.region_city||null,region_state:form.region_state||null,content_tags:tags,
+      }, SOCIAL.map(p=>({platform:p.key,profile_url:normalize(p.key,(form as any)[`social_${p.key}`])})).filter(link=>!!link.profile_url) as {platform:string;profile_url:string}[],form.syndication_webhook_url);
       toast({ title: 'Creator profile created — welcome!' });
       nav.getParent()?.reset({ index: 0, routes: [{ name: 'InfluencerTabs' as any }] });
     } catch (e: any) {
@@ -154,6 +134,8 @@ export default function InfluencerOnboardingScreen() {
       setLoading(false);
     }
   };
+
+  if (checkFailed) return <SafeAreaView style={s.safe}><BackButton/><Text accessibilityRole="alert">Your creator profile could not be checked.</Text><Button onPress={()=>setCheckAttempt(value=>value+1)}>Retry profile</Button></SafeAreaView>;
 
   if (authLoading || checking) {
     return (

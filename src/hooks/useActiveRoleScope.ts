@@ -53,7 +53,7 @@ export function notificationTypesForRole(role: ActiveRole): string[] | null {
     case 'athlete':
       return [
         'letter_sent', 'profile_view', 'athlete_saved', 'athlete_contacted',
-        'recruiting', 'camp', 'profile', 'info', 'message',
+        'recruiting', 'camp', 'profile', 'info', 'message', 'guardian_link_request', 'guardian_linked',
       ];
     case 'coach':
     case 'scout':
@@ -64,7 +64,7 @@ export function notificationTypesForRole(role: ActiveRole): string[] | null {
     case 'influencer':
       return ['message', 'info', 'profile', 'profile_view'];
     case 'parent':
-      return ['info', 'recruiting', 'message', 'letter_sent', 'profile_view'];
+      return ['info', 'recruiting', 'message', 'letter_sent', 'profile_view', 'guardian_linked'];
     case 'admin':
       return null;
     case 'all':

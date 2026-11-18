@@ -3,6 +3,7 @@ module.exports = function (api) {
   return {
     presets: ['babel-preset-expo'],
     plugins: [
+      './plugins/reactive-colors-babel.js',
       ['module-resolver', {
         root: ['./'],
         alias: { '@': './src' },

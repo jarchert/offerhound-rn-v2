@@ -1,3 +1,4 @@
+import {athleteVideoPath,athleteMediaAllowed,validateMediaBytes,saveAthleteMedia} from '@/lib/athleteMedia';
 // HighlightVideoUpload — RN port of offerhound-repo/src/components/HighlightVideoUpload.tsx
 //
 // Athletes can upload a highlight video to Supabase Storage `highlight-videos`
@@ -11,7 +12,7 @@
 //   - <video controls> → expo-av Video preview (best-effort: if expo-av isn't
 //     bundled we fall back to a static "Video saved" panel + Linking.openURL)
 //   - 100MB cap (parity)
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Linking } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Video as VideoIcon, X, Eye, EyeOff, Play, Loader2 } from 'lucide-react-native';
@@ -42,8 +43,10 @@ export function HighlightVideoUpload({
   const [isUploading, setIsUploading] = useState(false);
   const [videoUrl, setVideoUrl] = useState(currentVideoUrl || '');
   const { toast } = useToast();
+  useEffect(()=>setVideoUrl(currentVideoUrl||''),[athleteId,currentVideoUrl]);
 
   const pickAndUpload = async () => {
+    if(!await athleteMediaAllowed(supabase,athleteId,message=>toast({title:'Upload unavailable',description:message,variant:'destructive'})))return;
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
@@ -75,23 +78,21 @@ export function HighlightVideoUpload({
       const uriExt = asset.uri.split('.').pop()?.split('?')[0]?.toLowerCase() || 'mp4';
       const fileExt = asset.fileName?.split('.').pop()?.toLowerCase() || uriExt;
       const mimeType = asset.mimeType || `video/${fileExt === 'mov' ? 'quicktime' : fileExt}`;
-      const filePath = `${athleteId}/highlight.${fileExt}`;
+      const filePath = athleteVideoPath(athleteId,fileExt);
 
       const response = await fetch(asset.uri);
       const arrayBuffer = await response.arrayBuffer();
+      validateMediaBytes(arrayBuffer,100*1024*1024);
       const { error } = await supabase.storage
         .from('highlight-videos')
-        .upload(filePath, arrayBuffer, { contentType: mimeType, upsert: true });
+        .upload(filePath, arrayBuffer, { contentType: mimeType, upsert: false });
       if (error) throw error;
       const {
         data: { publicUrl },
       } = supabase.storage.from('highlight-videos').getPublicUrl(filePath);
+      await saveAthleteMedia(supabase,athleteId,{highlight_video_url:publicUrl},{highlight_video_url:videoUrl||null},value=>{setVideoUrl(value||'');onVideoUpdated?.(value||'');});
       setVideoUrl(publicUrl);
       onVideoUpdated?.(publicUrl);
-      await supabase
-        .from('player_profiles')
-        .update({ highlight_video_url: publicUrl })
-        .eq('id', athleteId);
       toast({ title: 'Video uploaded!' });
     } catch (err: any) {
       toast({
@@ -105,9 +106,9 @@ export function HighlightVideoUpload({
   };
 
   const clearVideo = async () => {
-    setVideoUrl('');
-    onVideoUpdated?.('');
-    await supabase.from('player_profiles').update({ highlight_video_url: null }).eq('id', athleteId);
+    if(isUploading)return;setIsUploading(true);
+    try{await saveAthleteMedia(supabase,athleteId,{highlight_video_url:null},{highlight_video_url:videoUrl||null},value=>{setVideoUrl(value||'');onVideoUpdated?.(value||'');});}
+    catch(error:any){toast({title:'Removal not confirmed',description:error.message,variant:'destructive'});}finally{setIsUploading(false);}
   };
 
   return (

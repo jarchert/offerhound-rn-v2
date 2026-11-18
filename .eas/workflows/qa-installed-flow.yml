@@ -1,0 +1,32 @@
+name: OfferHound focused installed-app QA
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        type: string
+        required: true
+      platform:
+        type: choice
+        required: true
+        default: ios
+        options: [ios, android]
+      flow_file:
+        type: choice
+        required: true
+        default: .maestro/staging-role-parent.yaml
+        options:
+          - .maestro/staging-role-parent.yaml
+          - .maestro/staging-referral-permissions.yaml
+          - .maestro/staging-launch-parity.yaml
+          - .maestro/staging-capture-android-voice.yaml
+          - .maestro/staging-club-private-media.yaml
+jobs:
+  acceptance:
+    type: maestro
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      flow_path: ${{ inputs.flow_file }}
+      record_screen: true
+      retries: 0

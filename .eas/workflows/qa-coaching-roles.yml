@@ -1,0 +1,25 @@
+name: OfferHound coaching-role infrastructure retry
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        type: string
+        required: true
+      platform:
+        type: choice
+        required: true
+        default: android
+        options: [ios, android]
+jobs:
+  coaching:
+    type: maestro
+    runs_on: "${{ inputs.platform == 'android' ? 'linux-medium-nested-virtualization' : 'macos-medium' }}"
+    environment: preview
+    params:
+      build_id: ${{ inputs.build_id }}
+      flow_path:
+        - .maestro/staging-role-college-coach.yaml
+        - .maestro/staging-role-club-coach.yaml
+        - .maestro/staging-role-hs-coach.yaml
+      record_screen: true
+      retries: 0

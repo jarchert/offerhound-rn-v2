@@ -1,27 +1,8 @@
-// AthleteSearchScreen — RN port of Lovable web AthleteSearch page.
-// Source: offerhound-repo/src/pages/AthleteSearch.tsx (248 LOC)
-//
-// Adaptations (web → RN):
-//   - <div>/<h1>/<p>/<span>          → <View>/<Text>
-//   - className utility classes      → StyleSheet
-//   - lucide-react                   → lucide-react-native
-//   - Input/Select/Button            → @/components/ui/* RN primitives
-//   - useNavigate + useSearchParams  → useNavigation + useRoute (params object)
-//   - sonner toasts                  → showToast helper from @/lib/toast (best-effort)
-//   - AthleteMatchCard               → existing RN port (compact variant)
-//
-// PORT-PENDING gaps (kept as no-op stubs so this screen compiles + ships):
-//   - LetterButton (recruiter inline letter CTA)        → omitted (letterSlot undefined)
-//   - useLetterCenter()                                  → omitted (handleSendLetter no-ops)
-//   - useScoutProfile / useCoachProfile / useHSCoachProfile sport sorting →
-//     viewerSports filter is bypassed when those hooks are not wired in RN
-//     (we only consume useScoutProfile + useScoutSavedAthletes today;
-//     other recruiter detection falls back to "athlete viewer" mode).
-//   - Messages route navigation       → uses RootStackParamList "Messages" with no params
-//
-// Verbatim filter logic preserved: position aliases, doesPositionMatch,
-// proximity sort via stateProximityScore, name-presence sort, fromNeed
-// "Showing prospects for your position need" banner.
+// Native recruiter search: owner-scoped actions and server filtering over the safe listing.
+import {useCoachProfile} from '@/hooks/useCoachProfile';
+import {useHSCoachProfile} from '@/hooks/useHSCoachProfile';
+import {recruiterSportTerms,recruiterSportFilter,literalSearchText} from '@/lib/recruiterSportFilter';
+import {useLetterCenter} from '@/hooks/useLetterCenter';
 import React, { useMemo, useState } from 'react';
 import {
   View,
@@ -31,7 +12,7 @@ import {
   ScrollView,
   Pressable,
 } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { useNavigation, useRoute, NavigationProp } from '@react-navigation/native';
 import { Search, Target, X } from 'lucide-react-native';
 import { supabase } from '@/integrations/supabase/client';
@@ -46,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select';
+import { useAuth } from '@/contexts/AuthContext';
 import { useScoutProfile } from '@/hooks/useScoutProfile';
 import { useScoutSavedAthletes, useScoutSaveAthlete } from '@/hooks/useScoutSavedAthletes';
 import { compareByFullNamePresence } from '@/lib/utils/nameSorting';
@@ -98,7 +80,15 @@ type AthleteSearchRouteParams = {
   needPriority?: string;
 };
 
+type PublicAthleteSearchRow = {
+  id: string; full_name: string | null; position: string | null; school: string | null;
+  graduation_year: number | null; city: string | null; state: string | null;
+  profile_image_url: string | null; custom_url: string | null; sport: string | null;
+};
+
 export default function AthleteSearchScreen() {
+  const { user, userRole } = useAuth();
+  const {goToLetterForAthlete}=useLetterCenter();
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
   const route = useRoute();
   const params = (route.params || {}) as AthleteSearchRouteParams;
@@ -114,13 +104,13 @@ export default function AthleteSearchScreen() {
   const [gradYear, setGradYear] = useState(fromNeed && needGradYear ? needGradYear : 'all');
 
   const { data: scoutProfile } = useScoutProfile();
+  const { data: coachProfile } = useCoachProfile();
+  const { data: hsCoachProfile } = useHSCoachProfile();
+  const viewerSports = recruiterSportTerms(coachProfile,hsCoachProfile,scoutProfile);
   const { data: savedAthletes = [] } = useScoutSavedAthletes();
   const saveAthleteMutation = useScoutSaveAthlete();
 
-  // PORT-PENDING: useCoachProfile / useHSCoachProfile not consumed yet in RN
-  // recruiter detection. Treat the viewer as a scout-only recruiter for now.
-  const isScout = !!scoutProfile;
-  const isRecruiter = isScout;
+  const isRecruiter = ['coach','scout','high_school_coach','club_coach','agency','admin'].includes(userRole||'');
 
   const savedAthleteIds = useMemo(
     () => new Set(savedAthletes.map((s: any) => s.athlete_profile_id)),
@@ -134,33 +124,39 @@ export default function AthleteSearchScreen() {
     setGradYear('all');
   };
 
-  const { data: athletes = [], isLoading } = useQuery({
-    queryKey: ['athlete-search', search, position, gradYear],
-    queryFn: async () => {
+  const athletePages = useInfiniteQuery({
+    queryKey: ['athlete-search', user?.id, search, position, gradYear, viewerSports],
+    enabled: !!user && isRecruiter,
+    initialPageParam: 0,
+    queryFn: async ({pageParam}) => {
       let q = supabase
-        .from('player_profiles')
+        .from('player_profiles_recruiter_safe' as any)
         .select(
           'id, full_name, position, school, graduation_year, city, state, profile_image_url, custom_url, sport',
         )
-        .order('full_name')
-        .limit(100);
-      if (search) q = q.ilike('full_name', `%${search}%`);
+        .order('is_example_profile',{ascending:false}).order('full_name').order('id')
+        .range(pageParam*100,pageParam*100+99);
+      if (search) q = q.ilike('full_name', `%${literalSearchText(search)}%`);
+      if (viewerSports.length) q = q.or(recruiterSportFilter(viewerSports));
       if (position !== 'all') q = q.eq('position', position);
       if (gradYear !== 'all') q = q.eq('graduation_year', gradYear);
-      const { data } = await q;
+      const { data, error } = await q.returns<PublicAthleteSearchRow[]>();
+      if (error) throw error;
       return data || [];
     },
+    getNextPageParam: (lastPage, pages) => lastPage.length===100 ? pages.length : undefined,
   });
+  const athletes=athletePages.data?.pages.flat()||[];
+  const {isLoading,isError:searchFailed,refetch:retrySearch}=athletePages;
 
-  // Resolve viewer's home state for proximity sorting (scout state in RN today;
-  // HS-coach + college-coach inputs land in a future port wave).
+  // Use the viewer's own role profile for proximity sorting.
   const viewerState = useMemo<string | null>(
-    () => ((scoutProfile as any)?.state ?? null),
-    [scoutProfile],
+    () => ((hsCoachProfile as any)?.state ?? (coachProfile as any)?.state ?? (scoutProfile as any)?.state ?? null),
+    [hsCoachProfile,coachProfile,scoutProfile],
   );
 
   const sortedAthletes = useMemo(() => {
-    const filtered = athletes; // PORT-PENDING: viewerSports overlap filter
+    const filtered = athletes; // All filters are applied before server pagination.
     return [...filtered].sort((a, b) => {
       if (fromNeed && needPosition) {
         const aMatch = doesPositionMatch(a.position, needPosition);
@@ -190,7 +186,7 @@ export default function AthleteSearchScreen() {
     saveAthleteMutation.mutate(
       { athleteProfileId: athleteId },
       {
-        onSuccess: () => showToast('success', 'Athlete saved to favorites!'),
+        onSuccess: (result:any) => showToast(result?.alreadySaved?'info':'success',result?.alreadySaved?'Already saved!':'Athlete saved to favorites!'),
         onError: () => showToast('error', 'Failed to save athlete'),
       },
     );
@@ -199,24 +195,14 @@ export default function AthleteSearchScreen() {
   // Route to the shared LetterComposer root screen with the athlete
   // pre-filled. LetterComposer accepts a `seed` with `prefillAthleteId` +
   // `prefillAthleteName` so the recipient is primed on mount.
-  const handleSendLetter = (athlete: any) => {
-    nav.navigate(
-      'LetterComposer' as any,
-      {
-        seed: {
-          prefillAthleteId: athlete.id,
-          prefillAthleteName: athlete.full_name,
-          recipientName: athlete.full_name,
-        },
-      } as any,
-    );
-  };
+  const handleSendLetter = (athlete: any) => goToLetterForAthlete(athlete);
 
   return (
     <SafeAreaView style={s.root}>
       <ScrollView contentContainerStyle={s.content}>
         <BackButton />
         <Text style={s.title}>Athlete Search</Text>
+        {!isRecruiter&&<Text accessibilityRole="alert" style={s.subtitle}>Athlete discovery is available to recruiting accounts.</Text>}
         <Text style={s.subtitle}>
           Find athletes by name, position, or graduation year.
           {viewerState ? ` Sorted nearest to ${viewerState} first.` : ''}
@@ -282,6 +268,11 @@ export default function AthleteSearchScreen() {
 
         {isLoading ? (
           <Text style={s.statusText}>Searching athletes...</Text>
+        ) : searchFailed ? (
+          <View>
+            <Text accessibilityRole="alert" style={s.statusText}>Athlete search could not be loaded. Check your connection and retry.</Text>
+            <Button onPress={() => void retrySearch()}>Retry athlete search</Button>
+          </View>
         ) : sortedAthletes.length === 0 ? (
           <Text style={s.statusText}>No athletes found matching your criteria.</Text>
         ) : (
@@ -300,11 +291,11 @@ export default function AthleteSearchScreen() {
                   variant="compact"
                   isSaved={isSaved}
                   proximityLabel={proxLabel}
-                  onToggleSave={isScout ? handleSaveAthlete : undefined}
+                  onToggleSave={isRecruiter ? handleSaveAthlete : undefined}
                   // PORT-PENDING: letterSlot for shared <LetterButton /> once ported.
                   onMessage={
                     isRecruiter
-                      ? () => nav.navigate('Messages' as any)
+                      ? () => nav.navigate('DirectMessageDraft', {athleteProfileId:athlete.id})
                       : undefined
                   }
                   onContact={isRecruiter ? () => handleSendLetter(athlete) : undefined}
@@ -314,7 +305,8 @@ export default function AthleteSearchScreen() {
           </View>
         )}
 
-        <Text style={s.footerCount}>{sortedAthletes.length} athletes found</Text>
+        <Text style={s.footerCount}>{sortedAthletes.length} athletes loaded</Text>
+        {athletePages.hasNextPage?<Button disabled={athletePages.isFetchingNextPage} onPress={()=>void athletePages.fetchNextPage()}>{athletePages.isFetchingNextPage?'Loading more athletes…':'Load more athletes'}</Button>:null}
         <Footer />
       </ScrollView>
     </SafeAreaView>

@@ -1,3 +1,4 @@
+import {useHomeNavigation} from '@/navigation/HomeNavigation';
 // CoachNav — coach-role post-auth global navigation.
 // Ported verbatim from Lovable (src/components/CoachNav.tsx) with web → RN mapping:
 //   - react-router useLocation / <Link> → @react-navigation useNavigation + current route
@@ -56,6 +57,7 @@ const NAV_COLLAPSED_KEY = 'coachNavCollapsed';
 const LG_BREAKPOINT = 1024;
 
 export function CoachNav() {
+  const globalHome=useHomeNavigation();
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -119,6 +121,7 @@ export function CoachNav() {
   const isItemActive = (item: NavItem) => currentRouteName === item.route;
 
   const isWide = width >= LG_BREAKPOINT;
+  if(globalHome)return null;
 
   // ── Wide (≥ lg) sidebar ───────────────────────────────────────────────
   if (isWide) {

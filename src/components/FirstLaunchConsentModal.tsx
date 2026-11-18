@@ -1,3 +1,4 @@
+import {getCanonicalOrigin} from '@/lib/canonicalDomain';
 // FirstLaunchConsentModal — RN port of Lovable CookieConsentBanner.tsx
 // First-launch privacy / cookie acknowledgement required for App Store compliance.
 // Shows once on fresh install; dismissed via Accept All, Essential Only, or Customize.
@@ -51,7 +52,7 @@ export function FirstLaunchConsentModal({
           <Text style={styles.body}>
             We use cookies and similar technologies to enhance your experience,
             analyze usage, and personalize content. Read our{' '}
-            <Text style={styles.link} onPress={() => Linking.openURL('https://offer-hound.com/privacy')}>
+            <Text style={styles.link} onPress={() => Linking.openURL(getCanonicalOrigin() + '/privacy')}>
               Privacy Policy
             </Text>
             .

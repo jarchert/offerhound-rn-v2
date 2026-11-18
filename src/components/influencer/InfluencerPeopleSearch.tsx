@@ -10,7 +10,8 @@
 //     AthleteMatchCard fallback CTA is used. Re-enable once
 //     letters/LetterButton lands.
 import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import {useNavigation} from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { Search, Users } from 'lucide-react-native';
 import { supabase } from '@/integrations/supabase/client';
@@ -104,40 +105,45 @@ export function InfluencerPeopleSearch() {
 
 export default InfluencerPeopleSearch;
 
-function EmptyOrLoading({ loading, count }: { loading: boolean; count: number }) {
+function EmptyOrLoading({ loading, count, error, retry }: { loading: boolean; count: number; error?:unknown; retry?:()=>void }) {
+  if(error)return <Pressable accessibilityRole="button" onPress={retry}><Text style={s.empty}>Couldn't load people. Tap to retry.</Text></Pressable>;
   if (loading) return <Text style={s.empty}>Searching…</Text>;
   if (count === 0) return <Text style={s.empty}>No results match your filters.</Text>;
   return null;
 }
 
 function CoachResults({ sport, search }: { sport: string; search: string }) {
-  const { data = [], isLoading } = useQuery({
+  const navigation=useNavigation<any>();
+  const { data = [], isLoading, error, refetch } = useQuery({
     queryKey: ['inf-search-coaches', sport, search],
     queryFn: async () => {
       let q = supabase
         .from('public_coaches')
-        .select('id, name, school, sport, profile_image_url, title')
+        .select('id, name, school, sport, image_url, title')
         .order('name')
         .limit(40);
       if (sport !== 'all') q = q.eq('sport', sport);
       if (search.trim()) q = q.or(`name.ilike.%${search}%,school.ilike.%${search}%`);
-      const { data } = await q;
+      const { data, error: queryError } = await q;
+      if(queryError)throw queryError;
       return data ?? [];
     },
   });
   return (
     <View style={{ gap: spacing.sm }}>
-      <EmptyOrLoading loading={isLoading} count={data.length} />
+      <EmptyOrLoading loading={isLoading} count={data.length} error={error} retry={()=>void refetch()} />
       {data.map((c: any) => (
         <CoachMatchCard
           key={c.id}
           variant="compact"
+          showContact={false}
+          onOpenProfile={()=>navigation.navigate('CoachProfile',{id:c.id})}
           coach={{
             id: c.id,
             name: c.name || 'Coach',
             title: c.title || 'Coach',
             school: c.school || '',
-            image_url: c.profile_image_url,
+            image_url: c.image_url,
           }}
           proximityLabel={c.sport ? String(c.sport).toUpperCase() : null}
         />
@@ -147,23 +153,24 @@ function CoachResults({ sport, search }: { sport: string; search: string }) {
 }
 
 function AthleteResults({ sport, search }: { sport: string; search: string }) {
-  const { data = [], isLoading } = useQuery({
+  const { data = [], isLoading, error, refetch } = useQuery({
     queryKey: ['inf-search-athletes', sport, search],
     queryFn: async () => {
       let q = supabase
         .from('public_player_profiles')
-        .select('id, full_name, primary_position, school, sport, profile_image_url, custom_url, graduation_year, city, state')
+        .select('id, full_name, position, school, sport, profile_image_url, custom_url, graduation_year, city, state')
         .order('full_name')
         .limit(40);
       if (sport !== 'all') q = q.eq('sport', sport);
       if (search.trim()) q = q.or(`full_name.ilike.%${search}%,school.ilike.%${search}%`);
-      const { data } = await q;
+      const { data, error: queryError } = await q;
+      if(queryError)throw queryError;
       return data ?? [];
     },
   });
   return (
     <View style={{ gap: spacing.sm }}>
-      <EmptyOrLoading loading={isLoading} count={data.length} />
+      <EmptyOrLoading loading={isLoading} count={data.length} error={error} retry={()=>void refetch()} />
       {data.map((a: any) => (
         <AthleteMatchCard
           key={a.id}
@@ -171,7 +178,7 @@ function AthleteResults({ sport, search }: { sport: string; search: string }) {
           athlete={{
             id: a.id,
             full_name: a.full_name,
-            position: a.primary_position,
+            position: a.position,
             school: a.school,
             graduation_year: a.graduation_year,
             city: a.city,
@@ -188,33 +195,37 @@ function AthleteResults({ sport, search }: { sport: string; search: string }) {
 }
 
 function ScoutResults({ sport, search }: { sport: string; search: string }) {
-  const { data = [], isLoading } = useQuery({
+  const navigation=useNavigation<any>();
+  const { data = [], isLoading, error, refetch } = useQuery({
     queryKey: ['inf-search-scouts', sport, search],
     queryFn: async () => {
       let q = supabase
         .from('scout_profiles')
-        .select('id, full_name, organization, sports, profile_image_url, title')
-        .order('full_name')
+        .select('id, name, company, sports, image_url, title')
+        .order('name')
         .limit(40);
       if (sport !== 'all') q = q.contains('sports', [sport]);
-      if (search.trim()) q = q.or(`full_name.ilike.%${search}%,organization.ilike.%${search}%`);
-      const { data } = await q;
+      if (search.trim()) q = q.or(`name.ilike.%${search}%,company.ilike.%${search}%`);
+      const { data, error: queryError } = await q;
+      if(queryError)throw queryError;
       return data ?? [];
     },
   });
   return (
     <View style={{ gap: spacing.sm }}>
-      <EmptyOrLoading loading={isLoading} count={data.length} />
+      <EmptyOrLoading loading={isLoading} count={data.length} error={error} retry={()=>void refetch()} />
       {data.map((sc: any) => (
         <CoachMatchCard
           key={sc.id}
           variant="compact"
+          showContact={false}
+          onOpenProfile={()=>navigation.navigate('PublicProfileStack',{screen:'PublicScoutProfile',params:{scoutId:sc.id}})}
           coach={{
             id: sc.id,
-            name: sc.full_name || 'Scout',
+            name: sc.name || 'Scout',
             title: sc.title || 'Scout',
-            school: sc.organization || 'Independent Scout',
-            image_url: sc.profile_image_url,
+            school: sc.company || 'Independent Scout',
+            image_url: sc.image_url,
           }}
           proximityLabel="Scout"
         />

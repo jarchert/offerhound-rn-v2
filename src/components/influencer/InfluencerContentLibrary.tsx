@@ -18,7 +18,7 @@
  *  - tailwind classes → StyleSheet using theme tokens
  */
 import React, { useState } from 'react';
-import { View, Text, Image, Pressable, StyleSheet, Linking } from 'react-native';
+import { Alert, View, Text, Image, Pressable, StyleSheet, Linking } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Upload, Link2, Trash2, ExternalLink, FolderOpen } from 'lucide-react-native';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
@@ -37,7 +37,7 @@ import {
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
 export function InfluencerContentLibrary({ influencerId }: { influencerId: string }) {
-  const { data: items = [] } = useContentLibrary(influencerId);
+  const { data: items = [], isLoading: contentLoading, isError: contentFailed, refetch: retryContent } = useContentLibrary(influencerId);
   const upload = useUploadLibraryAsset();
   const addLink = useAddLibraryItem();
   const remove = useDeleteLibraryItem();
@@ -99,6 +99,9 @@ export function InfluencerContentLibrary({ influencerId }: { influencerId: strin
     }
   };
 
+  if (contentFailed) return <Button onPress={() => void retryContent()}>Could not load creator content. Retry</Button>;
+  if (contentLoading) return <Text>Loading creator content…</Text>;
+
   return (
     <Card>
       <CardHeader>
@@ -159,7 +162,7 @@ export function InfluencerContentLibrary({ influencerId }: { influencerId: strin
                         </Pressable>
                       ) : null}
                       <Pressable
-                        onPress={() => remove.mutate({ id: it.id, influencerId })}
+                        onPress={() => Alert.alert('Remove this library item?','The item will be removed from your content library.',[{text:'Cancel',style:'cancel'},{text:'Remove',style:'destructive',onPress:()=>remove.mutate({id:it.id,influencerId},{onError:(error:any)=>toast.error(error.message || 'Removal was not confirmed.')})}])}
                         style={({ pressed }) => [s.tileBtn, s.tileBtnDestructive, pressed && s.tileBtnPressed]}
                       >
                         <Trash2 size={14} color={colors.destructiveForeground} />

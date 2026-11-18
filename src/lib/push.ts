@@ -17,6 +17,8 @@ Notifications.setNotificationHandler({
 });
 
 export async function requestPushPermissions(): Promise<boolean> {
+  // QA builds must not request device permission or register real push tokens.
+  if (process.env.EXPO_PUBLIC_APP_ENV === 'staging') return false;
   if (!Device.isDevice) return false;
   const { status: existing } = await Notifications.getPermissionsAsync();
   if (existing === 'granted') return true;

@@ -1,5 +1,7 @@
+import {HomeButton} from '@/navigation/HomeNavigation';
 import React, { createContext, useContext, useEffect, useRef } from 'react';
 import { Modal, Animated, View, Text, Pressable, StyleSheet, Dimensions, ViewStyle, TextStyle, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import { colors, typography, spacing } from '@/lib/theme';
 
@@ -21,6 +23,7 @@ export function SheetTrigger({ children, asChild }: { children: React.ReactNode;
 
 export function SheetContent({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
   const ctx = useContext(Ctx);
+  const insets = useSafeAreaInsets();
   const { width, height } = Dimensions.get('window');
   const anim = useRef(new Animated.Value(0)).current;
 
@@ -40,11 +43,12 @@ export function SheetContent({ children, style }: { children: React.ReactNode; s
 
   return (
     <Modal visible={ctx.open} transparent animationType="fade" onRequestClose={() => ctx.onOpenChange(false)}>
-      <Pressable style={[s.overlay, align]} onPress={() => ctx.onOpenChange(false)}>
+      <Pressable accessible={false} style={[s.overlay, align]} onPress={() => ctx.onOpenChange(false)}>
         <Animated.View style={[s.sheet, dims, translate, style]}>
-          <Pressable style={s.sheetInner} onPress={(e) => e.stopPropagation()}>
+          <Pressable accessible={false} style={[s.sheetInner,{paddingTop:Math.max(insets.top,16)+44,paddingBottom:Math.max(insets.bottom,16)}]} onPress={(e) => e.stopPropagation()}>
+            <HomeButton confirmLeave beforeNavigate={()=>ctx.onOpenChange(false)}/>
             <ScrollView contentContainerStyle={s.scrollContent}>{children}</ScrollView>
-            <Pressable style={s.closeBtn} onPress={() => ctx.onOpenChange(false)} hitSlop={8}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close drawer" style={[s.closeBtn,{top:Math.max(insets.top,16)}]} onPress={() => ctx.onOpenChange(false)} hitSlop={8}>
               <X size={20} color={colors.mutedForeground} />
             </Pressable>
           </Pressable>
@@ -72,7 +76,7 @@ const s = StyleSheet.create({
   sheet: { backgroundColor: colors.card },
   sheetInner: { flex: 1, padding: spacing.lg, position: 'relative' },
   scrollContent: { gap: spacing.md, paddingRight: spacing.xl },
-  closeBtn: { position: 'absolute', top: spacing.sm, right: spacing.sm, padding: 4 },
+  closeBtn: { position: 'absolute', top: spacing.sm, right: spacing.sm, minHeight:44,minWidth:44,alignItems:'center',justifyContent:'center',zIndex:10 },
   header: { gap: 4, marginBottom: spacing.md },
   footer: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm, marginTop: spacing.md },
   title: { fontFamily: typography.fontFamily.heading, fontSize: typography.fontSize.xl, color: colors.foreground, letterSpacing: typography.letterSpacing.heading },

@@ -1,3 +1,4 @@
+import {normalizeAthleteImageAsset,athleteImagePath,athleteMediaAllowed,validateMediaBytes,saveAthleteMedia} from '@/lib/athleteMedia';
 import { useState } from 'react';
 import { View, Text, StyleSheet, Image, Pressable, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -25,6 +26,7 @@ export function FamilyImageUpload({
   const { toast } = useToast();
 
   const pickAndUpload = async () => {
+    if(!await athleteMediaAllowed(supabase,athleteId,message=>toast({title:'Upload unavailable',description:message,variant:'destructive'})))return;
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
@@ -43,7 +45,7 @@ export function FamilyImageUpload({
       });
 
       if (result.canceled || !result.assets?.[0]) return;
-      const asset = result.assets[0];
+      const asset = await normalizeAthleteImageAsset(result.assets[0]);
 
       // Validate MIME type (parity with Lovable: file.type.startsWith("image/"))
       const mimeType = asset.mimeType || '';
@@ -85,24 +87,19 @@ export function FamilyImageUpload({
       const uriExt = asset.uri.split('.').pop()?.split('?')[0]?.toLowerCase() || 'jpg';
       const fileExt = asset.fileName?.split('.').pop()?.toLowerCase() || uriExt || 'jpg';
       const mimeType = asset.mimeType || `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
-      const fileName = `athletes/${athleteId}/family-${Date.now()}.${fileExt}`;
+      const fileName = athleteImagePath(athleteId,'family',fileExt);
 
-      if (currentImageUrl && currentImageUrl.includes('/profile-images/')) {
-        const oldPath = currentImageUrl.split('/profile-images/')[1];
-        if (oldPath) {
-          await supabase.storage.from('profile-images').remove([oldPath]);
-        }
-      }
 
       // Read file as ArrayBuffer for Supabase upload (fetch+blob is unreliable in RN)
       const response = await fetch(asset.uri);
       const arrayBuffer = await response.arrayBuffer();
+      validateMediaBytes(arrayBuffer,10*1024*1024);
 
       const { error: uploadError } = await supabase.storage
         .from('profile-images')
         .upload(fileName, arrayBuffer, {
           cacheControl: '3600',
-          upsert: true,
+          upsert: false,
           contentType: mimeType,
         });
 
@@ -112,12 +109,7 @@ export function FamilyImageUpload({
         .from('profile-images')
         .getPublicUrl(fileName);
 
-      const { error: updateError } = await supabase
-        .from('player_profiles')
-        .update({ family_image_url: urlData.publicUrl })
-        .eq('id', athleteId);
-
-      if (updateError) throw updateError;
+      await saveAthleteMedia(supabase,athleteId,{family_image_url: urlData.publicUrl },{family_image_url:currentImageUrl||null},value=>onImageUpdated?.(value));
 
       onImageUpdated(urlData.publicUrl);
 
@@ -143,19 +135,7 @@ export function FamilyImageUpload({
     setIsDeleting(true);
 
     try {
-      if (currentImageUrl.includes('/profile-images/')) {
-        const oldPath = currentImageUrl.split('/profile-images/')[1];
-        if (oldPath) {
-          await supabase.storage.from('profile-images').remove([oldPath]);
-        }
-      }
-
-      const { error: updateError } = await supabase
-        .from('player_profiles')
-        .update({ family_image_url: null })
-        .eq('id', athleteId);
-
-      if (updateError) throw updateError;
+        await saveAthleteMedia(supabase,athleteId,{family_image_url:null},{family_image_url:currentImageUrl},value=>onImageUpdated?.(value));
 
       onImageUpdated(null);
 

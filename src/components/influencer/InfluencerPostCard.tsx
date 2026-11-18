@@ -12,6 +12,7 @@
  *  - Tailwind classes → StyleSheet using theme tokens (colors/typography/spacing/radius)
  *  - date-fns format() preserved (works in RN)
  */
+import {isCreatorContentUrl} from '@/lib/creatorSchedule';
 import React from 'react';
 import { View, Text, Image, Pressable, StyleSheet, Linking } from 'react-native';
 import { format } from 'date-fns';
@@ -53,10 +54,10 @@ export function InfluencerPostCard({
   const shareUrl = buildInfluencerShareUrl(influencer.handle, `?post=${post.id}`);
 
   const openCta = () => {
-    if (post.cta_url) Linking.openURL(post.cta_url).catch(() => {});
+    if (isCreatorContentUrl(post.cta_url)) Linking.openURL(post.cta_url).catch(() => {});
   };
   const openEmbed = () => {
-    if (post.embed_url) Linking.openURL(post.embed_url).catch(() => {});
+    if (isCreatorContentUrl(post.embed_url)) Linking.openURL(post.embed_url).catch(() => {});
   };
 
   return (
@@ -95,7 +96,7 @@ export function InfluencerPostCard({
         </View>
 
         {/* Media with watermark */}
-        {post.media_url && (
+        {isCreatorContentUrl(post.media_url) && (
           <View style={s.mediaTile}>
             <Image
               source={{ uri: post.media_url }}
@@ -107,7 +108,7 @@ export function InfluencerPostCard({
           </View>
         )}
 
-        {post.embed_url && !post.media_url && (
+        {isCreatorContentUrl(post.embed_url) && !isCreatorContentUrl(post.media_url) && (
           <Pressable onPress={openEmbed} style={s.embedTile}>
             <Text style={s.embedText} numberOfLines={2}>
               ▶ Open embedded media
@@ -129,7 +130,7 @@ export function InfluencerPostCard({
 
         {/* Footer: CTA + share */}
         <View style={s.footerRow}>
-          {post.cta_url ? (
+          {isCreatorContentUrl(post.cta_url) ? (
             <Pressable onPress={openCta} hitSlop={6}>
               <Text style={s.ctaText}>{post.cta_label || 'Learn more →'}</Text>
             </Pressable>

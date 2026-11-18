@@ -1,4 +1,5 @@
-// FloatingAICoach — persistent post-auth floating action button.
+// Persistent post-auth AI action in its own layout area so it cannot cover
+// editor fields, list rows or primary actions.
 // Tap → navigates to the AICoach modal screen (registered in RootNavigator).
 // Hidden while the keyboard is visible or while the user is already on AICoach.
 //
@@ -12,6 +13,7 @@ import {
   Keyboard,
   Animated,
   Easing,
+  SafeAreaView,
 } from 'react-native';
 import { Sparkles } from 'lucide-react-native';
 import { navigate, getCurrentRouteName } from '@/navigation/navigationRef';
@@ -68,9 +70,6 @@ export function FloatingAICoach({
     return () => loop.stop();
   }, [pulse]);
 
-  if (keyboardVisible) return null;
-  if (activeRoute === hideOnRoute) return null;
-
   // Sync active route on a polling interval — lightweight since this component
   // only needs to know if it's on the AICoach screen to hide itself.
   React.useEffect(() => {
@@ -79,6 +78,9 @@ export function FloatingAICoach({
     }, 300);
     return () => clearInterval(id);
   }, []);
+
+  if (keyboardVisible) return null;
+  if (activeRoute === hideOnRoute) return null;
 
   const handlePress = () => {
     try {
@@ -89,10 +91,10 @@ export function FloatingAICoach({
   };
 
   return (
-    <View
+    <SafeAreaView
       style={[
         s.fabContainer,
-        bottomOffset !== undefined ? { bottom: bottomOffset } : null,
+        bottomOffset !== undefined ? { marginBottom: bottomOffset } : null,
       ]}
       pointerEvents="box-none">
       <Animated.View style={{ transform: [{ scale: pulse }] }}>
@@ -104,7 +106,7 @@ export function FloatingAICoach({
           <Sparkles size={24} color={colors.primaryForeground} />
         </Pressable>
       </Animated.View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -112,11 +114,12 @@ export default FloatingAICoach;
 
 const s = StyleSheet.create({
   fabContainer: {
-    position: 'absolute',
-    right: spacing.lg,
-    // Sit above the bottom tab bar (typical RN tab bar ~ 56-83pt).
-    bottom: spacing.lg + 72,
-    zIndex: 50,
+    alignItems: 'flex-end',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.background,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
   },
   fab: {
     width: 56,

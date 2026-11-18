@@ -1,17 +1,10 @@
+import { CampGuardianWaiver } from '@/components/CampGuardianWaiver';
 // CampMobileCheckinScreen — RN port of Lovable web src/pages/CampMobileCheckin.tsx (433 LOC).
 // Coach-side mobile check-in: scan athlete QR, manual token entry, walk-up registration.
 //
-// PORT-PENDING (camera/QR scan):
-//   Web uses BarcodeDetector + getUserMedia. RN equivalent is `expo-barcode-scanner` or
-//   `expo-camera`'s onBarCodeScanned, but neither is currently in package.json. For now
-//   the "Scan" tab renders a stub explaining the limitation and pushes users to the
-//   "Manual" token-entry tab. When expo-barcode-scanner is installed, replace
-//   <ScanStub /> with a real <BarCodeScanner /> wrapper.
+// Native camera capture and exact server-authorized token validation are implemented independently.
 //
-//
-// PORT-PENDING (walk-up registration):
-//   CampWalkupRegistration component is web-only. We render an inline placeholder card
-//   directing staff to the future RN equivalent.
+// Guest registration is implemented independently in CampGuestWalkupForm.
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -42,6 +35,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCampCheckinSync } from '@/hooks/useCampCheckinSync';
 import { enqueueOp } from '@/lib/checkinQueue';
 import { useToast } from '@/hooks/use-toast';
+import { CampQrScanner } from '@/components/CampQrScanner';
+import { checkInNativeToken, decodeCampToken } from '@/lib/nativeCampCheckin';
+import { CampGuestWalkupForm } from '@/components/CampGuestWalkupForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -51,6 +47,7 @@ import { colors, spacing } from '@/lib/theme';
 import type { CampStackParamList } from '@/navigation/stacks/CampStack';
 
 interface Enrollment {
+  full_name?:string;guest_name?:string;
   id: string;
   camp_id: string;
   status: string;
@@ -77,6 +74,8 @@ export default function CampMobileCheckinScreen() {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState('scan');
   const [manualToken, setManualToken] = useState('');
+  const [checkinMessage, setCheckinMessage] = useState('');
+  const access = useQuery({ queryKey: ['camp-checkin-access', campId, user?.id], enabled: !!campId && isAuthenticated, queryFn: async () => { const r = await (supabase.rpc as any)('can_register_camp_guest', { p_camp_id: campId }); if (r.error) throw r.error; return r.data === true; } });
 
   const { isOnline, queueCount, isFlushing, flushNow, refreshQueue } = useCampCheckinSync(
     campId ?? '',
@@ -85,12 +84,12 @@ export default function CampMobileCheckinScreen() {
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       // Auth gate parity with web (web redirects to /auth?redirect=...).
-      navigation.navigate('Auth' as never);
+      navigation.navigate('AuthStack', { screen: 'Auth' });
     }
   }, [authLoading, isAuthenticated, navigation]);
 
   const { data: camp, isLoading: campLoading } = useQuery({
-    queryKey: ['camp-mobile-checkin-camp', campId],
+    queryKey: ['camp-mobile-checkin-camp', campId, user?.id],
     queryFn: async () => {
       if (!campId) return null;
       const { data, error } = await supabase
@@ -101,46 +100,46 @@ export default function CampMobileCheckinScreen() {
       if (error) throw error;
       return data as CampSummary | null;
     },
-    enabled: !!campId,
+    enabled: !!campId && isAuthenticated,
   });
 
-  const { data: enrollments = [], isLoading: enrollmentsLoading } = useQuery({
-    queryKey: ['camp-ops-enrollments', campId],
+  const { data: enrollments = [], isLoading: enrollmentsLoading,isError:rosterError,refetch:reloadRoster } = useQuery({
+    queryKey: ['camp-ops-enrollments', campId, user?.id],
     queryFn: async () => {
       if (!campId) return [];
       const { data, error } = await supabase
         .from('camp_enrollments')
         .select(
-          'id, camp_id, status, jersey_number, position_group, qr_code_token, checked_in_at, notes',
+          'id, camp_id, guest_name, status, jersey_number, position_group, qr_code_token, checked_in_at, notes',
         )
         .eq('camp_id', campId)
+        .neq('status','cancelled')
         .order('created_at', { ascending: true });
       if (error) throw error;
-      return (data || []) as Enrollment[];
+      const rows=data||[];let names:Record<string,string>={};
+      if(rows.length){const profiles=await supabase.from('camp_registrant_profiles').select('enrollment_id,full_name').in('enrollment_id',rows.filter(row=>row.status!=='checked_in'&&row.status!=='cancelled').slice(0,25).map(row=>row.id));if(profiles.error)throw profiles.error;names=Object.fromEntries((profiles.data||[]).map(p=>[p.enrollment_id,p.full_name]));}
+      return rows.map(row=>({...row,full_name:names[row.id]||row.guest_name||undefined})) as Enrollment[];
     },
-    enabled: !!campId,
+    enabled: !!campId && access.data===true,
     refetchInterval: isOnline ? 8000 : false,
   });
 
   const checkInMutation = useMutation({
     mutationFn: async (enrollmentId: string) => {
+      if (!campId || !user?.id) throw new Error('Sign in as camp registration staff.');
+      let enrollment = enrollments.find(row => row.id === enrollmentId);
+      if(!enrollment?.qr_code_token){const fresh=await supabase.from('camp_enrollments').select('qr_code_token').eq('id',enrollmentId).eq('camp_id',campId).single();if(fresh.error)throw fresh.error;enrollment=fresh.data as Enrollment;}
+      if (!enrollment?.qr_code_token) throw new Error('Reload the camp roster before checking in this athlete.');
       if (!isOnline) {
         await enqueueOp({
-          kind: 'check_in',
-          campId: campId ?? '',
-          payload: { enrollmentId },
+          kind: 'qr_check_in',
+          campId,
+          payload: { token: enrollment.qr_code_token, staffId: user.id },
         });
         await refreshQueue();
         return { queued: true as const, enrollmentId };
       }
-      const { error } = await supabase
-        .from('camp_enrollments')
-        .update({
-          status: 'checked_in',
-          checked_in_at: new Date().toISOString(),
-        } as any)
-        .eq('id', enrollmentId);
-      if (error) throw error;
+      await checkInNativeToken(campId, enrollment.qr_code_token, user.id);
       return { queued: false as const, enrollmentId };
     },
     onSuccess: (result) => {
@@ -159,46 +158,26 @@ export default function CampMobileCheckinScreen() {
     },
   });
 
-  const handleScanned = (decoded: string) => {
-    const trimmed = decoded.trim();
-    let token = trimmed;
+  const scanning = React.useRef(false);
+  const handleScanned = async (decoded: string): Promise<string> => {
+    if (scanning.current) throw new Error('A check-in is already being processed.');
+    if (!user || access.data !== true) throw new Error('Camp registration staff access required.');
+    scanning.current = true;
     try {
-      // RN doesn't have URL constructor on all engines; guard.
-      const url = new URL(trimmed);
-      const candidate =
-        url.searchParams.get('token') || url.pathname.split('/').filter(Boolean).pop() || '';
-      if (candidate) token = candidate;
-    } catch {
-      // not a URL — use the raw value
-    }
-
-    const match = enrollments.find(
-      (e) =>
-        e.qr_code_token === token ||
-        (e.qr_code_token && e.qr_code_token.startsWith(token)),
-    );
-    if (!match) {
-      toast({
-        title: 'No match',
-        description: 'No enrollment found for that QR code.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    if (match.status === 'checked_in') {
-      toast({
-        title: 'Already checked in',
-        description: `Athlete #${match.jersey_number || match.id.slice(0, 8)}`,
-      });
-      return;
-    }
-    checkInMutation.mutate(match.id);
+      const token = decodeCampToken(decoded);
+      if (!isOnline) {
+        await enqueueOp({ kind: 'qr_check_in', campId: campId!, payload: { token, staffId: user.id } });
+        await refreshQueue();
+        return 'QR saved offline. Check-in will be validated when connected.';
+      }
+      const result = await checkInNativeToken(campId!, token, user.id);
+      await queryClient.invalidateQueries({ queryKey: ['camp-ops-enrollments', campId] });
+      return result.status === 'already_checked_in' ? 'Already checked in. No duplicate was created.' : 'Athlete checked in.';
+    } finally { scanning.current = false; }
   };
-
-  const handleManualSubmit = () => {
-    if (!manualToken.trim()) return;
-    handleScanned(manualToken);
-    setManualToken('');
+  const handleManualSubmit = async () => {
+    try { const result = await handleScanned(manualToken); setCheckinMessage(result); setManualToken(''); }
+    catch (error: any) { setCheckinMessage(error.message || 'Could not check in.'); }
   };
 
   const stats = useMemo(() => {
@@ -211,7 +190,7 @@ export default function CampMobileCheckinScreen() {
     .filter((e) => e.status !== 'checked_in' && e.status !== 'cancelled')
     .slice(0, 25);
 
-  if (authLoading || campLoading) {
+  if (authLoading || !isAuthenticated || campLoading) {
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -275,7 +254,7 @@ export default function CampMobileCheckinScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
         {!isOwner ? (
           <Card>
             <CardContent style={{ paddingVertical: 12 }}>
@@ -328,36 +307,11 @@ export default function CampMobileCheckinScreen() {
           </TabsList>
 
           <TabsContent value="scan">
-            <Card>
-              <CardHeader style={{ paddingBottom: spacing.xs }}>
-                <CardTitle>Scan athlete QR</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {/* PORT-PENDING: when expo-camera/expo-barcode-scanner is added to package.json,
-                    replace this stub with a real <BarCodeScanner onBarCodeScanned={...} />.
-                    On mount, request permission via
-                      const { status } = await Camera.requestCameraPermissionsAsync();
-                    Handle "granted" / "denied" states with user-facing messaging and a
-                    Settings deep-link. Decoded string should be passed to handleScanned(). */}
-                <View style={styles.scanStub}>
-                  <QrCode size={48} color={colors.mutedForeground} />
-                  <Text style={[styles.muted, { textAlign: 'center', marginTop: 12 }]}>
-                    Camera-based QR scanning is not yet wired in the native app. Use the Manual tab
-                    to paste a token.
-                  </Text>
-                  <Button
-                    variant="outline"
-                    style={{ marginTop: 12 }}
-                    onPress={() => setTab('manual')}>
-                    Open manual entry
-                  </Button>
-                </View>
-              </CardContent>
-            </Card>
+            {access.data === true ? <CampQrScanner onCode={handleScanned} onManual={() => setTab('manual')} /> : <Text style={styles.muted}>{access.isPending ? 'Checking check-in access…' : 'Only camp registration staff can check in athletes.'}</Text>}
           </TabsContent>
 
           <TabsContent value="manual">
-            <Card>
+            {access.data === true ? <Card>
               <CardHeader style={{ paddingBottom: spacing.xs }}>
                 <CardTitle>Enter token</CardTitle>
               </CardHeader>
@@ -367,20 +321,21 @@ export default function CampMobileCheckinScreen() {
                     <Input
                       value={manualToken}
                       onChangeText={setManualToken}
-                      placeholder="Paste QR token"
+                      testID="camp-manual-token" placeholder="Paste complete QR token"
                       onSubmitEditing={handleManualSubmit}
                       autoCapitalize="none"
                       autoCorrect={false}
                     />
                   </View>
                   <Button
-                    onPress={handleManualSubmit}
+                    testID="camp-manual-submit" onPress={() => { void handleManualSubmit(); }}
                     disabled={!manualToken.trim()}
                     style={{ marginLeft: 8 }}>
                     <UserCheck size={16} color={colors.primaryForeground} />
                   </Button>
                 </View>
 
+                <Text testID="camp-manual-result" style={styles.muted}>{checkinMessage}</Text>
                 <Text style={[styles.label, { marginTop: 16 }]}>
                   Pending ({pendingList.length})
                 </Text>
@@ -388,19 +343,19 @@ export default function CampMobileCheckinScreen() {
                   <View style={{ paddingVertical: 24, alignItems: 'center' }}>
                     <ActivityIndicator color={colors.primary} />
                   </View>
-                ) : pendingList.length === 0 ? (
+                ) : rosterError ? <View><Text accessibilityRole="alert" style={styles.muted}>Participants could not load.</Text><Button onPress={()=>void reloadRoster()}>Retry participants</Button></View> : pendingList.length === 0 ? (
                   <Text style={[styles.muted, { textAlign: 'center', paddingVertical: 16 }]}>
-                    Everyone is checked in 🎉
+                    {enrollments.length?'Everyone is checked in 🎉':'No participants have registered yet.'}
                   </Text>
                 ) : (
                   pendingList.map((e) => (
-                    <View key={e.id} style={styles.pendingRow}>
+                    <View key={e.id} style={[styles.pendingRow,{flexDirection:'column',alignItems:'stretch',gap:8}]}>
                       <View style={styles.pendingLeft}>
                         {e.jersey_number ? (
                           <Text style={styles.jersey}>{e.jersey_number}</Text>
                         ) : null}
                         <Text style={styles.pendingId} numberOfLines={1}>
-                          #{e.id.slice(0, 8)}
+                          {e.full_name||e.guest_name||`Registration ${e.id.slice(0,8)}`}
                         </Text>
                         {e.position_group ? (
                           <Badge variant="outline" style={styles.posBadge}>
@@ -408,7 +363,9 @@ export default function CampMobileCheckinScreen() {
                           </Badge>
                         ) : null}
                       </View>
+                      <CampGuardianWaiver campId={campId!} enrollmentId={e.id}/>
                       <Button
+                        accessibilityLabel={`Check in ${e.full_name||e.guest_name||'participant'}`}
                         size="sm"
                         variant="secondary"
                         onPress={() => checkInMutation.mutate(e.id)}
@@ -419,19 +376,11 @@ export default function CampMobileCheckinScreen() {
                   ))
                 )}
               </CardContent>
-            </Card>
+            </Card> : <Text style={styles.muted}>Only camp registration staff can check in athletes.</Text>}
           </TabsContent>
 
           <TabsContent value="walkup">
-            {/* PORT-PENDING: Lovable CampWalkupRegistration not yet ported to RN. */}
-            <Card>
-              <CardContent style={{ paddingVertical: 24 }}>
-                <Text style={[styles.muted, { textAlign: 'center' }]}>
-                  Walk-up registration form is coming soon to the native app. For now, register the
-                  athlete on the web dashboard, then check them in here.
-                </Text>
-              </CardContent>
-            </Card>
+            <CampGuestWalkupForm campId={campId!} positions={camp.positions ?? []} online={isOnline} refreshQueue={refreshQueue} onCheckIn={id=>checkInMutation.mutate(id)} checkInBusy={checkInMutation.isPending} onRoster={()=>navigation.navigate('CampDetail',{campId})} />
           </TabsContent>
         </Tabs>
 

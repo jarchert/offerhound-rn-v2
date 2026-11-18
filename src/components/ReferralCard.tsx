@@ -1,3 +1,4 @@
+import {getCanonicalOrigin} from '@/lib/canonicalDomain';
 // Verbatim port of Lovable's src/components/ReferralCard.tsx
 // React Native adaptations:
 //   - lucide-react              → lucide-react-native
@@ -55,7 +56,7 @@ function useReferrals() {
   }, []);
 
   const shareReferralLink = useCallback(async (): Promise<'shared' | 'copied' | 'failed'> => {
-    const productionUrl = 'https://offer-hound.com';
+    const productionUrl = getCanonicalOrigin();
     const link = referralCode ? `${productionUrl}/pricing?ref=${referralCode}` : '';
     if (!link) return 'failed';
     try {
@@ -152,7 +153,7 @@ export function ReferralCard() {
     );
   }
 
-  const productionUrl = 'https://offer-hound.com';
+  const productionUrl = getCanonicalOrigin();
   const referralLink = referralCode ? `${productionUrl}/pricing?ref=${referralCode}` : '';
 
   const handleCopy = async () => {

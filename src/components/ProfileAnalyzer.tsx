@@ -1,3 +1,4 @@
+import { profileAnalysisError } from '@/lib/profileAnalysisError';
 // ProfileAnalyzer — RN port of Lovable src/components/ProfileAnalyzer.tsx.
 // Verbatim structure / copy preserved. Tailwind classes translated to RN
 // StyleSheet using the design tokens from `@/lib/theme`. The Lovable
@@ -25,7 +26,6 @@ import { Progress } from '@/components/ui/Progress';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { PatentPendingBadge } from '@/components/ui/PatentPendingBadge';
-import { toast } from '@/components/ui/toast';
 import { supabase } from '@/integrations/supabase/client';
 import { colors, typography, spacing, radius } from '@/lib/theme';
 
@@ -87,9 +87,8 @@ function useProfileAnalysis() {
       setAnalysis(data as ProfileAnalysis);
       return data as ProfileAnalysis;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to analyze profile';
+      const message = profileAnalysisError(err);
       setError(message);
-      toast.error(message);
       return null;
     } finally {
       setIsLoading(false);
@@ -163,7 +162,7 @@ function getPriorityIcon(priority: string) {
 }
 
 export function ProfileAnalyzer({ profileId, autoAnalyze = true }: ProfileAnalyzerProps) {
-  const { analysis, isLoading, analyzeProfile, refreshAnalysis } = useProfileAnalysis();
+  const { analysis, isLoading, error, analyzeProfile, refreshAnalysis } = useProfileAnalysis();
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
 
   useEffect(() => {
@@ -199,10 +198,11 @@ export function ProfileAnalyzer({ profileId, autoAnalyze = true }: ProfileAnalyz
           <Text style={s.emptyDesc}>
             Get personalized recommendations to improve your profile visibility to coaches using our patent-pending AI.
           </Text>
+          {error ? <Text accessibilityRole="alert" style={s.emptyDesc}>{error}</Text> : null}
           <Button variant="hero" onPress={() => analyzeProfile(profileId)}>
             <View style={s.btnInner}>
               <Sparkles width={16} height={16} color={colors.primaryForeground} />
-              <Text style={s.btnHeroText}>Analyze My Profile</Text>
+              <Text style={s.btnHeroText}>{error ? 'Retry profile analysis' : 'Analyze My Profile'}</Text>
             </View>
           </Button>
         </CardContent>

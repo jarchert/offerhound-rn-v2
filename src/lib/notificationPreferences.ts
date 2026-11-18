@@ -1,0 +1,6 @@
+export const preferenceDefaults={messages_in_app:true,recruiting_in_app:true,camps_in_app:true,camps_email:true};
+export type PreferenceKey=keyof typeof preferenceDefaults;
+export const preferenceFields=Object.keys(preferenceDefaults).join(',');
+export function normalizePreferences(row:any){return Object.fromEntries(Object.entries(preferenceDefaults).map(([key,value])=>[key,typeof row?.[key]==='boolean'?row[key]:value])) as typeof preferenceDefaults;}
+export async function loadPreferences(client:any,userId:string){if(!userId)throw Error('Sign in to manage notifications.');const {data,error}=await client.from('notification_preferences').select(preferenceFields).eq('user_id',userId).maybeSingle();if(error)throw error;return normalizePreferences(data);}
+export async function savePreference(client:any,userId:string,key:PreferenceKey,value:boolean){if(!userId||!(key in preferenceDefaults)||typeof value!=='boolean')throw Error('Invalid notification preference.');const {data,error}=await client.from('notification_preferences').upsert({user_id:userId,[key]:value},{onConflict:'user_id'}).select(preferenceFields).single();if(error)throw error;if(!data||data[key]!==value)throw Error('The setting was not saved.');return normalizePreferences(data);}

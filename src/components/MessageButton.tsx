@@ -8,18 +8,20 @@ import type { RootStackParamList } from '@/navigation/RootNavigator';
 
 interface Props {
   recipientId: string;
+  athleteProfileId?: string;
+  recipientRole?: string;
   recipientName?: string;
   label?: string;
   compact?: boolean;
 }
 
-export function MessageButton({ recipientId, recipientName, label = 'Message', compact = false }: Props) {
+export function MessageButton({ recipientId, recipientName, athleteProfileId, recipientRole, label = 'Message', compact = false }: Props) {
   const nav = useNavigation<NavigationProp<RootStackParamList>>();
   const handle = () => {
-    nav.navigate('Messages' as any, { recipientId, recipientName } as any);
+    nav.navigate('DirectMessageDraft', athleteProfileId ? {athleteProfileId} : {recipientUserId:recipientId,recipientRole});
   };
   return (
-    <Pressable style={[s.btn, compact && s.compact]} onPress={handle}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`${label}${recipientName ? ` ${recipientName}` : ''}`} style={[s.btn, compact && s.compact]} onPress={handle}>
       <MessageSquare size={compact ? 14 : 16} color={colors.primaryForeground} />
       {!compact && <Text style={s.text}>{label}</Text>}
     </Pressable>

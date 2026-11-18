@@ -1,3 +1,5 @@
+import { requirePurchaseService } from '@/lib/purchaseReadiness';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/integrations/supabase/client';
 /**
  * In-App Purchase wrapper around `expo-iap` (v4.x, OpenIAP-compliant).
  *
@@ -184,6 +186,7 @@ export async function fetchConsumables(): Promise<Product[]> {
  * once the modal has been presented and the user has acted on it.
  */
 export async function purchaseSubscription(sku: string): Promise<Purchase | Purchase[] | null> {
+  await requirePurchaseService(SUPABASE_URL, SUPABASE_ANON_KEY);
   if (!connected) await initIAP();
   const result = await requestPurchase({
     type: 'subs',
@@ -200,6 +203,7 @@ export async function purchaseSubscription(sku: string): Promise<Purchase | Purc
 
 /** Request a one-time (consumable) purchase, e.g. a single Camp Manager event. */
 export async function purchaseConsumable(sku: string): Promise<Purchase | Purchase[] | null> {
+  await requirePurchaseService(SUPABASE_URL, SUPABASE_ANON_KEY);
   if (!connected) await initIAP();
   const result = await requestPurchase({
     type: 'in-app',

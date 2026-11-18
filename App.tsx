@@ -2,11 +2,11 @@ import 'react-native-url-polyfill/auto';
 import 'react-native-gesture-handler';
 
 import React, { useCallback, useEffect } from 'react';
-import { AppState, View, StyleSheet, ActivityIndicator } from 'react-native';
+import { AppState,View,Text,Pressable,StyleSheet,ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer,DarkTheme,DefaultTheme } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider, onlineManager, focusManager } from '@tanstack/react-query';
 import NetInfo from '@react-native-community/netinfo';
 import Toast from 'react-native-toast-message';
@@ -19,8 +19,8 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 
-import { AuthProvider } from '@/contexts/AuthContext';
-import { ThemeProvider } from '@/contexts/ThemeContext';
+import { AuthProvider,useAuth } from '@/contexts/AuthContext';
+import { ThemeProvider,useTheme } from '@/contexts/ThemeContext';
 import { SportProvider } from '@/contexts/SportContext';
 import { ImpersonationProvider } from '@/contexts/ImpersonationContext';
 import { AthleteProfileProvider } from '@/contexts/AthleteProfileContext';
@@ -36,6 +36,17 @@ import ImpersonationBanner from '@/components/ImpersonationBanner';
 import { FirstLaunchConsentModal, useCookieConsent } from '@/components/FirstLaunchConsentModal';
 import { initIAP, teardownIAP } from '@/lib/iap';
 import { colors } from '@/lib/theme';
+import {resolvedPalette} from '@/lib/adaptiveTheme';
+
+function ThemedNavigation({children}:{children:React.ReactNode}) {
+  const {theme}=useTheme();const palette=resolvedPalette(theme),base=theme==='dark'?DarkTheme:DefaultTheme;
+  const {isLoading,user,userRole,roleError,retryRoleLookup,signOut}=useAuth();
+  if(user&&roleError)return <View style={{flex:1,backgroundColor:palette.background,alignItems:'center',justifyContent:'center',padding:24,gap:16}}><Text style={{color:palette.foreground}}>Your account role could not be loaded.</Text><Pressable accessibilityRole="button" onPress={()=>void retryRoleLookup()}><Text style={{color:palette.primary}}>Retry account loading</Text></Pressable><Pressable accessibilityRole="button" onPress={()=>void signOut()}><Text style={{color:palette.foreground}}>Sign out</Text></Pressable></View>;
+  // Resolve the session before React Navigation consumes a cold-start link.
+  if(isLoading||(user&&!userRole))return <View style={{flex:1,backgroundColor:palette.background,alignItems:'center',justifyContent:'center'}}><ActivityIndicator accessibilityLabel="Restoring session" color={palette.primary}/></View>;
+  return <NavigationContainer ref={navigationRef} linking={linking} theme={{...base,colors:{...base.colors,background:palette.background,card:palette.card,text:palette.foreground,border:palette.border,primary:palette.primary}}}>{children}</NavigationContainer>;
+}
+function ThemedStatusBar(){const {theme}=useTheme();return <StatusBar style={theme==='dark'?'light':'dark'}/>;}
 
 // Keep the native splash visible until fonts + providers are ready.
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -113,7 +124,7 @@ export default function App() {
                     <ImpersonationProvider>
                       <AthleteProfileProvider>
                         <PodcastPlayerProvider>
-                          <NavigationContainer ref={navigationRef} linking={linking}>
+                          <ThemedNavigation>
                             <ImpersonationBanner />
                             <OfflineBanner />
                             <RootNavigator />
@@ -123,9 +134,9 @@ export default function App() {
                               onAcceptEssential={handleAcceptEssential}
                               onCustomize={handleCustomize}
                             />
-                          </NavigationContainer>
+                          </ThemedNavigation>
                           <Toast />
-                          <StatusBar style="light" />
+                          <ThemedStatusBar />
                         </PodcastPlayerProvider>
                       </AthleteProfileProvider>
                     </ImpersonationProvider>

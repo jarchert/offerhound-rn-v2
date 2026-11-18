@@ -1,3 +1,7 @@
+import {CreatorGalleryImage} from '@/components/influencer/CreatorGalleryImage';
+import {ProfileUnavailable} from '@/components/ProfileUnavailable';
+import {useVideoPlayer,VideoView} from 'expo-video';
+import {Dialog,DialogContent,DialogHeader,DialogTitle} from '@/components/ui/Dialog';
 // Ported from Lovable web src/pages/InfluencerProfile.tsx (317 LOC).
 // Web → RN translation:
 //   - useParams → useRoute<RouteProp>().params
@@ -7,7 +11,7 @@
 //   - <img>/<video> → Image + expo-av Video for inline video
 //   - external <a href> → Linking.openURL
 //   - Tailwind/responsive grids → ScrollView columns + StyleSheet
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import {
   View,
   Text,
@@ -68,48 +72,44 @@ export default function InfluencerProfileScreen() {
   const { params } = useRoute<R>();
   const handle = params?.handle;
   const nav = useNavigation<any>();
-  const { user } = useAuth();
+  const { user,isLoading:authRestoring } = useAuth();
 
-  const { data: influencer, isLoading } = useQuery({
-    queryKey: ['influencer-profile', handle],
+  const { data: influencer, isLoading,isError:profileFailed,refetch:retryProfile } = useQuery({
+    queryKey: ['influencer-profile', user?.id, handle],
     queryFn: async () => {
       if (!handle) return null;
-      const { data } = await supabase
+      const { data,error } = await supabase
         .from('influencer_profiles' as any)
         .select('*')
         .eq('handle', handle)
         .maybeSingle();
+      if(error)throw error;
       return data as any;
     },
-    enabled: !!handle,
+    enabled: !!handle&&!authRestoring,
   });
 
   const influencerId = influencer?.id;
-  const { data: posts = [] } = useInfluencerPosts(influencerId);
-  const { data: blogs = [] } = useInfluencerBlogPosts(influencerId);
-  const { data: podcasts = [] } = useInfluencerLinkedPodcasts(influencerId);
-  const { data: gallery = [] } = useInfluencerGallery(influencerId);
-  const { data: socialLinks = [] } = useInfluencerSocialLinks(influencerId);
-  const { data: followerCount = 0 } = useFollowerCount(influencerId);
-  const { data: isFollowing } = useIsFollowing(influencerId);
-  const { follow, unfollow } = useFollowInfluencer();
+  const { data: posts = [], isError: postsFailed, refetch: retryposts } = useInfluencerPosts(influencerId);
+  const { data: blogs = [], isError: blogsFailed, refetch: retryblogs } = useInfluencerBlogPosts(influencerId);
+  const { data: podcasts = [], isError: podcastsFailed, refetch: retrypodcasts } = useInfluencerLinkedPodcasts(influencerId);
+  const { data: gallery = [], isError:galleryFailed, refetch:reloadGallery } = useInfluencerGallery(influencerId);
+  const [videoPreview,setVideoPreview]=useState<string|null>(null);
+  const { data: socialLinks = [], isError: socialLinksFailed, refetch: retrysocialLinks } = useInfluencerSocialLinks(influencerId);
+  const { data: followerCount, isError: followersFailed, refetch: retryFollowers } = useFollowerCount(influencerId);
+  const { data: isFollowing, isLoading: followingLoading, isError: followingFailed, refetch: retryFollowing } = useIsFollowing(influencerId);
+  const { follow, unfollow, isFollowing: followPending, isUnfollowing: unfollowPending } = useFollowInfluencer();
 
   const [tab, setTab] = useState<string>('posts');
 
-  if (isLoading) {
+  if (isLoading||authRestoring) {
     return (
       <View style={s.center}>
         <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
-  if (!influencer) {
-    return (
-      <View style={s.center}>
-        <Text style={s.muted}>Influencer not found.</Text>
-      </View>
-    );
-  }
+  if(profileFailed||!influencer)return <ProfileUnavailable kind="influencer" id={handle} failed={profileFailed} retry={retryProfile}/>;
 
   const isOwner = user?.id === influencer.user_id;
   const region = [influencer.region_city, influencer.region_state].filter(Boolean).join(', ');
@@ -121,6 +121,7 @@ export default function InfluencerProfileScreen() {
         description={influencer.bio?.slice(0, 155)}
       />
       <ScrollView contentContainerStyle={s.scroll}>
+        {(postsFailed || blogsFailed || podcastsFailed || socialLinksFailed || followersFailed) ? <View><Text accessibilityRole="alert">Some creator profile details could not be loaded.</Text><Button onPress={() => {void retryposts();void retryblogs();void retrypodcasts();void retrysocialLinks();void retryFollowers();}}>Retry profile content</Button></View> : null}
         {/* HERO */}
         <View style={s.hero}>
           <BackButton />
@@ -164,16 +165,18 @@ export default function InfluencerProfileScreen() {
                 <Badge variant="outline">
                   <View style={s.iconBadge}>
                     <Users size={12} color={colors.foreground} />
-                    <Text style={s.iconBadgeText}>{Number(followerCount).toLocaleString()} followers</Text>
+                    <Text style={s.iconBadgeText}>{followersFailed ? "Unavailable" : followerCount == null ? "…" : Number(followerCount).toLocaleString()} followers</Text>
                   </View>
                 </Badge>
               </View>
 
               {!!influencer.bio && <Text style={s.bio}>{influencer.bio}</Text>}
 
+              {followingFailed ? <Button onPress={() => void retryFollowing()}>Could not load follow status. Retry</Button> : null}
               <View style={s.ctaRow}>
                 {!isOwner && user && (
                   <Button
+                    disabled={followingLoading || followingFailed || followPending || unfollowPending}
                     variant={isFollowing ? 'outline' : 'default'}
                     onPress={() =>
                       isFollowing
@@ -200,6 +203,7 @@ export default function InfluencerProfileScreen() {
                 {!isOwner && user && (
                   <MessageButton
                     recipientId={influencer.user_id}
+                    recipientRole="influencer"
                     recipientName={influencer.display_name}
                   />
                 )}
@@ -311,20 +315,14 @@ export default function InfluencerProfileScreen() {
 
             {/* MEDIA */}
             <TabsContent value="media">
-              {gallery.length === 0 ? (
+              {galleryFailed?<View><Text accessibilityRole="alert" style={{color:colors.foreground}}>Could not load media.</Text><Button onPress={()=>reloadGallery()}>Retry media</Button></View>:gallery.length === 0 ? (
                 <EmptyState Icon={ImageIcon} text="No media uploaded yet." />
               ) : (
                 <View style={s.mediaGrid}>
                   {gallery.map((m: any) => (
-                    <View key={m.id} style={s.mediaCell}>
-                      {/* PORT-PENDING: video tiles use Image as a placeholder
-                          poster; expo-av Video integration tracked separately. */}
-                      <Image
-                        source={{ uri: m.thumbnail_url || m.file_url }}
-                        style={s.mediaImg}
-                        resizeMode="cover"
-                      />
-                    </View>
+                    m.file_type==='video' ? <Pressable key={m.id} accessibilityRole="button" accessibilityLabel={`Play ${m.title||'video'}`} style={s.mediaCell} onPress={()=>setVideoPreview(m.file_url)}>
+                      {m.thumbnail_url?<Image source={{uri:m.thumbnail_url}} style={s.mediaImg} resizeMode="cover"/>:<View style={{flex:1,alignItems:'center',justifyContent:'center'}}><Text style={{color:colors.foreground}}>▶ Play video</Text></View>}
+                    </Pressable>:<View key={m.id} style={s.mediaCell}><CreatorGalleryImage uri={m.thumbnail_url||m.file_url} title={m.title} isWatermarked={m.is_watermarked} style={s.mediaImg}/></View>
                   ))}
                 </View>
               )}
@@ -398,6 +396,7 @@ export default function InfluencerProfileScreen() {
           </Tabs>
         </View>
 
+        <Dialog open={!!videoPreview} onOpenChange={open=>{if(!open)setVideoPreview(null);}}><DialogContent><DialogHeader><DialogTitle>Video</DialogTitle></DialogHeader>{videoPreview?<InfluencerVideoPreview uri={videoPreview}/>:null}<Button onPress={()=>setVideoPreview(null)}>Close video</Button></DialogContent></Dialog>
         <Footer />
       </ScrollView>
     </View>
@@ -464,3 +463,9 @@ const s = StyleSheet.create({
 
   emptyContent: { paddingVertical: 48, alignItems: 'center', gap: spacing.sm },
 });
+
+function InfluencerVideoPreview({uri}:{uri:string}){
+ const player=useVideoPlayer(uri,p=>{p.loop=false;});const [failed,setFailed]=useState(false);
+ useEffect(()=>{const listener=player.addListener('statusChange',event=>setFailed(event.status==='error'));return()=>listener.remove();},[player]);
+ return <View><VideoView player={player} nativeControls fullscreenOptions={{enable:true}} style={{width:'100%',height:260}}/>{failed?<Text accessibilityRole="alert" style={{color:colors.foreground}}>Video could not be played. Close it and retry.</Text>:null}</View>;
+}

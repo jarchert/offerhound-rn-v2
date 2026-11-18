@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';import ts from 'typescript';
+const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/notificationPreferences.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports});
+const {loadPreferences,savePreference,preferenceDefaults,normalizePreferences}=exports;
+let rows=new Map(),owner='a',fail=false,calls=[];
+const client={from:table=>{assert.equal(table,'notification_preferences');let payload,key;const q={select:()=>q,eq:(_column,id)=>{key=id;return q},maybeSingle:async()=>{if(fail)return {error:Error('offline')};return {data:key===owner?rows.get(key):null}},upsert:(data,options)=>{payload=data;calls.push(data);assert.equal(options.onConflict,'user_id');return q},single:async()=>{if(fail||payload.user_id!==owner)return {error:Error('denied')};const row={...preferenceDefaults,...rows.get(owner),...payload};rows.set(owner,row);return {data:row}}};return q;}};
+assert.deepEqual(JSON.parse(JSON.stringify(await loadPreferences(client,'a'))),{messages_in_app:true,recruiting_in_app:true,camps_in_app:true,camps_email:true});assert.equal(rows.size,0);
+let saved=await savePreference(client,'a','messages_in_app',false);assert.equal(saved.messages_in_app,false);assert.deepEqual(Object.keys(calls[0]).sort(),['messages_in_app','user_id']);assert.equal((await loadPreferences(client,'a')).messages_in_app,false);
+await savePreference(client,'a','camps_email',false);assert.equal((await loadPreferences(client,'a')).messages_in_app,false);
+owner='b';assert.equal((await loadPreferences(client,'b')).messages_in_app,true);await assert.rejects(()=>savePreference(client,'a','messages_in_app',true));
+owner='a';fail=true;await assert.rejects(()=>loadPreferences(client,'a'));await assert.rejects(()=>savePreference(client,'a','messages_in_app',true));assert.equal(rows.get('a').messages_in_app,false);fail=false;assert.equal((await savePreference(client,'a','messages_in_app',true)).messages_in_app,true);
+await assert.rejects(()=>savePreference(client,'a','weekly_digest',true));await assert.rejects(()=>loadPreferences(client,''));assert.equal(normalizePreferences({messages_in_app:null,camps_email:false}).messages_in_app,true);
+console.log('PASS: actual native notification contract defaults without writes, single-field confirmed saves, reload, account-scoped requests, load/save failures and explicit retry. Server RLS independently tested on staging.');

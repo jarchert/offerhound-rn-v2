@@ -1,3 +1,5 @@
+import {acceptedRoster,openRoster} from '@/lib/teamMembership';
+import {useAuth} from '@/hooks/useAuth';
 // Ported from Lovable web: src/components/club/TeamRosterAthleteCard.tsx
 // Translations:
 //   <div>/<p>/<h3>/<span>/<a> → <View>/<Text>/<Pressable>+Linking
@@ -51,6 +53,8 @@ interface RosterRow {
   school?: string | null;
   graduation_year?: number | null;
   status?: string | null;
+  removed_at?: string|null;
+  athlete_accepted_at?: string|null;
   parent_name?: string | null;
   parent_email?: string | null;
   zorts_completed?: boolean | null;
@@ -63,6 +67,7 @@ interface RosterRow {
 
 interface Props {
   roster: RosterRow;
+  invitationStates?:string[];
   /** Coach can manage roster (resend invite, mark zorts, remove, parent invite). */
   canManage: boolean;
   /** Coach can message + view profile (club coach owner OR team staff). */
@@ -82,6 +87,7 @@ interface Props {
  */
 export function TeamRosterAthleteCard({
   roster,
+  invitationStates=[],
   canManage,
   canMessage,
   resendInvitePending,
@@ -93,27 +99,31 @@ export function TeamRosterAthleteCard({
   onSendLetter,
 }: Props) {
   const navigation = useNavigation<any>();
+  const {user}=useAuth();
+  const accepted=acceptedRoster(roster);
   const [expanded, setExpanded] = useState(false);
 
-  const { data: profile } = useQuery({
-    queryKey: ['roster-player-profile', roster.athlete_profile_id, expanded],
+  const { data: loadedProfile,isPending:profileLoading,isError:profileError,refetch:refetchProfile } = useQuery({
+    queryKey: ['roster-player-profile',user?.id,roster.athlete_profile_id,roster.athlete_accepted_at,expanded],
     queryFn: async () => {
       if (!roster.athlete_profile_id) return null;
-      const { data } = await supabase
+      const { data,error } = await supabase
         .from('player_profiles')
         .select(
           'id, full_name, profile_image_url, position, school, graduation_year, city, state, height, weight, gpa, custom_url, is_published, sport, bio',
         )
         .eq('id', roster.athlete_profile_id)
         .maybeSingle();
+      if(error)throw error;
       return data;
     },
-    enabled: !!roster.athlete_profile_id && expanded,
+    enabled: !!user&&accepted&&expanded,
   });
 
+  const profile=accepted?loadedProfile:null;
   const isPublished = !!profile?.is_published;
   const displayName = profile?.full_name || roster.athlete_name;
-  const profileImg = profile?.profile_image_url || roster.player_profiles?.profile_image_url || null;
+  const profileImg = accepted?(profile?.profile_image_url || roster.player_profiles?.profile_image_url || null):null;
   const position = profile?.position || roster.position;
   const school = profile?.school || roster.school;
   const gradYear = profile?.graduation_year || roster.graduation_year;
@@ -155,12 +165,12 @@ export function TeamRosterAthleteCard({
               <Text style={s.name} numberOfLines={1}>{displayName}</Text>
               <Badge variant={statusVariant(roster.status)} style={s.tinyBadge}>
                 <Text style={s.tinyBadgeText}>
-                  {(roster.status || '').replace(/_/g, ' ')}
+                  {!openRoster(roster)?(roster.status||'Closed').replace(/_/g,' '):accepted?'Accepted team member':roster.athlete_profile_id?'Awaiting acceptance':'Profile not linked'}
                 </Text>
               </Badge>
               {isPublished && (
                 <Badge variant="success" style={s.tinyBadge}>
-                  <Text style={[s.tinyBadgeText, { color: '#fff' }]}>Public</Text>
+                  <Text style={[s.tinyBadgeText, { color: '#fff' }]}>Published</Text>
                 </Badge>
               )}
               {roster.zorts_completed ? (
@@ -241,7 +251,7 @@ export function TeamRosterAthleteCard({
               <Text style={s.italicNote}>
                 No OfferHound profile yet — invitation pending.
               </Text>
-            ) : !profile ? (
+            ) : !accepted ? <Text style={s.italicNote}>Awaiting athlete or guardian acceptance.</Text> : profileError ? <Button onPress={()=>void refetchProfile()}>Retry profile preview</Button> : !profile&&!profileLoading ? <Text style={s.italicNote}>The athlete's privacy settings do not share this profile with this team.</Text> : !profile ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <ActivityIndicator size="small" color={colors.mutedForeground} />
                 <Text style={s.italicNote}>Loading profile…</Text>
@@ -268,12 +278,15 @@ export function TeamRosterAthleteCard({
           </View>
         ) : null}
 
+        {invitationStates.map((state,index)=><Text key={`${state}:${index}`} style={{color:colors.mutedForeground}}>Invitation {state}</Text>)}
+
         {/* Action row */}
         <View style={s.actionRow}>
-          {canMessage && roster.athlete_profile_id ? (
+          {canMessage && accepted && (profile||roster.player_profiles) && roster.athlete_profile_id ? (
             <View style={{ flex: 1, minWidth: 90 }}>
               <MessageButton
                 recipientId={roster.athlete_profile_id}
+                athleteProfileId={roster.athlete_profile_id}
                 recipientName={displayName}
               />
             </View>
