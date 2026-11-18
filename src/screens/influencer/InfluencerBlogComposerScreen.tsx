@@ -190,6 +190,7 @@ export default function InfluencerBlogComposerScreen() {
           <Card style={s.card}>
             <Text style={s.label}>Title</Text>
             <TextInput
+              testID="creator-blog-title"
               style={s.input}
               editable={!saving}
               value={title}
@@ -265,6 +266,7 @@ export default function InfluencerBlogComposerScreen() {
 
           <View style={s.actions}>
             <Pressable
+              testID="creator-blog-save-draft"
               onPress={() => submit(false)}
               disabled={saving}
               style={[s.btn, s.btnSecondary, saving && s.btnDisabled]}

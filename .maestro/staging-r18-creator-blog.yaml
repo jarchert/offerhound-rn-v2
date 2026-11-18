@@ -1,0 +1,54 @@
+appId: com.emergentmindlab.offerhoundv2.staging
+name: Disposable adult creator updates an existing private draft
+---
+- runFlow:
+    file: common/login.yaml
+    env:
+      QA_EMAIL: qa-r18-20261118.creator@offerhound.test
+      QA_PASSWORD: ${MAESTRO_QA_R18_CREATOR_PASSWORD}
+- extendedWaitUntil:
+    visible: .*QA R18 Creator.*
+    timeout: 60000
+- scrollUntilVisible:
+    element:
+      id: creator-tab-blogs
+    direction: DOWN
+    centerElement: false
+    timeout: 30000
+- tapOn:
+    id: creator-tab-blogs
+- scrollUntilVisible:
+    element:
+      text: Edit blog
+    direction: DOWN
+    centerElement: false
+    timeout: 45000
+- tapOn: Edit blog
+- extendedWaitUntil:
+    visible:
+      id: creator-blog-title
+    timeout: 45000
+- tapOn:
+    id: creator-blog-title
+- inputText: " R18 native checked "
+- pressKey: Enter
+- scrollUntilVisible:
+    element:
+      id: creator-blog-save-draft
+    direction: DOWN
+    centerElement: false
+    timeout: 30000
+- tapOn:
+    id: creator-blog-save-draft
+- extendedWaitUntil:
+    visible: Draft saved
+    timeout: 45000
+- tapOn: OK
+- extendedWaitUntil:
+    visible: .*R18 native checked.*
+    timeout: 45000
+- takeScreenshot: r18-native-draft-save-confirmed
+- runFlow:
+    file: common/logout.yaml
+    env:
+      QA_EMAIL: qa-r18-20261118.creator@offerhound.test

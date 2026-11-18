@@ -9,7 +9,7 @@ export async function uploadTranscriptFile(client:any,input:{userId:string;athle
  const name=input.file.name.replace(/[^a-zA-Z0-9._-]/g,'_').slice(-150)||'transcript.pdf';
  if(!/^[a-zA-Z0-9_-]+$/.test(input.uploadId))throw new Error('Upload identity is unavailable.');
  const path=`${input.userId}/${input.uploadId}_${name}`;
- const uploaded=await client.storage.from('transcripts').upload(path,bytes,{contentType:'application/pdf',upsert:false});if(uploaded.error)throw uploaded.error;
+ const uploaded=await client.storage.from('transcripts').upload(path,bytes,{contentType:'application/pdf',cacheControl:'0',upsert:false});if(uploaded.error)throw uploaded.error;
  const payload={user_id:input.userId,athlete_profile_id:input.athleteProfileId,file_name:input.file.name,file_path:path,file_size_bytes:bytes.byteLength,semester:input.semester||null,year:input.year||null,gpa:input.gpa||null,is_official:input.isOfficial??false,notes:input.notes||null};
  const confirmed=(row:any)=>!!row?.id&&row.user_id===input.userId&&row.athlete_profile_id===input.athleteProfileId&&row.file_path===path;
  try{const saved=await client.from('academic_transcripts').insert(payload).select('*').single();if(saved.error)throw saved.error;if(!confirmed(saved.data))throw new Error('Missing save acknowledgment.');return saved.data;}catch{

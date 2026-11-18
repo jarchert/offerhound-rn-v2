@@ -25,7 +25,7 @@ export function CreatorGallery({influencerId}:{influencerId:string}){
   if(input.action==='delete')return deleteCreatorGallery(supabase,scope);
   if(input.action==='move'){await moveCreatorGallery(supabase,user.id,influencerId,gallery.data||[],input.from,input.to);return {};}
   await updateCreatorGallery(supabase,{...scope,...input.fields});return {};
- },onSuccess:(result:any,input:any)=>{refresh();if(input.action==='edit')setEditing(previous=>previous&&previous.id===input.id&&previous.title===input.fields.title&&previous.description===input.fields.description?null:previous);if(result.cleanupPending)Alert.alert('Removed from gallery','File cleanup could not be confirmed.');},onError:(error:any)=>{refresh();Alert.alert('Gallery change',error.message||'Change was not confirmed.');}});
+ },onSuccess:(result:any,input:any)=>{refresh();if(input.action==='edit')setEditing(previous=>previous&&previous.id===input.id&&previous.title===input.fields.title&&previous.description===input.fields.description?null:previous);if(result.cleanupPending)Alert.alert('Removed from gallery','File cleanup could not be confirmed.');else if(result.referenced)Alert.alert('Removed from gallery','The file was kept because another gallery item still uses it.');},onError:(error:any)=>{refresh();Alert.alert('Gallery change',error.message||'Change was not confirmed.');}});
  const busy=upload.isPending||change.isPending;
  const pick=async()=>{try{
   const permission=await ImagePicker.requestMediaLibraryPermissionsAsync();if(!permission.granted)throw new Error('Allow photo access to choose media.');

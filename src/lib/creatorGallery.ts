@@ -16,7 +16,14 @@ export async function cleanupCreatorGalleryFiles(client:any,userId:string,paths:
   if(originals.data?.length||displays.data?.length)return {cleanupPending:false,referenced:true};
   const removed=await client.storage.from('influencer-media').remove(paths);
   const names=new Set((removed.data||[]).map((item:any)=>item.name));
-  return {cleanupPending:!!removed.error||paths.some(path=>!names.has(path))};
+  if(removed.error||paths.some(path=>!names.has(path)))return {cleanupPending:true};
+  // A removal response alone does not prove the private storage record disappeared.
+  for(const path of paths){
+   const slash=path.lastIndexOf('/'),folder=path.slice(0,slash),name=path.slice(slash+1);
+   const readback=await client.storage.from('influencer-media').list(folder,{limit:100,search:name});
+   if(readback.error||!Array.isArray(readback.data)||readback.data.some((item:any)=>item.name===name))return {cleanupPending:true};
+  }
+  return {cleanupPending:false};
  }catch{return {cleanupPending:true};}
 }
 export async function updateCreatorGallery(client:any,input:{userId:string;influencerId:string;id:string;title?:string;description?:string;isFeatured?:boolean;displayOrder?:number}){

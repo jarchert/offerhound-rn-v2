@@ -21,7 +21,7 @@ name: Staff directory and messaging read-only acceptance
     element:
       text: Cancel
     direction: DOWN
-    centerElement: true
+    centerElement: false
     timeout: 30000
 - tapOn: Cancel
 - scrollUntilVisible:
@@ -43,6 +43,12 @@ name: Staff directory and messaging read-only acceptance
     timeout: 30000
 - assertVisible: Full Name.*
 - takeScreenshot: staff-editor-readonly
+- scrollUntilVisible:
+    element:
+      id: staff-editor-cancel
+    direction: DOWN
+    centerElement: false
+    timeout: 30000
 - tapOn:
     id: staff-editor-cancel
 - scrollUntilVisible:
@@ -59,3 +65,5 @@ name: Staff directory and messaging read-only acceptance
 - takeScreenshot: staff-messages-confirmed-empty
 - runFlow:
     file: common/logout.yaml
+    env:
+      QA_EMAIL: qa.college-coach@offerhound.test
