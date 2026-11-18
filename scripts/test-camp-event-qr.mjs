@@ -1,16 +1,19 @@
+import os from 'node:os';import path from 'node:path';
 import {build} from 'esbuild';import assert from 'node:assert/strict';import fs from 'node:fs';import {createRequire}from'node:module';
 const require=createRequire(import.meta.url);
-const file='/private/tmp/offerhound-native-qr-contract.cjs';
+const tempDir=fs.mkdtempSync(path.join(os.tmpdir(),'offerhound-qr-'));
+process.on('exit',()=>fs.rmSync(tempDir,{recursive:true,force:true}));
+const file=path.join(tempDir,'offerhound-native-qr-contract.cjs');
 await build({entryPoints:['src/lib/campEventQR.ts'],bundle:true,platform:'node',format:'cjs',outfile:file,define:{'process.env.EXPO_PUBLIC_CAMP_CONSENT_WEB_URL':'"https://qa.example.test"','process.env.EXPO_PUBLIC_APP_ENV':'"staging"'}});
 const {campEventUrl,campQRVector,campQRPDF,campQRFilename}=require(file);
-await build({entryPoints:['src/lib/campFlyer.ts'],bundle:true,platform:'node',format:'cjs',outfile:'/private/tmp/offerhound-native-flyer-contract.cjs'});
-const {campFlyer,campFlyerHTML}=require('/private/tmp/offerhound-native-flyer-contract.cjs');
+await build({entryPoints:['src/lib/campFlyer.ts'],bundle:true,platform:'node',format:'cjs',outfile:path.join(tempDir,'offerhound-native-flyer-contract.cjs')});
+const {campFlyer,campFlyerHTML}=require(path.join(tempDir,'offerhound-native-flyer-contract.cjs'));
 const id='20000000-0000-4000-8000-000000000001',url=campEventUrl(id);
 assert.equal(url,'https://qa.example.test/camp-consent?event='+id);assert.throws(()=>campEventUrl('invalid'));
 const vector=campQRVector(url);assert(vector.svg.startsWith('<svg'));assert(vector.svg.includes('viewBox="0 0 '+vector.size));assert(vector.cells.every(([x,y])=>x>=4&&y>=4&&x<vector.size-4&&y<vector.size-4));
 const expected=require('qrcode').create(url,{errorCorrectionLevel:'H'}).modules;assert.equal(vector.cells.length,Array.from(expected.data).filter(Boolean).length);
 const pdf=campQRPDF(url,'QA Skills Camp');assert(pdf.startsWith('%PDF-1.4'));assert(pdf.includes(url));const start=Number(pdf.match(/startxref\n(\d+)/)[1]);assert.equal(pdf.slice(start,start+4),'xref');const offsets=pdf.slice(start).match(/\d{10} 00000 n/g).map(x=>Number(x.slice(0,10)));offsets.forEach((n,i)=>assert(pdf.slice(n).startsWith(`${i+1} 0 obj`)));assert.equal(campQRFilename('../../ Skills Camp /','20000000'), 'skills-camp-20000000-qr');
-fs.writeFileSync('/private/tmp/offerhound-native-qr-review.svg',vector.svg);fs.writeFileSync('/private/tmp/offerhound-native-qr-review.pdf',pdf);
+fs.writeFileSync(path.join(tempDir,'offerhound-native-qr-review.svg'),vector.svg);fs.writeFileSync(path.join(tempDir,'offerhound-native-qr-review.pdf'),pdf);
 console.log('Native event QR PASS: stable camp URL, invalid ID, quiet zone, exact encoded matrix, SVG content, PDF header/xref/objects, safe filenames. Native share sheet requires device verification.');
 // Exercise actual native handlers; filesystem/share-sheet boundaries are mocked.
 const vm=await import('node:vm'),ts=await import('typescript');
@@ -29,5 +32,5 @@ assert(printed[0].html.includes('Actual QA camp description &amp; skills.'));ass
 for(const format of ['PNG','SVG','PDF']){const button=nodes(tree).find(n=>n.type==='Button'&&label(n).startsWith('Save '+format));button.props.onPress();await new Promise(setImmediate);}
 assert.equal(saved.length,3);assert.deepEqual(saved.map(x=>x.mimeType),['image/png','image/svg+xml','application/pdf']);assert(saved.every(x=>x.bytes.length===3));assert.equal(alerts.filter(x=>x[0]==='Camp flyer saved').length,3);
 const before=writes.length;imports['expo-file-system'].Directory.pickDirectoryAsync=async()=>{throw Error('The file picker was cancelled by the user')};nodes(tree).find(n=>n.type==='Button'&&label(n).startsWith('Save PNG')).props.onPress();await new Promise(setImmediate);assert.equal(writes.length,before);assert.equal(alerts.filter(x=>x[0]==='QR export unavailable').length,0);
-const flyer=campFlyer(url,'Camp <QA> — Skills','Actual description & safety <script>alert(1)</script>');assert(flyer.svg.includes('Camp &lt;QA&gt; — Skills'));assert(!flyer.svg.includes('<script>'));assert(flyer.svg.includes('#e7af08'));assert(!campFlyerHTML(flyer).includes('src=\"http'));fs.writeFileSync('/private/tmp/offerhound-native-flyer-review.svg',flyer.svg);
+const flyer=campFlyer(url,'Camp <QA> — Skills','Actual description & safety <script>alert(1)</script>');assert(flyer.svg.includes('Camp &lt;QA&gt; — Skills'));assert(!flyer.svg.includes('<script>'));assert(flyer.svg.includes('#e7af08'));assert(!campFlyerHTML(flyer).includes('src=\"http'));fs.writeFileSync(path.join(tempDir,'offerhound-native-flyer-review.svg'),flyer.svg);
 console.log('Native actual flyer export handlers PASS: branded camp title/description and gold, complete tall PNG dimensions, SVG, Unicode-capable native PDF HTML, explicit local folder writes, correct share MIME types, safe text and canceled-folder recovery; native filesystem/print/share boundaries mocked.');
