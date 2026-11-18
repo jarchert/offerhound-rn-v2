@@ -111,16 +111,23 @@ export function CampCheckInOps({ campId, campName, drillStations = [], positions
   const bulkUpdate = useMutation({
     mutationFn: async (updates: { id: string; group_assignment?: string; position_group?: string }[]) => {
       for (const { id, ...rest } of updates) {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('camp_enrollments')
           .update(rest as any)
-          .eq('id', id);
+          .eq('id', id)
+          .eq('camp_id', campId)
+          .select('id, group_assignment, position_group')
+          .single();
         if (error) throw error;
+        if (!data || data.id !== id || Object.entries(rest).some(([key, value]) => (data as any)[key] !== value)) {
+          throw Error('Assignment was not confirmed. Reload the roster before retrying.');
+        }
       }
     },
-    onSuccess: () => {
+    onSuccess: () => { toast.success('Assignments Updated'); },
+    onError: (error: any) => { toast.error('Assignments not fully confirmed', error.message); },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['camp-ops-enrollments', campId] });
-      toast.success('Assignments Updated');
     },
   });
 
